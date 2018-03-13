@@ -1,10 +1,11 @@
 # Couchbase Single Cluster Example
 
-This folder shows an example of Terraform code that uses the [couchbase-cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster) module to deploy 
-a [Couchbase](https://www.couchbase.com/) cluster in [AWS](https://aws.amazon.com/). The cluster consists of one Auto 
-Scaling Group (ASG) that runs all Couchbase services and Sync Gateway:
+This folder shows an example of Terraform code that uses the 
+[couchbase-cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster) 
+module to deploy a [Couchbase](https://www.couchbase.com/) cluster in [AWS](https://aws.amazon.com/). The cluster 
+consists of one Auto Scaling Group (ASG) that runs all Couchbase services and Sync Gateway:
 
-![Couchbase single-cluster architecture](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/_docs/single-cluster-architecture.png?raw=true)
+![Couchbase single-cluster architecture](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/_docs/couchbase-single-cluster-architecture.png?raw=true)
 
 You will need to create an [Amazon Machine Image (AMI)](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) 
 that has Couchbase installed, which you can do using the [couchbase-ami 
