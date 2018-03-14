@@ -18,7 +18,7 @@ This folder defines a [Terraform module](https://www.terraform.io/docs/modules/u
 code by adding a `module` configuration and setting its `source` parameter to URL of this folder:
 
 ```hcl
-module "consul_cluster" {
+module "couchbase_cluster" {
   # TODO: replace <VERSION> with the latest version from the releases page: https://github.com/gruntwork-io/terraform-aws-couchbase/releases
   source = "github.com/gruntwork-io/terraform-aws-couchbase//modules/couchbase-cluster?ref=<VERSION>"
 
