@@ -18,7 +18,7 @@ This script assumes you installed it, plus all of its dependencies (including Co
 The default install path is `/opt/couchbase/bin`, so to configure and start Couchbase, you run:
 
 ```
-/opt/couchbase/bin/run-couchbase-server --server
+/opt/couchbase/bin/run-couchbase-server --cluster-tag-key couchbase-cluster --cluster-tag-value prod-cluster
 ```
 
 This will:
