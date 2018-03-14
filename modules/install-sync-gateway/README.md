@@ -64,7 +64,7 @@ The `install-sync-gateway` script does the following:
 1. [Install Sync Gateway binaries and scripts](#install-sync-gateway-binaries-and-scripts)
 
 
-### Install Consul binaries and scripts
+### Install Sync Gateway binaries and scripts
 
 Install the following:
 

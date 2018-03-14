@@ -1,7 +1,7 @@
 # Couchbase Server Install Script
 
 This folder contains a script for installing Couchbase server and its dependencies. Use this script along with the
-[run-couchbase-server script](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/run-consul) 
+[run-couchbase-server script](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/run-couchbase-server) 
 to create a Couchbase [Amazon Machine Image 
 (AMI)](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) that can be deployed in 
 [AWS](https://aws.amazon.com/) across an Auto Scaling Group using the [couchbase-cluster 
@@ -68,7 +68,7 @@ The `install-couchbase-server` script does the following:
 1. [Configure services to start on boot](#configure-services-to-start-on-boot)
 
 
-### Install Consul binaries and scripts
+### Install Couchbase binaries and scripts
 
 Install the following:
 
