@@ -42,7 +42,7 @@ This repo has the following folder structure:
 
 The general idea is to: 
 
-1. Use the 
+1. Use the scripts in the
    [install-couchbase-server](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/install-couchbase-server) and
    [install-sync-gateway](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/install-sync-gateway)
    modules to create an AMI with Couchbase and Sync Gateway installed.
