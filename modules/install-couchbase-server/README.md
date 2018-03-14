@@ -66,7 +66,6 @@ The `install-couchbase-server` script does the following:
 
 1. [Install Couchbase binaries and scripts](#install-couchbase-binaries-and-scripts)
 1. [Configure services to start on boot](#configure-services-to-start-on-boot)
-1. [Follow-up tasks](#follow-up-tasks)
 
 
 ### Install Consul binaries and scripts
