@@ -1,0 +1,76 @@
+{
+  "min_packer_version": "0.12.0",
+  "variables": {
+    "aws_region": "us-east-1"
+  },
+  "builders": [{
+    "name": "ubuntu-ami",
+    "ami_name": "couchbase-ubuntu-{{isotime | clean_ami_name}}",
+    "ami_description": "An Ubuntu 16.04 AMI that has Couchbase installed.",
+    "instance_type": "t2.micro",
+    "region": "{{user `aws_region`}}",
+    "type": "amazon-ebs",
+    "source_ami_filter": {
+      "filters": {
+        "virtualization-type": "hvm",
+        "architecture": "x86_64",
+        "name": "*ubuntu-xenial-16.04-amd64-server-*",
+        "block-device-mapping.volume-type": "gp2",
+        "root-device-type": "ebs"
+      },
+      "owners": ["099720109477"],
+      "most_recent": true
+    },
+    "ssh_username": "ubuntu"
+  },{
+    "name": "amazon-linux-ami",
+    "ami_name": "couchbase-amazon-linux-{{isotime | clean_ami_name}}",
+    "ami_description": "An Amazon Linux AMI that has Couchbase installed.",
+    "instance_type": "t2.micro",
+    "region": "{{user `aws_region`}}",
+    "type": "amazon-ebs",
+    "source_ami_filter": {
+      "filters": {
+        "virtualization-type": "hvm",
+        "architecture": "x86_64",
+        "name": "*amzn-ami-hvm-*",
+        "block-device-mapping.volume-type": "gp2",
+        "root-device-type": "ebs"
+      },
+      "owners": ["amazon"],
+      "most_recent": true
+    },
+    "ssh_username": "ec2-user"
+  },{
+    "name": "ubuntu-docker",
+    "type": "docker",
+    "image": "gruntwork/ubuntu-test:16.04",
+    "commit": true
+  },{
+    "name": "amazon-linux-docker",
+    "type": "docker",
+    "image": "gruntwork/amazonlinux-test:latest",
+    "commit": true
+  }],
+  "provisioners": [{
+    "type": "file",
+    "source": "{{template_dir}}/../../../terraform-aws-couchbase",
+    "destination": "/tmp"
+  },{
+    "type": "shell",
+    "inline": [
+      "/tmp/terraform-aws-couchbase/modules/install-couchbase-server/install-couchbase-server"
+    ]
+  }],
+  "post-processors": [{
+    "type": "docker-tag",
+    "repository": "gruntwork/couchbase-ubuntu-test",
+    "tag": "latest",
+    "only": ["ubuntu-docker"]
+  },{
+    "type": "docker-tag",
+    "repository": "gruntwork/couchbase-amazon-linux-test",
+    "tag": "latest",
+    "only": ["amazon-linux-docker"]
+  }]
+}

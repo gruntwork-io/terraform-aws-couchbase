@@ -1,0 +1,233 @@
+#!/bin/bash
+
+set -e
+
+readonly DEFAULT_COUCHBASE_VERSION="5.1.0"
+readonly DEFAULT_COUCHBASE_SHA256_CHECKSUM="4d6a1f159577f283f6f980f6ab9161630eb2d8fd228429029de004b1be46ad76"
+readonly DEFAULT_SWAPINESS="0"
+
+readonly SWAPINESS_CONFIG_FILE="/etc/sysctl.conf"
+readonly DISABLE_THP_BOOT_SCRIPT="/etc/init.d/disable-thp"
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_NAME="$(basename "$0")"
+
+function print_usage {
+  echo
+  echo "Usage: install-couchbase-server [options]"
+  echo
+  echo "This script can be used to install Couchbase Server and its dependencies. This script has been tested with Ubuntu 16.04 and Amazon Linux."
+  echo
+  echo "Options:"
+  echo
+  echo -e "  --version\t\tThe version of Couchbase to install. Default: $DEFAULT_COUCHBASE_VERSION."
+  echo -e "  --checksum\t\tThe SHA-256 checksum of the Couchbase package. Required if --version is specified. You can get it from the downloads page of the Couchbase website."
+  echo -e "  --swapiness\t\tThe OS swapiness setting to use. Couchbase recommends setting this to 0. Default: $DEFAULT_SWAPINESS."
+  echo
+  echo "Example:"
+  echo
+  echo "  install-couchbase-server --version $DEFAULT_COUCHBASE_VERSION --checksum $DEFAULT_COUCHBASE_SHA256_CHECKSUM"
+}
+
+function log {
+  local readonly level="$1"
+  local readonly message="$2"
+  local readonly timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+  >&2 echo -e "${timestamp} [${level}] [$SCRIPT_NAME] ${message}"
+}
+
+function log_info {
+  local readonly message="$1"
+  log "INFO" "$message"
+}
+
+function log_warn {
+  local readonly message="$1"
+  log "WARN" "$message"
+}
+
+function log_error {
+  local readonly message="$1"
+  log "ERROR" "$message"
+}
+
+function assert_is_installed {
+  local readonly name="$1"
+
+  if [[ ! $(command -v ${name}) ]]; then
+    log_error "The binary '$name' is required by this script but is not installed or in the system's PATH."
+    exit 1
+  fi
+}
+
+function assert_not_empty {
+  local readonly arg_name="$1"
+  local readonly arg_value="$2"
+
+  if [[ -z "$arg_value" ]]; then
+    log_error "The value for '$arg_name' cannot be empty"
+    print_usage
+    exit 1
+  fi
+}
+
+function is_ubuntu {
+  grep -q "Ubuntu" /etc/os-release
+}
+
+
+function file_exists {
+  local readonly file="$1"
+  [[ -f "$file" ]]
+}
+
+function file_contains_text {
+  local readonly text="$1"
+  local readonly file="$2"
+  grep -q "$text" "$file"
+}
+
+function append_text_to_file {
+  local readonly text="$1"
+  local readonly file="$2"
+
+  echo -e "\n$text" | sudo tee -a "$file"
+}
+
+# Replace a line of text in a file. Only works for single-line replacements.
+function replace_text_in_file {
+  local readonly original_text_regex="$1"
+  local readonly replacement_text="$2"
+  local readonly file="$3"
+
+  sudo sed -i -e "s|$original_text_regex|$replacement_text|" "$file"
+}
+
+function replace_or_append_in_file {
+  local readonly original_text_regex="$1"
+  local readonly replacement_text="$2"
+  local readonly file="$3"
+
+  if $(file_exists "$file") && $(file_contains_text "$original_text_regex" "$file"); then
+    replace_text_in_file "$original_text_regex" "$replacement_text" "$file"
+  else
+    append_text_to_file "$replacement_text" "$file"
+  fi
+}
+
+function install_couchbase_on_ubuntu {
+  local readonly version="$1"
+  local readonly checksum="$2"
+
+  # TODO: what about the community edition?
+  local readonly filepath="couchbase-server-enterprise_${version}-ubuntu16.04_amd64.deb"
+  local readonly url="https://packages.couchbase.com/releases/$version/$filepath"
+
+  log_info "Installing Couchbase dependencies on Ubuntu"
+  sudo DEBIAN_FRONTEND=noninteractive apt-get update
+  sudo apt-get install -y python-httplib2
+
+  log_info "Downloading Couchbase from $url to $filepath"
+  curl --location --silent --fail --show-error -O "$url"
+
+  log_info "Verifying checksum is $checksum"
+  echo "$checksum $filepath" | sha256sum -c
+
+  log_info "Installing Couchbase from $filepath"
+  sudo INSTALL_DONT_START_SERVER=1 dpkg -i "$filepath"
+  sudo systemctl enable couchbase-server
+
+  log_info "Cleaning up $filepath"
+  rm -f "$filepath"
+}
+
+# Couchbase recommends disabling transparent huge pages.
+# https://developer.couchbase.com/documentation/server/current/install/thp-disable.html
+function disable_transparent_huge_pages {
+  log_info "Adding boot script $DISABLE_THP_BOOT_SCRIPT to disable transparent huge pages"
+  sudo cp "$SCRIPT_DIR/disable-thp" "$DISABLE_THP_BOOT_SCRIPT"
+}
+
+# Couchbase recommends setting swapiness to 0 or 1.
+# https://developer.couchbase.com/documentation/server/current/install/install-swap-space.html
+function update_swapiness {
+  local readonly swapiness="$1"
+
+  log_info "Updating OS swapiness settings to $swapiness in $SWAPINESS_CONFIG_FILE"
+
+  replace_or_append_in_file "^vm.swappiness.*=.*$" "vm.swapiness = $swapiness" "$SWAPINESS_CONFIG_FILE"
+}
+
+# Returns successfully if the given needle is in the given haystack; exits with an error otherwise.
+function array_contains {
+  local readonly needle="$1"
+  shift
+  local readonly haystack=($@)
+
+  local item
+  for item in "${haystack[@]}"; do
+    if [[ "$item" == "$needle" ]]; then
+      return
+    fi
+  done
+
+  exit 1
+}
+
+function install {
+  local version="$DEFAULT_COUCHBASE_VERSION"
+  local checksum="$DEFAULT_COUCHBASE_SHA256_CHECKSUM"
+  local swapiness="$DEFAULT_SWAPINESS"
+
+  while [[ $# > 0 ]]; do
+    local key="$1"
+
+    case "$key" in
+      --version)
+        assert_not_empty "$key" "$2"
+        version="$2"
+        shift
+        ;;
+      --checksum)
+        assert_not_empty "$key" "$2"
+        checksum="$2"
+        shift
+        ;;
+      --swapiness)
+        assert_not_empty "$key" "$2"
+        swapiness="$2"
+        shift
+        ;;
+      --help)
+        print_usage
+        exit
+        ;;
+      *)
+        log_error "Unrecognized argument: $key"
+        print_usage
+        exit 1
+        ;;
+    esac
+
+    shift
+  done
+
+  assert_is_installed "curl"
+
+  log_info "Starting Couchbase install..."
+
+  if is_ubuntu; then
+    install_couchbase_on_ubuntu "$version" "$checksum"
+  else
+    log_error "This script only supports Ubuntu and Amazon Linux."
+    exit 1
+  fi
+
+  update_swapiness "$swapiness"
+  disable_transparent_huge_pages
+
+  log_info "Couchbase installed successfully!"
+}
+
+install "$@"
+

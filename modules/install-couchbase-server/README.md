@@ -24,7 +24,7 @@ page](https://github.com/gruntwork-io/terraform-aws-couchbase/releases) for all 
 
 ```
 git clone --branch <VERSION> https://github.com/gruntwork-io/terraform-aws-couchbase.git
-terraform-aws-couchbase/modules/install-couchbase-server/install-couchbase-server --version <VERSION>
+terraform-aws-couchbase/modules/install-couchbase-server/install-couchbase-server
 ```
 
 The `install-couchbase-server` script will install Couchbase, its dependencies, and the [run-couchbase-server 
@@ -45,18 +45,8 @@ sample code).
 
 ## Command line Arguments
 
-The `install-couchbase-server` script accepts the following arguments:
+Run `install-couchbase-server --help` to see all available arguments.
 
-* `version VERSION`: Install Couchbase version VERSION. Required. 
-* `--<SERVICE>`: Run service SERVICE on boot. Supported values: `--data`, `--index`, `--query`, `--search`, 
-  `--manager`, or `--all`.
-
-
-Example:
-
-```
-install-couchbase-server --version 5.1.0 --all
-```
 
 
 
