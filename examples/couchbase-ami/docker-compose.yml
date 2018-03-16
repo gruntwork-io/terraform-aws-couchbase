@@ -1,6 +1,6 @@
 version: '3'
 services:
-  ubuntu:
+  couchbase-ubuntu:
     image: gruntwork/couchbase-ubuntu-test
     entrypoint: ["/sbin/init"]
     privileged: true
