@@ -1,0 +1,20 @@
+version: '3'
+services:
+  ubuntu:
+    image: gruntwork/couchbase-ubuntu-test
+    entrypoint: ["/sbin/init"]
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp:unconfined
+    tmpfs:
+      - /run
+      - /run/lock
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    ports:
+      - "8091:8091"
+      - "8092:8092"
+      - "8093:8093"
+      - "8094:8094"
