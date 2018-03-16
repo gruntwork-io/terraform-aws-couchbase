@@ -55,7 +55,8 @@ Run `install-couchbase-server --help` to see all available arguments.
 The `install-couchbase-server` script does the following:
 
 1. [Install Couchbase binaries and scripts](#install-couchbase-binaries-and-scripts)
-1. [Configure services to start on boot](#configure-services-to-start-on-boot)
+1. [Update swap settings](#update-swap-settings)
+1. [Disable transparent huge pages](#disable-transparent-huge-pages)
 
 
 ### Install Couchbase binaries and scripts
@@ -69,12 +70,16 @@ Install the following:
   `/opt/couchbase/bin`. 
 
 
-### Configure services to start on boot
+### Update swap settings
 
-Configure which Couchbase services to run based on the flag(s) passed in: `--data`, `--index`, `--query`, `--search`, 
-`--manager`, or `--all`. For more info, see [Couchbase 
-Architecture](https://developer.couchbase.com/documentation/server/5.1/architecture/architecture-intro.html).
+Set the "swapiness" setting on your OS to 0. See [Swap Space and Kernel 
+Swappiness](https://developer.couchbase.com/documentation/server/current/install/install-swap-space.html) for details.
 
+
+## Disable transparent huge pages
+
+Disable transparent huge pages on your OS. See [Disabling Transparent Huge Pages 
+(THP)](https://developer.couchbase.com/documentation/server/current/install/thp-disable.html) for details.
 
 
 

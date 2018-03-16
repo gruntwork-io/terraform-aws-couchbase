@@ -9,6 +9,9 @@ readonly DEFAULT_SWAPINESS="0"
 readonly SWAPINESS_CONFIG_FILE="/etc/sysctl.conf"
 readonly DISABLE_THP_BOOT_SCRIPT="/etc/init.d/disable-thp"
 
+readonly DEFAULT_COUCHBASE_DIR="/opt/couchbase"
+readonly DEFAULT_COUCHBASE_BIN_DIR="$DEFAULT_COUCHBASE_DIR/bin"
+
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPT_NAME="$(basename "$0")"
 
@@ -174,6 +177,15 @@ function array_contains {
   exit 1
 }
 
+function install_run_couchbase_script {
+  local readonly src="$SCRIPT_DIR/../run-couchbase-server/run-couchbase-server"
+  local readonly dest="/usr/local/bin/run-couchbase-server"
+
+  log_info "Copying $src to $dest"
+  sudo cp "$src" "$dest"
+  sudo chmod +x "$dest"
+}
+
 function install {
   local version="$DEFAULT_COUCHBASE_VERSION"
   local checksum="$DEFAULT_COUCHBASE_SHA256_CHECKSUM"
@@ -223,6 +235,7 @@ function install {
     exit 1
   fi
 
+  install_run_couchbase_script
   update_swapiness "$swapiness"
   disable_transparent_huge_pages
 

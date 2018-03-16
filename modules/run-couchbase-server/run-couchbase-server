@@ -1,0 +1,103 @@
+#!/bin/bash
+
+set -e
+
+readonly COUCHBASE_SERVICE_FLAGS=("--data", "--index", "--query", "--search", "--manager")
+readonly ALL_FLAG="--all"
+readonly ALL_SERVICE_FLAGS=("${COUCHBASE_SERVICE_FLAGS[@]}" "$ALL_FLAG")
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_NAME="$(basename "$0")"
+
+function print_usage {
+  echo
+  echo "Usage: run-couchbase-server [options]"
+  echo
+  echo "This script can be used to configure and run a Couchbase Server. This script has been tested with Ubuntu 16.04 and Amazon Linux."
+  echo
+  echo "Options:"
+  echo
+  echo -e "  --<service>\t\tThe Couchbase service to run. May be any combination of [${COUCHBASE_SERVICE_FLAGS[@]}]. Use $ALL_FLAG to indicate all services."
+  echo
+  echo "Example:"
+  echo
+  echo "  run-couchbase-server --all"
+}
+
+function log {
+  local readonly level="$1"
+  local readonly message="$2"
+  local readonly timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+  >&2 echo -e "${timestamp} [${level}] [$SCRIPT_NAME] ${message}"
+}
+
+function log_info {
+  local readonly message="$1"
+  log "INFO" "$message"
+}
+
+function log_warn {
+  local readonly message="$1"
+  log "WARN" "$message"
+}
+
+function log_error {
+  local readonly message="$1"
+  log "ERROR" "$message"
+}
+
+function init_cluster {
+  log_info "TODO"
+
+  # From: https://developer.couchbase.com/documentation/server/current/install/init-setup.html
+#  totalRAM=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+#  dataRAM=$((50 * $totalRAM / 100000))
+#  indexRAM=$((25 * $totalRAM / 100000))
+#
+#  echo "Running couchbase-cli cluster-init"
+#  ./couchbase-cli cluster-init \
+#    --cluster=$nodePublicDNS \
+#    --cluster-username=$adminUsername \
+#    --cluster-password=$adminPassword \
+#    --cluster-ramsize=$dataRAM \
+#    --cluster-index-ramsize=$indexRAM \
+#    --services=${services}
+}
+
+function run {
+  local services=()
+
+  while [[ $# > 0 ]]; do
+    local key="$1"
+
+    case "$key" in
+      --help)
+        print_usage
+        exit
+        ;;
+      *)
+        if array_contains "$key" "${ALL_SERVICE_FLAGS[@]}"; then
+          services+=("$key")
+          shift
+        else
+          log_error "Unrecognized argument: $key"
+          print_usage
+          exit 1
+        fi
+        ;;
+    esac
+
+    shift
+  done
+
+  if [[ -z "${services[@]}" || array_contains "$ALL_FLAG" "$services[@]" ]]; then
+    log_info "Defaulting to all Couchbase services"
+    services="${COUCHBASE_SERVICE_FLAGS[@]}"
+  fi
+
+  init_cluster
+
+  # TODO: this script is a work in progress!
+}
+
+run "$@"
