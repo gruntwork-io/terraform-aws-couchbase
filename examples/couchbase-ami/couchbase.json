@@ -46,6 +46,8 @@
     "type": "docker",
     "image": "gruntwork/ubuntu-test:16.04",
     "commit": true,
+    "run_command": ["-d", "-i", "-t", "{{.Image}}", "/sbin/init"],
+    "privileged": true,
     "volumes": {
       "/sys/fs/cgroup": "/sys/fs/cgroup"
     }

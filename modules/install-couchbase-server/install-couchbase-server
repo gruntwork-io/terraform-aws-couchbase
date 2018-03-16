@@ -137,8 +137,7 @@ function install_couchbase_on_ubuntu {
   echo "$checksum $filepath" | sha256sum -c
 
   log_info "Installing Couchbase from $filepath"
-  sudo INSTALL_DONT_START_SERVER=1 dpkg -i "$filepath"
-  sudo systemctl enable couchbase-server
+  sudo dpkg -i "$filepath"
 
   log_info "Cleaning up $filepath"
   rm -f "$filepath"
