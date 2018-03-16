@@ -45,7 +45,10 @@
     "name": "ubuntu-docker",
     "type": "docker",
     "image": "gruntwork/ubuntu-test:16.04",
-    "commit": true
+    "commit": true,
+    "volumes": {
+      "/sys/fs/cgroup": "/sys/fs/cgroup"
+    }
   },{
     "name": "amazon-linux-docker",
     "type": "docker",
@@ -53,6 +56,14 @@
     "commit": true
   }],
   "provisioners": [{
+    "type": "shell",
+    "inline": [
+      "echo 'Cleaning up systemd files so we only boot up the bare minimum services necessary in the Docker container.'",
+      "sudo find /etc/systemd/system /lib/systemd/system -path '*.wants/*' -not -name '*journald*' -not -name '*systemd-tmpfiles*' -not -name '*systemd-user-sessions*' -exec rm {} \\;",
+      "sudo systemctl set-default multi-user.target"
+    ],
+    "only": ["ubuntu-docker"]
+  },{
     "type": "file",
     "source": "{{template_dir}}/../../../terraform-aws-couchbase",
     "destination": "/tmp"
