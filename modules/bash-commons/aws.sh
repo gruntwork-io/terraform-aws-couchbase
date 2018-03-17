@@ -48,48 +48,6 @@ function get_instance_id {
   lookup_path_in_instance_metadata "instance-id"
 }
 
-# Get all the tags for the current EC2 Instance. Tags propagate asynchronously, so retry multiple times if tags are not
-# found.
-function get_instance_tags {
-  local readonly instance_region="$1"
-
-  local instance_id
-  instance_id=$(get_instance_id)
-
-  log_info "Looking up tags for Instance $instance_id in $instance_region"
-  for (( i=1; i<="$MAX_RETRIES"; i++ )); do
-    local tags
-    tags=$(aws ec2 describe-tags \
-      --region "$instance_region" \
-      --filters "Name=resource-type,Values=instance" "Name=resource-id,Values=$instance_id")
-
-    local count_tags
-    count_tags=$(echo $tags | jq -r ".Tags? | length")
-
-    log_info "Found $count_tags tags for Instance $instance_id in $instance_region: $tags."
-
-    if [[ "$count_tags" -gt 0 ]]; then
-      echo "$tags"
-      return
-    else
-      log_warn "Did not find any tags for Instance $instance_id in $instance_region. Will sleep for $SLEEP_BETWEEN_RETRIES_SEC seconds and try again."
-      sleep "$SLEEP_BETWEEN_RETRIES_SEC"
-    fi
-  done
-
-  log_error "Could not find Instance tags for $instance_id in $instance_region after $MAX_RETRIES retries."
-  exit 1
-}
-
-# Get the value for a specific tag from the tags JSON returned by the AWS describe-tags:
-# https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-tags.html
-function get_tag_value {
-  local readonly tags="$1"
-  local readonly tag_key="$2"
-
-  echo "$tags" | jq -r ".Tags[] | select(.Key == \"$tag_key\") | .Value"
-}
-
 # Get the desired capacity of the ASG with the given name in the given region
 function get_asg_size {
   local readonly asg_name="$1"
@@ -116,11 +74,7 @@ function describe_instances_in_asg {
   log_info "Looking up Instances in ASG $asg_name in $aws_region"
   for (( i=1; i<="$MAX_RETRIES"; i++ )); do
     local instances
-    instances=$(aws ec2 describe-instances \
-      --region "$aws_region" \
-      --filters
-        "Name=tag:aws:autoscaling:groupName,Values=$asg_name" \
-        "Name=instance-state-name,Values=pending,running")
+    instances=$(aws ec2 describe-instances --region "$aws_region" --filters "Name=tag:aws:autoscaling:groupName,Values=$asg_name" "Name=instance-state-name,Values=pending,running")
 
     local count_instances
     count_instances=$(echo "$instances" | jq -r "[.Reservations[].Instances[].InstanceId] | length")
