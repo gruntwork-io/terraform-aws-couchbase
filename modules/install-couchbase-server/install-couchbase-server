@@ -19,8 +19,7 @@ readonly DISABLE_THP_BOOT_SCRIPT="/etc/init.d/disable-thp"
 
 readonly DEFAULT_COUCHBASE_DIR="/opt/couchbase"
 readonly DEFAULT_COUCHBASE_BIN_DIR="$DEFAULT_COUCHBASE_DIR/bin"
-
-readonly BASH_COMMONS_INSTALL_DIR="/opt/bash-commons"
+readonly BASH_COMMONS_INSTALL_DIR="$DEFAULT_COUCHBASE_DIR/bash-commons"
 
 function print_usage {
   echo

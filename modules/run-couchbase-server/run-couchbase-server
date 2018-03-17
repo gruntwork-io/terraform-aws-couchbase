@@ -5,14 +5,15 @@ set -e
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly BASH_COMMONS_INSTALL_DIR="$SCRIPT_DIR/../bash-commons"
 
-readonly COUCHBASE_BASE_DIR="/opt/couchbase"
-readonly COUCHBASE_BIN_DIR="$COUCHBASE_BASE_DIR/bin"
-
 source "$BASH_COMMONS_INSTALL_DIR/logging.sh"
 source "$BASH_COMMONS_INSTALL_DIR/assertions.sh"
 source "$BASH_COMMONS_INSTALL_DIR/aws.sh"
 source "$BASH_COMMONS_INSTALL_DIR/os.sh"
 source "$BASH_COMMONS_INSTALL_DIR/collections.sh"
+source "$BASH_COMMONS_INSTALL_DIR/strings.sh"
+
+readonly COUCHBASE_BASE_DIR="/opt/couchbase"
+readonly COUCHBASE_BIN_DIR="$COUCHBASE_BASE_DIR/bin"
 
 readonly DEFAULT_SERVICES="data,index,query,fts"
 readonly DEFAULT_CLUSTER_PORT=8091
@@ -92,7 +93,6 @@ function get_rally_point_hostname {
   hostname=$(echo "$rally_point" | jq -r "$hostname_field")
   assert_not_empty_aws_response "$rally_point" "Get hostname from field $hostname_field for rally point in $asg_name: $rally_point"
 
-  log_info "Rally point for this ASG has hostname $hostname"
   echo -n "$hostname"
 }
 
@@ -338,7 +338,7 @@ function run {
         shift
         ;;
       --cluster-password)
-        cluster_username="$2"
+        cluster_password="$2"
         shift
         ;;
       --index-storage-setting)
@@ -435,7 +435,7 @@ function run {
       "$index_ramsize" \
       "$services"
   else
-    log_info "This rally point for cluster $cluster_name is $rally_point_hostname."
+    log_info "The rally point for cluster $cluster_name is $rally_point_hostname."
     join_existing_cluster \
       "$rally_point_hostname" \
       "$cluster_name" \
