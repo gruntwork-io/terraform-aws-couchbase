@@ -20,11 +20,15 @@ function get_instance_public_hostname {
 
 # This mock returns a hard-coded, simplified version of the aws ec2 describe-instances call.
 function describe_instances_in_asg {
+
   # These hostnames are set by Docker Compose networking using the names of the services
-  # https://docs.docker.com/compose/networking/
-  local readonly couchbase_hostname_0="couchbase-ubuntu-0"
-  local readonly couchbase_hostname_1="couchbase-ubuntu-1"
-  local readonly couchbase_hostname_2="couchbase-ubuntu-2"
+  # (https://docs.docker.com/compose/networking/). We use getent (https://unix.stackexchange.com/a/20793/215969) to get
+  # the IP addresses for these hostnames, as that's what the servers themselves will advertise (see the mock
+  # get_instance_xxx_hostname methods above).
+
+  local readonly couchbase_hostname_0=$(getent hosts couchbase-ubuntu-0 | awk '{ print $1 }')
+  local readonly couchbase_hostname_1=$(getent hosts couchbase-ubuntu-1 | awk '{ print $1 }')
+  local readonly couchbase_hostname_2=$(getent hosts couchbase-ubuntu-2 | awk '{ print $1 }')
 
   cat << EOF
 {
