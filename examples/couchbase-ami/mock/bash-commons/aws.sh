@@ -18,6 +18,10 @@ function get_instance_public_hostname {
   hostname -i
 }
 
+function get_instance_region {
+  echo "us-east-1"
+}
+
 # This mock returns a hard-coded, simplified version of the aws ec2 describe-instances call.
 function describe_instances_in_asg {
 

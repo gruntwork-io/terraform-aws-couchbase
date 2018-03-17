@@ -65,3 +65,10 @@ function string_contains {
 
   [[ "$haystack" == *"$needle"* ]]
 }
+
+function multiline_string_contains {
+  local readonly haystack="$1"
+  local readonly needle="$2"
+
+  echo "$haystack" | grep -q "$needle"
+}

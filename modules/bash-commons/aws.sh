@@ -48,6 +48,11 @@ function get_instance_id {
   lookup_path_in_instance_metadata "instance-id"
 }
 
+# Get the region this EC2 Instance is deployed in
+function get_instance_region {
+  lookup_path_in_instance_dynamic_data "instance-identity/document" | jq -r ".region"
+}
+
 # Get the desired capacity of the ASG with the given name in the given region
 function get_asg_size {
   local readonly asg_name="$1"
