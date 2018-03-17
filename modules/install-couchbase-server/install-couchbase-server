@@ -2,6 +2,14 @@
 
 set -e
 
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly BASH_COMMONS_DIR="$SCRIPT_DIR/../bash-commons"
+
+source "$BASH_COMMONS_DIR/logging.sh"
+source "$BASH_COMMONS_DIR/assertions.sh"
+source "$BASH_COMMONS_DIR/strings.sh"
+source "$BASH_COMMONS_DIR/os.sh"
+
 readonly DEFAULT_COUCHBASE_VERSION="5.1.0"
 readonly DEFAULT_COUCHBASE_SHA256_CHECKSUM="4d6a1f159577f283f6f980f6ab9161630eb2d8fd228429029de004b1be46ad76"
 readonly DEFAULT_SWAPINESS="0"
@@ -12,8 +20,7 @@ readonly DISABLE_THP_BOOT_SCRIPT="/etc/init.d/disable-thp"
 readonly DEFAULT_COUCHBASE_DIR="/opt/couchbase"
 readonly DEFAULT_COUCHBASE_BIN_DIR="$DEFAULT_COUCHBASE_DIR/bin"
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly SCRIPT_NAME="$(basename "$0")"
+readonly BASH_COMMONS_INSTALL_DIR="/opt/bash-commons"
 
 function print_usage {
   echo
@@ -30,92 +37,6 @@ function print_usage {
   echo "Example:"
   echo
   echo "  install-couchbase-server --version $DEFAULT_COUCHBASE_VERSION --checksum $DEFAULT_COUCHBASE_SHA256_CHECKSUM"
-}
-
-function log {
-  local readonly level="$1"
-  local readonly message="$2"
-  local readonly timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-  >&2 echo -e "${timestamp} [${level}] [$SCRIPT_NAME] ${message}"
-}
-
-function log_info {
-  local readonly message="$1"
-  log "INFO" "$message"
-}
-
-function log_warn {
-  local readonly message="$1"
-  log "WARN" "$message"
-}
-
-function log_error {
-  local readonly message="$1"
-  log "ERROR" "$message"
-}
-
-function assert_is_installed {
-  local readonly name="$1"
-
-  if [[ ! $(command -v ${name}) ]]; then
-    log_error "The binary '$name' is required by this script but is not installed or in the system's PATH."
-    exit 1
-  fi
-}
-
-function assert_not_empty {
-  local readonly arg_name="$1"
-  local readonly arg_value="$2"
-
-  if [[ -z "$arg_value" ]]; then
-    log_error "The value for '$arg_name' cannot be empty"
-    print_usage
-    exit 1
-  fi
-}
-
-function is_ubuntu {
-  grep -q "Ubuntu" /etc/os-release
-}
-
-
-function file_exists {
-  local readonly file="$1"
-  [[ -f "$file" ]]
-}
-
-function file_contains_text {
-  local readonly text="$1"
-  local readonly file="$2"
-  grep -q "$text" "$file"
-}
-
-function append_text_to_file {
-  local readonly text="$1"
-  local readonly file="$2"
-
-  echo -e "\n$text" | sudo tee -a "$file"
-}
-
-# Replace a line of text in a file. Only works for single-line replacements.
-function replace_text_in_file {
-  local readonly original_text_regex="$1"
-  local readonly replacement_text="$2"
-  local readonly file="$3"
-
-  sudo sed -i -e "s|$original_text_regex|$replacement_text|" "$file"
-}
-
-function replace_or_append_in_file {
-  local readonly original_text_regex="$1"
-  local readonly replacement_text="$2"
-  local readonly file="$3"
-
-  if $(file_exists "$file") && $(file_contains_text "$original_text_regex" "$file"); then
-    replace_text_in_file "$original_text_regex" "$replacement_text" "$file"
-  else
-    append_text_to_file "$replacement_text" "$file"
-  fi
 }
 
 function install_couchbase_on_ubuntu {
@@ -160,29 +81,22 @@ function update_swapiness {
   replace_or_append_in_file "^vm.swappiness.*=.*$" "vm.swapiness = $swapiness" "$SWAPINESS_CONFIG_FILE"
 }
 
-# Returns successfully if the given needle is in the given haystack; exits with an error otherwise.
-function array_contains {
-  local readonly needle="$1"
-  shift
-  local readonly haystack=($@)
-
-  local item
-  for item in "${haystack[@]}"; do
-    if [[ "$item" == "$needle" ]]; then
-      return
-    fi
-  done
-
-  exit 1
-}
-
 function install_run_couchbase_script {
+  local readonly dest_dir="$1"
   local readonly src="$SCRIPT_DIR/../run-couchbase-server/run-couchbase-server"
-  local readonly dest="/usr/local/bin/run-couchbase-server"
+  local readonly dest="$dest_dir/run-couchbase-server"
 
   log_info "Copying $src to $dest"
   sudo cp "$src" "$dest"
   sudo chmod +x "$dest"
+}
+
+function install_bash_commons {
+  local readonly dest_dir="$1"
+  local readonly src_dir="$BASH_COMMONS_DIR"
+
+  log_info "Copying $src_dir to $dest_dir"
+  sudo cp -r "$src_dir" "$dest_dir"
 }
 
 function install {
@@ -234,7 +148,8 @@ function install {
     exit 1
   fi
 
-  install_run_couchbase_script
+  install_run_couchbase_script "$DEFAULT_COUCHBASE_BIN_DIR"
+  install_bash_commons "$BASH_COMMONS_INSTALL_DIR"
   update_swapiness "$swapiness"
   disable_transparent_huge_pages
 
