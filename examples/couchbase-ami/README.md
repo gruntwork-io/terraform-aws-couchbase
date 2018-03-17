@@ -25,7 +25,8 @@ To build the Couchbase AMI:
    set the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables.
 1. Update the `variables` section of the `couchbase.json` Packer template to specify the AWS region and Couchbase
    version you wish to use.
-1. Run `packer build couchbase.json`.
+1. To build an Ubuntu AMI: `packer build -only=ubuntu-ami couchbase.json`.
+1. To build an Amazon Linux AMI: `packer build -only=amazon-linux-ami couchbase.json`.
 
 When the build finishes, it will output the IDs of the new AMIs. To see how to deploy this AMI, check out the 
 [couchbase-single-cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-single-cluster), 
