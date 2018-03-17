@@ -1,8 +1,9 @@
 version: '3'
 services:
-  couchbase-ubuntu:
+  couchbase-ubuntu-0: &couchbase_config
     image: gruntwork/couchbase-ubuntu-test
     entrypoint: ["/sbin/init"]
+    container_name: couchbase-ubuntu-0
     privileged: true
     cap_add:
       - SYS_ADMIN
@@ -13,8 +14,19 @@ services:
       - /run/lock
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - ./mock/bash-commons/aws.sh:/opt/couchbase/bash-commons/aws.sh
+      - ../../modules/run-couchbase-server/run-couchbase-server:/opt/couchbase/bin/run-couchbase-server
     ports:
       - "8091:8091"
       - "8092:8092"
       - "8093:8093"
       - "8094:8094"
+
+  couchbase-ubuntu-1:
+    <<: *couchbase_config
+    container_name: couchbase-ubuntu-1
+    ports:
+      - "9091:8091"
+      - "9092:8092"
+      - "9093:8093"
+      - "9094:8094"
