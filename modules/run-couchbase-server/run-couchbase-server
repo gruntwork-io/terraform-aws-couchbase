@@ -397,6 +397,16 @@ function assert_memory_settings_specified_manually {
   fi
 }
 
+# Automatically determine how much memory to provide Couchbase data nodes, index nodes, and full text search nodes.
+# We use a very simple calculation here to keep things simple:
+#
+# 1. If we're only running a single service, give it 75% of the memory on the server.
+# 2. If we're running the data + index or data + fts, give data 50% and the other service 25%.
+# 3. If we're running the data + index + fts, give data 40%, index 20%, and fts 15%.
+# 4. If we're running index + fts, give index 50% and fts 25%.
+#
+# In the future, we may want to use more sophisticated strategies to better deal with servers with a tiny or huge
+# amount of memory.
 function calculate_memory_settings_automatically {
   local readonly services="$1"
 
@@ -409,8 +419,6 @@ function calculate_memory_settings_automatically {
   local data_ramsize
   local index_ramsize
   local fts_ramsize
-
-  # TODO: what if you have multiple Couchbase apps running on the same server? Seems likely only on Docker...
 
   if string_contains "$services" "data" && string_contains "$services" "index" && string_contains "$services" "fts"; then
     data_ramsize=$(($available_memory_mb * 40 / 100))
