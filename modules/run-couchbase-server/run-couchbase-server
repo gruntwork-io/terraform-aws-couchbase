@@ -2,12 +2,21 @@
 
 set -e
 
-readonly COUCHBASE_SERVICE_FLAGS=("--data", "--index", "--query", "--search", "--manager")
-readonly ALL_FLAG="--all"
-readonly ALL_SERVICE_FLAGS=("${COUCHBASE_SERVICE_FLAGS[@]}" "$ALL_FLAG")
-
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly SCRIPT_NAME="$(basename "$0")"
+readonly BASH_COMMONS_INSTALL_DIR="/opt/bash-commons"
+
+readonly COUCHBASE_BASE_DIR="/opt/couchbase"
+readonly COUCHBASE_BIN_DIR="$COUCHBASE_BASE_DIR/bin"
+
+source "$BASH_COMMONS_INSTALL_DIR/logging.sh"
+source "$BASH_COMMONS_INSTALL_DIR/assertions.sh"
+source "$BASH_COMMONS_INSTALL_DIR/aws.sh"
+source "$BASH_COMMONS_INSTALL_DIR/os.sh"
+source "$BASH_COMMONS_INSTALL_DIR/collections.sh"
+
+readonly DEFAULT_SERVICES="data,index,query,fts"
+readonly DEFAULT_CLUSTER_PORT=8091
+readonly DEFAULT_INDEX_STORAGE_SETTING="default"
 
 function print_usage {
   echo
@@ -15,89 +24,430 @@ function print_usage {
   echo
   echo "This script can be used to configure and run a Couchbase Server. This script has been tested with Ubuntu 16.04 and Amazon Linux."
   echo
-  echo "Options:"
+  echo "Required arguments:"
   echo
-  echo -e "  --<service>\t\tThe Couchbase service to run. May be any combination of [${COUCHBASE_SERVICE_FLAGS[@]}]. Use $ALL_FLAG to indicate all services."
+  echo -e "  --asg-name\t\tThe name of the Auto Scaling Group on which the Couchbase Cluster is deployed."
+  echo -e "  --region\t\tThe AWS region we are in."
+  echo -e "  --cluster-username\t\tThe username for the Couchbase cluster."
+  echo -e "  --cluster-password\t\tThe password for the Couchbase cluster."
+  echo
+  echo "Optional arguments:"
+  echo
+  echo -e "  --services\t\tComma-separated list of Couchbase service to run. Default: $DEFAULT_SERVICES."
+  echo -e "  --cluster-name\t\tThe name of the Couchbase cluster. Default: use --asg-name."
+  echo -e "  --cluster-port\t\tThe port the Couchbase cluster will use. Default: $DEFAULT_CLUSTER_PORT."
+  echo -e "  --index-storage-setting\t\tThe index storage mode for the index service. Must be one of: default, memopt. Default: $DEFAULT_INDEX_STORAGE_SETTING."
+  echo -e "  --hostname\t\tThe hostname to use for this node. Default: look up the node's private hostname in EC2 metadata."
+  echo -e "  --use-public-hostname\t\tIf this flag is set, use the node's public hostname from EC2 metadata."
+  echo -e "  --rally-point-hostname\t\tThe hostname of the rally point server that initialized the cluster. If not set, automatically pick a rally point server in the ASG."
+  echo -e "  --manage-memory-manually\t\tIf this flag is set, you can set memory settings manually via the --data-ramsize, --fts-ramsize, and --index-ramsize arguments."
+  echo -e "  --data-ramsize\t\tThe data service memory quota in MB. Only used if --manage-memory-manually is set."
+  echo -e "  --index-ramsize\t\tThe index service memory quota in MB. Only used if --manage-memory-manually is set."
+  echo -e "  --fts-ramsize\t\tThe full-text service memory quota in MB. Only used if --manage-memory-manually is set."
+  echo -e "  --help\t\tShow this help text and exit."
   echo
   echo "Example:"
   echo
-  echo "  run-couchbase-server --all"
+  echo "  run-couchbase-server --asg-name couchbase-prod --region us-east-1 --cluster-username admin --cluser-password password"
 }
 
-function log {
-  local readonly level="$1"
-  local readonly message="$2"
-  local readonly timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-  >&2 echo -e "${timestamp} [${level}] [$SCRIPT_NAME] ${message}"
+function get_hostname {
+  local readonly use_public_hostname="$1"
+
+  if [[ "$use_public_hostname" == "true" ]]; then
+    log_info "Using public hostname as instance address"
+    get_instance_public_hostname
+  else
+    log_info "Using private hostname as instance address"
+    get_instance_private_hostname
+  fi
 }
 
-function log_info {
-  local readonly message="$1"
-  log "INFO" "$message"
+# Identify the server to use as a "rally point." This is the "leader" of the cluster that will be used to initialize
+# the cluster and kick off replication. We use a simple technique to identify a unique rally point in each ASG: look
+# up all the Instances in the ASG and select the one with the oldest launch time. If there is a tie, pick the one with
+# the lowest Instance ID (alphabetically). This way, all servers will always select the same server as the rally point,
+# so long as that server is alive. If it dies, the next oldest server will be selected.
+function get_rally_point_hostname {
+  local readonly aws_region="$1"
+  local readonly asg_name="$2"
+  local readonly use_public_hostname="$3"
+
+  log_info "Looking up rally point for ASG $asg_name in $aws_region"
+
+  local instances
+  instances=$(describe_instances_in_asg "$asg_name" "$aws_region")
+  assert_not_empty_aws_response "$instances" "Fetch list of Instances in ASG $asg_name"
+
+  local rally_point
+  rally_point=$(echo "$instances" | jq -r '[.Reservations[].Instances[]] | sort_by(.LaunchTime, .InstanceId) | .[0]')
+  assert_not_empty_aws_response "$rally_point" "Select rally point server in ASG $asg_name"
+
+  local hostname_field=".PrivateDnsName"
+  if [[ "$use_public_hostname" == "true" ]]; then
+    hostname_field=".PrivateDnsName"
+  fi
+
+  local hostname
+  hostname=$(echo "$rally_point" | jq -r "$hostname_field")
+  assert_not_empty_aws_response "$rally_point" "Get hostname from field $hostname_field for rally point in $asg_name: $rally_point"
+
+  log_info "Rally point for this ASG has hostname $hostname"
+  echo -n "$hostname"
 }
 
-function log_warn {
-  local readonly message="$1"
-  log "WARN" "$message"
+function couchbase_cli {
+  local readonly args=($@)
+
+  "$COUCHBASE_BIN_DIR/couchbase-cli" "${args[@]}"
 }
 
-function log_error {
-  local readonly message="$1"
-  log "ERROR" "$message"
+function init_new_cluster {
+  local readonly rally_point_hostname="$1"
+  local readonly cluster_name="$2"
+  local readonly cluster_port="$3"
+  local readonly cluster_username="$4"
+  local readonly cluster_password="$5"
+  local readonly index_storage_setting="$6"
+  local readonly data_ramsize="$7"
+  local readonly fts_ramsize="$8"
+  local readonly index_ramsize="$9"
+  local readonly services="${10}"
+
+  log_info "Initializing cluster $cluster_name"
+
+  local cluster_init_args=()
+
+  cluster_init_args+=("cluster-init")
+  cluster_init_args+=("--cluster=$rally_point_hostname")
+  cluster_init_args+=("--cluster-name=$cluster_name")
+  cluster_init_args+=("--cluster-port=$cluster_port")
+  cluster_init_args+=("--cluster-username=$cluster_username")
+  cluster_init_args+=("--cluster-password=$cluster_password")
+  cluster_init_args+=("--index-storage-setting=$index_storage_setting")
+  cluster_init_args+=("--services=$services")
+
+  if string_contains "$services" "data"; then
+    cluster_init_args+=("--cluster-ramsize=$data_ramsize")
+  fi
+
+  if string_contains "$services" "index"; then
+    cluster_init_args+=("--cluster-index-ramsize=$index_ramsize")
+  fi
+
+  if string_contains "$services" "fts"; then
+    cluster_init_args+=("--cluster-fts-ramsize=$fts_ramsize")
+  fi
+
+  # TODO: check if cluster already initialized?
+  # TODO: do in a retry loop?
+  couchbase_cli "${cluster_init_args[@]}"
 }
 
-function init_cluster {
-  log_info "TODO"
+function add_server_to_cluster {
+  local readonly rally_point_hostname="$1"
+  local readonly cluster_name="$2"
+  local readonly cluster_port="$3"
+  local readonly cluster_username="$4"
+  local readonly cluster_password="$5"
+  local readonly index_storage_setting="$6"
+  local readonly node_hostname="$7"
+  local readonly services="$8"
 
-  # From: https://developer.couchbase.com/documentation/server/current/install/init-setup.html
-#  totalRAM=$(grep MemTotal /proc/meminfo | awk '{print $2}')
-#  dataRAM=$((50 * $totalRAM / 100000))
-#  indexRAM=$((25 * $totalRAM / 100000))
-#
-#  echo "Running couchbase-cli cluster-init"
-#  ./couchbase-cli cluster-init \
-#    --cluster=$nodePublicDNS \
-#    --cluster-username=$adminUsername \
-#    --cluster-password=$adminPassword \
-#    --cluster-ramsize=$dataRAM \
-#    --cluster-index-ramsize=$indexRAM \
-#    --services=${services}
+  log_info "Adding $node_hostname to cluster $cluster_name with rally point $rally_point_hostname"
+
+  local server_add_args=()
+
+  server_add_args+=("server-add")
+  server_add_args+=("--cluster=$rally_point_hostname:$cluster_port")
+  server_add_args+=("--user=$cluster_username")
+  server_add_args+=("--pass=$cluster_password")
+  server_add_args+=("--server-add=$node_hostname:$cluster_port")
+  server_add_args+=("--server-add-username=$cluster_username")
+  server_add_args+=("--server-add-password=$cluster_password")
+  server_add_args+=("--index-storage-setting=$index_storage_setting")
+  server_add_args+=("--services=$services")
+
+  # TODO: do in a retry loop?
+  couchbase_cli "${server_add_args[@]}"
+}
+
+function rebalance_cluster {
+  local readonly rally_point_hostname="$1"
+  local readonly cluster_name="$2"
+  local readonly cluster_port="$3"
+  local readonly cluster_username="$4"
+  local readonly cluster_password="$5"
+
+  log_info "Rebalancing cluster $cluster_name with rally point $rally_point_hostname"
+
+  local rebalance_args=()
+
+  rebalance_args+=("rebalance")
+  rebalance_args+=("--cluster=$rally_point_hostname:$cluster_port")
+  rebalance_args+=("--user=$cluster_username")
+  rebalance_args+=("--pass=$cluster_password")
+
+  # TODO: do in a retry loop?
+  couchbase_cli "${rebalance_args}"
+}
+
+function join_existing_cluster {
+  local readonly rally_point_hostname="$1"
+  local readonly cluster_name="$2"
+  local readonly cluster_port="$3"
+  local readonly cluster_username="$4"
+  local readonly cluster_password="$5"
+  local readonly index_storage_setting="$6"
+  local readonly node_hostname="$7"
+  local readonly services="$8"
+
+  log_info "Joining cluster $cluster_name"
+
+  add_server_to_cluster \
+    "$rally_point_hostname" \
+    "$cluster_name" \
+    "$cluster_port" \
+    "$cluster_username" \
+    "$cluster_password" \
+    "$index_storage_setting" \
+    "$node_hostname" \
+    "$services"
+
+  rebalance_cluster \
+    "$rally_point_hostname" \
+    "$cluster_name" \
+    "$cluster_port" \
+    "$cluster_username" \
+    "$cluster_password" \
+}
+
+function assert_memory_settings_specified_automatically {
+  local readonly data_ramsize="$1"
+  local readonly index_ramsize="$2"
+  local readonly fts_ramsize="$3"
+
+  assert_empty "--data-ramsize" "$data_ramsize" "This flag can only be set if the --manage-memory-manually flag is set."
+  assert_empty "--index-ramsize" "$index_ramsize" "This flag can only be set if the --manage-memory-manually flag is set."
+  assert_empty "--fts-ramsize" "$fts_ramsize" "This flag can only be set if the --manage-memory-manually flag is set."
+}
+
+function assert_memory_settings_specified_manually {
+  local readonly services="$1"
+  local readonly data_ramsize="$2"
+  local readonly index_ramsize="$3"
+  local readonly fts_ramsize="$4"
+
+  log_info "The --manage-memory-manually flag is set. Checking that you've specified memory settings for all services..."
+
+  if string_contains "$services" "data"; then
+    assert_not_empty "--data-ramsize" "$data_ramsize" "The --manage-memory-manually flag is set and the data service is included in --services."
+  fi
+
+  if string_contains "$services" "index"; then
+    assert_not_empty "--index-ramsize" "$index_ramsize" "The --manage-memory-manually flag is set and the index service is included in --services."
+  fi
+
+  if string_contains "$services" "fts"; then
+    assert_not_empty "--fts-ramsize" "$fts_ramsize" "The --manage-memory-manually flag is set and the fts service is included in --services."
+  fi
+}
+
+function calculate_memory_settings_automatically {
+  local readonly services="$1"
+
+  log_info "Calculating memory settings automatically..."
+
+  # Note on the memory math below: bash cannot do floating point arithmetic! So we have to use solely integer math.
+  local available_memory_mb
+  available_memory_mb=$(get_available_memory_mb)
+
+  local data_ramsize
+  local index_ramsize
+  local fts_ramsize
+
+  if string_contains "$services" "data" && string_contains "$services" "index" && string_contains "$services" "fts"; then
+    data_ramsize=$(($available_memory_mb * 40 / 100))
+    index_ramsize=$(($available_memory_mb * 20 / 100))
+    fts_ramsize=$(($available_memory_mb * 15 / 100))
+  elif string_contains "$services" "data" && string_contains "$services" "index"; then
+    data_ramsize=$(($available_memory_mb * 50 / 100))
+    index_ramsize=$(($available_memory_mb * 25 / 100))
+  elif string_contains "$services" "data" && string_contains "$services" "fts"; then
+    data_ramsize=$(($available_memory_mb * 50 / 100))
+    fts_ramsize=$(($available_memory_mb * 25 / 100))
+  elif string_contains "$services" "data"; then
+    data_ramsize=$(($available_memory_mb * 75 / 100))
+  elif string_contains "$services" "index"; then
+    index_ramsize=$(($available_memory_mb * 75 / 100))
+  elif string_contains "$services" "fts"; then
+    fts_ramsize=$(($available_memory_mb * 75 / 100))
+  fi
+
+  # This is a hacky way to return multiple values from Bash that happens to work because our values contain no spaces
+  # https://stackoverflow.com/a/39063403/483528
+  echo "$data_ramsize" "$index_ramsize" "$fts_ramsize"
 }
 
 function run {
-  local services=()
+  local services="$DEFAULT_SERVICES"
+  local hostname
+  local rally_point_hostname
+  local use_public_hostname="false"
+  local cluster_name
+  local cluster_port="$DEFAULT_CLUSTER_PORT"
+  local cluster_username
+  local cluster_password
+  local index_storage_setting="$DEFAULT_INDEX_STORAGE_SETTING"
+  local aws_region
+  local asg_name
+  local manage_memory_manually="false"
+  local data_ramsize
+  local fts_ramsize
+  local index_ramsize
 
   while [[ $# > 0 ]]; do
     local key="$1"
 
     case "$key" in
+      --asg-name)
+        asg_name="$2"
+        shift
+        ;;
+      --region)
+        aws_region="$2"
+        shift
+        ;;
+      --services)
+        assert_not_empty "$key" "$2"
+        services="$2"
+        shift
+        ;;
+      --cluster-name)
+        assert_not_empty "$key" "$2"
+        cluster_name="$2"
+        shift
+        ;;
+      --cluster-port)
+        assert_not_empty "$key" "$2"
+        cluster_port="$2"
+        shift
+        ;;
+      --cluster-username)
+        cluster_username="$2"
+        shift
+        ;;
+      --cluster-password)
+        cluster_username="$2"
+        shift
+        ;;
+      --index-storage-setting)
+        assert_not_empty "$key" "$2"
+        index_storage_setting="$2"
+        shift
+        ;;
+      --hostname)
+        assert_not_empty "$key" "$2"
+        hostname="$2"
+        shift
+        ;;
+      --rally-point-hostname)
+        assert_not_empty "$key" "$2"
+        rally_point_hostname="$2"
+        shift
+        ;;
+      --use-public-hostname)
+        use_public_hostname="true"
+        ;;
+      --manage-memory-manually)
+        manage_memory_manually="true"
+        ;;
+      --data-ramsize)
+        assert_not_empty "$key" "$2"
+        data_ramsize="$2"
+        shift
+        ;;
+      --fts-ramsize)
+        assert_not_empty "$key" "$2"
+        fts_ramsize="$2"
+        shift
+        ;;
+      --index-ramsize)
+        assert_not_empty "$key" "$2"
+        index_ramsize="$2"
+        shift
+        ;;
       --help)
         print_usage
         exit
         ;;
       *)
-        if array_contains "$key" "${ALL_SERVICE_FLAGS[@]}"; then
-          services+=("$key")
-          shift
-        else
-          log_error "Unrecognized argument: $key"
-          print_usage
-          exit 1
-        fi
+        log_error "Unrecognized argument: $key"
+        print_usage
+        exit 1
         ;;
     esac
 
     shift
   done
 
-  if [[ -z "${services[@]}" || array_contains "$ALL_FLAG" "$services[@]" ]]; then
-    log_info "Defaulting to all Couchbase services"
-    services="${COUCHBASE_SERVICE_FLAGS[@]}"
+  assert_is_installed "aws"
+  assert_is_installed "jq"
+
+  assert_not_empty "--asg-name" "$asg_name"
+  assert_not_empty "--region" "$aws_region"
+  assert_not_empty "--cluster-username" "$cluster_username"
+  assert_not_empty "--cluster-password" "$cluster_password"
+
+  log_info "Starting configuration of Couchbase server..."
+
+  if [[ -z "$cluster_name" ]]; then
+    log_info "Using ASG name $asg_name as cluster name"
+    cluster_name="$asg_name"
   fi
 
-  init_cluster
+  if [[ "$manage_memory_manually" == "true" ]]; then
+    assert_memory_settings_specified_manually "$services" "$data_ramsize" "$index_ramsize" "$fts_ramsize"
+  else
+    assert_memory_settings_specified_automatically "$data_ramsize" "$index_ramsize" "$fts_ramsize"
+    read data_ramsize index_ramsize fts_ramsize < <(calculate_memory_settings_automatically "$services")
+  fi
 
-  # TODO: this script is a work in progress!
+  if [[ -z "$hostname" ]]; then
+    hostname=$(get_hostname "$use_public_hostname")
+  fi
+
+  if [[ -z "$rally_point_hostname" ]]; then
+    rally_point_hostname=$(get_rally_point_hostname "$aws_region" "$asg_name" "$use_public_hostname")
+  fi
+
+  if [[ "$hostname" == "$rally_point_hostname" ]]; then
+    log_info "This server is the rally point for cluster $cluster_name, $rally_point_hostname!"
+    init_new_cluster \
+      "$rally_point_hostname" \
+      "$cluster_name" \
+      "$cluster_port" \
+      "$cluster_username" \
+      "$cluster_password" \
+      "$index_storage_setting" \
+      "$data_ramsize" \
+      "$fts_ramsize" \
+      "$index_ramsize" \
+      "$services"
+  else
+    log_info "This rally point for cluster $cluster_name is $rally_point_hostname."
+    join_existing_cluster \
+      "$rally_point_hostname" \
+      "$cluster_name" \
+      "$cluster_port" \
+      "$cluster_username" \
+      "$cluster_password" \
+      "$index_storage_setting" \
+      "$hostname" \
+      "$services"
+  fi
+
+  log_info "Couchbase server configured successfully!"
 }
 
 run "$@"
