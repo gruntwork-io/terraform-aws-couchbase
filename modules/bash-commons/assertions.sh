@@ -2,9 +2,8 @@
 
 set -e
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-source "$SCRIPT_DIR/logging.sh"
+readonly ASSERTIONS_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$ASSERTIONS_SCRIPT_DIR/logging.sh"
 
 # Check that the given binary is available on the PATH. If it's not, exit with an error.
 function assert_is_installed {

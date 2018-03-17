@@ -3,7 +3,7 @@
 set -e
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly BASH_COMMONS_INSTALL_DIR="/opt/bash-commons"
+readonly BASH_COMMONS_INSTALL_DIR="$SCRIPT_DIR/../bash-commons"
 
 readonly COUCHBASE_BASE_DIR="/opt/couchbase"
 readonly COUCHBASE_BIN_DIR="$COUCHBASE_BASE_DIR/bin"
@@ -26,25 +26,25 @@ function print_usage {
   echo
   echo "Required arguments:"
   echo
-  echo -e "  --asg-name\t\tThe name of the Auto Scaling Group on which the Couchbase Cluster is deployed."
-  echo -e "  --region\t\tThe AWS region we are in."
+  echo -e "  --asg-name\t\t\tThe name of the Auto Scaling Group on which the Couchbase Cluster is deployed."
+  echo -e "  --region\t\t\tThe AWS region we are in."
   echo -e "  --cluster-username\t\tThe username for the Couchbase cluster."
   echo -e "  --cluster-password\t\tThe password for the Couchbase cluster."
   echo
   echo "Optional arguments:"
   echo
-  echo -e "  --services\t\tComma-separated list of Couchbase service to run. Default: $DEFAULT_SERVICES."
+  echo -e "  --services\t\t\tComma-separated list of Couchbase service to run. Default: $DEFAULT_SERVICES."
   echo -e "  --cluster-name\t\tThe name of the Couchbase cluster. Default: use --asg-name."
   echo -e "  --cluster-port\t\tThe port the Couchbase cluster will use. Default: $DEFAULT_CLUSTER_PORT."
-  echo -e "  --index-storage-setting\t\tThe index storage mode for the index service. Must be one of: default, memopt. Default: $DEFAULT_INDEX_STORAGE_SETTING."
-  echo -e "  --hostname\t\tThe hostname to use for this node. Default: look up the node's private hostname in EC2 metadata."
+  echo -e "  --index-storage-setting\tThe index storage mode for the index service. Must be one of: default, memopt. Default: $DEFAULT_INDEX_STORAGE_SETTING."
+  echo -e "  --hostname\t\t\tThe hostname to use for this node. Default: look up the node's private hostname in EC2 metadata."
   echo -e "  --use-public-hostname\t\tIf this flag is set, use the node's public hostname from EC2 metadata."
-  echo -e "  --rally-point-hostname\t\tThe hostname of the rally point server that initialized the cluster. If not set, automatically pick a rally point server in the ASG."
-  echo -e "  --manage-memory-manually\t\tIf this flag is set, you can set memory settings manually via the --data-ramsize, --fts-ramsize, and --index-ramsize arguments."
+  echo -e "  --rally-point-hostname\tThe hostname of the rally point server that initialized the cluster. If not set, automatically pick a rally point server in the ASG."
+  echo -e "  --manage-memory-manually\tIf this flag is set, you can set memory settings manually via the --data-ramsize, --fts-ramsize, and --index-ramsize arguments."
   echo -e "  --data-ramsize\t\tThe data service memory quota in MB. Only used if --manage-memory-manually is set."
   echo -e "  --index-ramsize\t\tThe index service memory quota in MB. Only used if --manage-memory-manually is set."
-  echo -e "  --fts-ramsize\t\tThe full-text service memory quota in MB. Only used if --manage-memory-manually is set."
-  echo -e "  --help\t\tShow this help text and exit."
+  echo -e "  --fts-ramsize\t\t\tThe full-text service memory quota in MB. Only used if --manage-memory-manually is set."
+  echo -e "  --help\t\t\tShow this help text and exit."
   echo
   echo "Example:"
   echo
@@ -219,7 +219,7 @@ function join_existing_cluster {
     "$cluster_name" \
     "$cluster_port" \
     "$cluster_username" \
-    "$cluster_password" \
+    "$cluster_password"
 }
 
 function assert_memory_settings_specified_automatically {

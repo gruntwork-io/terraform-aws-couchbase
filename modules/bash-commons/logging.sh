@@ -2,13 +2,12 @@
 
 set -e
 
-readonly SCRIPT_NAME="$(basename "$0")"
-
 function log {
   local readonly level="$1"
   local readonly message="$2"
   local readonly timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-  >&2 echo -e "${timestamp} [${level}] [$SCRIPT_NAME] ${message}"
+  local readonly script_name="$(basename "$0")"
+  >&2 echo -e "${timestamp} [${level}] [$script_name] ${message}"
 }
 
 function log_info {
