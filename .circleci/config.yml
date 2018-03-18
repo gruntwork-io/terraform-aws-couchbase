@@ -1,0 +1,55 @@
+version: 2
+jobs:
+  test:
+    # We need to run Docker Compose with volumes, which isn't supported by CircleCI's Docker executor, so we have to use
+    # the machine executor instead.
+    machine: true
+    steps:
+      - checkout
+
+      # The weird way you have to set PATH in Circle 2.0
+      - run: echo 'export PATH=$HOME/.local/bin:$HOME/terraform:$HOME/packer:$PATH' >> $BASH_ENV
+
+      # Install Gruntwork and HashiCorp dependencies
+      - restore_cache:
+          keys:
+            - v1-external-dep
+            - v1-dep-{{ checksum "test/Gopkg.lock" }}
+      # Use the Gruntwork Installer to install the gruntwork-module-circleci-helpers
+      - run: curl -Ls https://raw.githubusercontent.com/gruntwork-io/gruntwork-installer/master/bootstrap-gruntwork-installer.sh | bash /dev/stdin --version v0.0.21
+      - run: gruntwork-install --module-name "gruntwork-module-circleci-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "v0.7.1"
+      - run: configure-environment-for-gruntwork-module --circle-ci-2-machine-executor --go-src-path test --use-go-dep
+      - save_cache:
+          key: v1-external-dep
+          paths:
+            - $HOME/terraform
+            - $HOME/packer
+      - save_cache:
+          key: v1-dep-{{ checksum "test/Gopkg.lock" }}
+          paths:
+            - $HOME/.go_workspace/src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/test/vendor
+
+      # Install external dependencies
+      - run: DEBIAN_FRONTEND=noninteractive sudo apt-get update && sudo apt-get install -y python-pip
+      - run: pip install pre-commit awscli
+
+      # Fail the build if the pre-commit hooks don't pass. Note: if you run "pre-commit install" locally in the roo repo
+      # folder, these hooks will execute automatically every time before you commit, ensuring the build never fails at this step!
+      - run: pre-commit install
+      - run: pre-commit run --all-files
+
+      # Run the tests
+      - run: run-go-tests --path test --timeout 90m
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test:
+          # We have to explicitly tell CircleCi to run on all tags and branches, or tag commits/pushes will not trigger
+          # builds: https://circleci.com/docs/2.0/workflows/#git-tag-job-execution.
+          filters:
+            branches:
+              only: /.*/
+            tags:
+              only: /.*/
