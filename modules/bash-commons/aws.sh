@@ -46,7 +46,7 @@ function wait_for_instance_tags {
 
     local count_tags
     count_tags=$(echo $tags | jq -r ".Tags? | length")
-    log_info "Found $count_tags for $instance_id."
+    log_info "Found $count_tags tags for $instance_id."
 
     if [[ "$count_tags" -gt 0 ]]; then
       echo "$tags"

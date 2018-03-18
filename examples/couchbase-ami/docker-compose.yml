@@ -16,10 +16,10 @@ services:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
       - ../../modules/bash-commons:/opt/couchbase/bash-commons
       - ./mock/bash-commons/aws-primitives.sh:/opt/couchbase/bash-commons/aws-primitives.sh
-      - ../../modules/run-couchbase-server/run-couchbase-server:/opt/couchbase/bin/run-couchbase-server
+      - ../../modules/configure-couchbase-server/configure-couchbase-server:/opt/couchbase/bin/configure-couchbase-server
       - ./mock/user-data:/user-data
       - ./mock/entrypoint:/entrypoint
-      - ./mock/systemd/mock-run-couchbase-server.service:/lib/systemd/system/mock-run-couchbase-server.service
+      - ./mock/systemd/mock-configure-couchbase-server.service:/lib/systemd/system/mock-configure-couchbase-server.service
     ports:
       - "8091:8091"
       - "8092:8092"

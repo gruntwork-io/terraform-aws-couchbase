@@ -82,8 +82,8 @@ function update_swapiness {
 
 function install_run_couchbase_script {
   local readonly dest_dir="$1"
-  local readonly src="$SCRIPT_DIR/../run-couchbase-server/run-couchbase-server"
-  local readonly dest="$dest_dir/run-couchbase-server"
+  local readonly src="$SCRIPT_DIR/../configure-couchbase-server/configure-couchbase-server"
+  local readonly dest="$dest_dir/configure-couchbase-server"
 
   log_info "Copying $src to $dest"
   sudo cp "$src" "$dest"

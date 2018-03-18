@@ -1,7 +1,7 @@
 # Couchbase Server Run Script
 
-This folder contains a script for configuring and running Couchbase on an [AWS](https://aws.amazon.com/) server. This 
-script has been tested on the following operating systems:
+This folder contains a script for configuring and initializing Couchbase on an [AWS](https://aws.amazon.com/) server. 
+This script has been tested on the following operating systems:
 
 * Ubuntu 16.04
 * Amazon Linux
@@ -18,20 +18,21 @@ This script assumes you installed it, plus all of its dependencies (including Co
 The default install path is `/opt/couchbase/bin`, so to configure and start Couchbase, you run:
 
 ```
-/opt/couchbase/bin/run-couchbase-server --cluster-username <USERNAME> --cluser-password <PASSWORD>
+/opt/couchbase/bin/configure-couchbase-server --cluster-username <USERNAME> --cluser-password <PASSWORD>
 ```
 
 This will:
 
-1. Configure the OS, including swap, pages, and memory settings. 
-
-1. Use EC2 tags to find all the nodes in the cluster.
-
-1. Configure Couchbase using 
-   [couchbase-cli](https://developer.couchbase.com/documentation/server/current/cli/cbcli-intro.html), including
-   running `cluster-init`, `server-add`, and `rebalance` as necessary.
+1. Figure out a rally point for your Couchbase cluster. This is a "leader" node that will be responsible for 
+   initializing the cluster and/or replication.
    
-We recommend using the `run-couchbase-server` command as part of [User 
+1. Initialize the cluster, including configuring which services to run, credentials, and memory settings.
+
+1. Add nodes to the cluster.
+
+1. Rebalance the cluster.
+   
+We recommend using the `configure-couchbase-server` command as part of [User 
 Data](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html#user-data-shell-scripts), so that it executes
 when the EC2 Instance is first booting. 
 
@@ -43,10 +44,10 @@ fully-working sample code.
 
 ## Command line Arguments
 
-Run `run-couchbase-server --help` to see all available arguments.
+Run `configure-couchbase-server --help` to see all available arguments.
 
 ```
-Usage: run-couchbase-server [options]
+Usage: configure-couchbase-server [options]
 
 This script can be used to configure and run a Couchbase Server. This script has been tested with Ubuntu 16.04 and Amazon Linux.
 
@@ -72,22 +73,22 @@ Optional arguments:
 
 Example:
 
-  run-couchbase-server --cluster-username admin --cluser-password password
+  configure-couchbase-server --cluster-username admin --cluser-password password
 ```
 
 
 
 ## Passing credentials securely
 
-The `run-couchbase-server` requires that you pass in your cluster username and password. You should make sure to never 
+The `configure-couchbase-server` requires that you pass in your cluster username and password. You should make sure to never 
 store these credentials in plaintext! You should use a secrets management tool to store the credentials in an encrypted
-format and only decrypt them, in memory, just before calling `run-couchbase-server`. Here are some tools to consider:
+format and only decrypt them, in memory, just before calling `configure-couchbase-server`. Here are some tools to consider:
 
 * [Vault](https://www.vaultproject.io/)
 * [Keywhiz](https://square.github.io/keywhiz/)
 * [KMS](https://aws.amazon.com/kms/)
 
-Moreover, if you're ever calling `run-couchbase-server` interactively (i.e., you're manually running CLI commands
+Moreover, if you're ever calling `configure-couchbase-server` interactively (i.e., you're manually running CLI commands
 rather than executing a script), be careful of passing credentials directly on the command line, or they will be 
 stored, in plaintext, [in Bash 
 history](https://www.digitalocean.com/community/tutorials/how-to-use-bash-history-commands-and-expansions-on-a-linux-vps)!
@@ -99,7 +100,7 @@ history](https://linuxconfig.org/how-to-disable-bash-shell-commands-history-on-l
 
 ## Required permissions
 
-The `run-couchbase-server` script assumes it is running on an EC2 Instance with an [IAM 
+The `configure-couchbase-server` script assumes it is running on an EC2 Instance with an [IAM 
 Role](http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) that has the following permissions:
 
 * `ec2:DescribeInstances`
