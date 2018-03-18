@@ -54,6 +54,8 @@ function print_usage {
   echo "  run-couchbase-server --asg-name couchbase-prod --region us-east-1 --cluster-username admin --cluser-password password"
 }
 
+# Get the hostname to use for this EC2 Instance. Use the public hostname if the first argument is true and the private
+# hostname otherwise.
 function get_hostname {
   local readonly use_public_hostname="$1"
 
@@ -66,11 +68,11 @@ function get_hostname {
   fi
 }
 
-# Identify the server to use as a "rally point." This is the "leader" of the cluster that will be used to initialize
+# Identify the server to use as a "rally point." This is the "leader" of the cluster that can be used to initialize
 # the cluster and kick off replication. We use a simple technique to identify a unique rally point in each ASG: look
 # up all the Instances in the ASG and select the one with the oldest launch time. If there is a tie, pick the one with
-# the lowest Instance ID (alphabetically). This way, all servers will always select the same server as the rally point,
-# so long as that server is alive. If it dies, the next oldest server will be selected.
+# the lowest Instance ID (alphabetically). This way, all servers will always select the same server as the rally point.
+# If the rally point server dies, all servers will then select the next oldest launch time / lowest Instance ID.
 function get_rally_point_hostname {
   local readonly aws_region="$1"
   local readonly asg_name="$2"
@@ -98,12 +100,14 @@ function get_rally_point_hostname {
   echo -n "$hostname"
 }
 
+# Run the couchbase CLI with the given arguments.
 function couchbase_cli {
   local readonly args=($@)
 
   "$COUCHBASE_BIN_DIR/couchbase-cli" "${args[@]}"
 }
 
+# Returns true (0) if the Couchbase cluster has already been initialized and false otherwise.
 function cluster_is_initialized {
   local readonly rally_point_hostname="$1"
   local readonly cluster_name="$2"
@@ -117,8 +121,11 @@ function cluster_is_initialized {
   string_contains "$cluster_status" "healthy active"
 }
 
+# Returns true if the Couchbase server at the given hostname has booted. Note that this ONLY checks if the Couchbase
+# process is running and responding to queries; it does NOT check if the Couchbase server has joined the cluster and is
+# active.
 function couchbase_is_running {
-  local readonly rally_point_hostname="$1"
+  local readonly node_hostname="$1"
   local readonly cluster_name="$2"
   local readonly cluster_port="$3"
   local readonly cluster_username="$4"
@@ -126,7 +133,7 @@ function couchbase_is_running {
 
   set +e
   local cluster_status
-  cluster_status=$(get_cluster_status "$rally_point_hostname" "$cluster_name" "$cluster_port" "$cluster_username" "$cluster_password")
+  cluster_status=$(get_cluster_status "$node_hostname" "$cluster_name" "$cluster_port" "$cluster_username" "$cluster_password")
   set -e
 
   string_contains "$cluster_status" "healthy active" || string_contains "$cluster_status" "unknown pool"
@@ -139,7 +146,7 @@ function couchbase_is_running {
 # ns_1@172.19.0.3 172.19.0.3:8091 healthy active
 # ns_1@172.19.0.4 172.19.0.4:8091 healthy active
 #
-# Otherwise, returns error text from the server-list command.
+# Otherwise, returns error text (e.g., "unknown pool") from the server-list command.
 function get_cluster_status {
   local readonly rally_point_hostname="$1"
   local readonly cluster_name="$2"
@@ -165,6 +172,9 @@ function get_cluster_status {
   echo -n "$out"
 }
 
+# Returns true if the node with the given hostname has already been added (via the server-add command) to the Couchbase
+# cluster. Note that this does NOT necessarily mean the new node is active; in order for the node to be active, you
+# not only need to add it, but also rebalance the cluster. See also node_is_active_in_cluster.
 function node_is_added_to_cluster {
   local readonly rally_point_hostname="$1"
   local readonly cluster_name="$2"
@@ -179,6 +189,8 @@ function node_is_added_to_cluster {
   multiline_string_contains "$cluster_status" "$node_hostname:$cluster_port healthy"
 }
 
+# Returns true if the node with the given hostname has already been added (via the server-add command) to the Couchbase
+# cluster and is active (via the rebalance command).
 function node_is_active_in_cluster {
   local readonly rally_point_hostname="$1"
   local readonly cluster_name="$2"
@@ -193,6 +205,9 @@ function node_is_active_in_cluster {
   multiline_string_contains "$cluster_status" "$node_hostname:$cluster_port healthy active"
 }
 
+# Add the given rally point server to the Couchbase cluster. If the cluster has not yet been initialized, this will
+# result in the cluster being initialized with this rally point. If the cluster has already been initialized, then
+# this server will be added as another node to that existing cluster.
 function add_rallypoint_to_cluster {
   local readonly rally_point_hostname="$1"
   local readonly cluster_name="$2"
@@ -234,6 +249,9 @@ function add_rallypoint_to_cluster {
   fi
 }
 
+# Wait until the given Couchbase cluster has been initialized. This is primarily useful during the initial deployment
+# of a new Couchbase cluster, where non rally point nodes want to join the cluster, but must wait for the rally point
+# to first initialize the cluster.
 function wait_for_cluster_to_be_initialized {
   local readonly rally_point_hostname="$1"
   local readonly cluster_name="$2"
@@ -257,29 +275,33 @@ function wait_for_cluster_to_be_initialized {
   exit 1
 }
 
+# Wait for Couchbase to boot on the node at the given hostname. Note that this ONLY waits for the Couchbase process to
+# boot and start responding to queries; it does NOT check that the Couchbase server has joined a cluster or is active.
 function wait_for_couchbase_to_boot {
-  local readonly rally_point_hostname="$1"
+  local readonly node_hostname="$1"
   local readonly cluster_name="$2"
   local readonly cluster_port="$3"
   local readonly cluster_username="$4"
   local readonly cluster_password="$5"
 
-  log_info "Checking if Couchbase server $rally_point_hostname is booted"
+  log_info "Checking if Couchbase server $node_hostname is booted"
 
   for (( i=1; i<="$MAX_RETRIES"; i++ )); do
-    if couchbase_is_running "$rally_point_hostname" "$cluster_name" "$cluster_port" "$cluster_username" "$cluster_password"; then
-      log_info "Couchbase server $rally_point_hostname is booted."
+    if couchbase_is_running "$node_hostname" "$cluster_name" "$cluster_port" "$cluster_username" "$cluster_password"; then
+      log_info "Couchbase server $node_hostname has booted."
       return
     else
-      log_warn "Couchbase server $rally_point_hostname is not yet booted. Will sleep for $SLEEP_BETWEEN_RETRIES_SEC seconds and check again."
+      log_warn "Couchbase server $node_hostname has not yet booted. Will sleep for $SLEEP_BETWEEN_RETRIES_SEC seconds and check again."
       sleep "$SLEEP_BETWEEN_RETRIES_SEC"
     fi
   done
 
-  log_error "Couchbase server $rally_point_hostname still not booted after $MAX_RETRIES retries."
+  log_error "Couchbase server $node_hostname still not booted after $MAX_RETRIES retries."
   exit 1
 }
 
+# Initialize a new Couchbase cluster. This command should (a) only be executed from the rally point node and (b) only
+# be executed once per cluster. Use cluster_is_initialized to check if a cluster is already initialized.
 function init_new_cluster {
   local readonly rally_point_hostname="$1"
   local readonly cluster_name="$2"
@@ -320,6 +342,9 @@ function init_new_cluster {
   couchbase_cli "${cluster_init_args[@]}"
 }
 
+# Add the given node with the given hostname to the given Couchbase cluster using the server-add command. Note that
+# this will NOT result in the node being active; to do that, you must not only add the node, but also rebalance the
+# cluster using the rebalance_cluster function.
 function add_server_to_cluster {
   local readonly rally_point_hostname="$1"
   local readonly cluster_name="$2"
@@ -347,6 +372,8 @@ function add_server_to_cluster {
   couchbase_cli "${server_add_args[@]}"
 }
 
+# Rebalance the cluster. This command must be called each time you add a new node; until it's called, the node will not
+# be in active state and won't actually serve any traffic.
 function rebalance_cluster {
   local readonly rally_point_hostname="$1"
   local readonly cluster_name="$2"
@@ -367,6 +394,8 @@ function rebalance_cluster {
   couchbase_cli "${rebalance_args[@]}"
 }
 
+# Join a node to an existing Couchbase cluster. This method is idempotent: it will add the node to the cluster if it
+# hasn't been added already and rebalance the cluster if the node isn't active already.
 function join_existing_cluster {
   local readonly rally_point_hostname="$1"
   local readonly cluster_name="$2"
@@ -407,6 +436,10 @@ function join_existing_cluster {
   fi
 }
 
+# Check that the user has not manually specified any of the memory settings and exit with an error if they have. To
+# keep things simple, we allow either (a) all memory settings to be specified manually, for which the user must set
+# the --manage-memory-manually flag or (b) all memory settings to be calculated automatically, in which case we use
+# this method to make sure the user isn't fooled into believing some of their manual settings are being used.
 function assert_memory_settings_specified_automatically {
   local readonly data_ramsize="$1"
   local readonly index_ramsize="$2"
@@ -417,6 +450,10 @@ function assert_memory_settings_specified_automatically {
   assert_empty "--fts-ramsize" "$fts_ramsize" "This flag can only be set if the --manage-memory-manually flag is set."
 }
 
+# Check check that the user has manually specified the memory settings for each service they requested and exit with
+# an error if any memory settings are missing. To keep things simple, we allow either (a) all memory settings to be
+# calculated automatically or (b) all memory settings to be specified manually, for which the user must set the
+# --manage-memory-manually flag, and we use this method to make sure they've specified all the required settings.
 function assert_memory_settings_specified_manually {
   local readonly services="$1"
   local readonly data_ramsize="$2"
@@ -438,13 +475,13 @@ function assert_memory_settings_specified_manually {
   fi
 }
 
-# Automatically determine how much memory to provide Couchbase data nodes, index nodes, and full text search nodes.
-# We use a very simple calculation here to keep things simple:
+# Automatically determine how much memory to provide Couchbase data nodes, index nodes, and full text search (fts)
+# nodes. We use a very simple calculation here:
 #
 # 1. If we're only running a single service, give it 75% of the memory on the server.
-# 2. If we're running the data + index or data + fts, give data 50% and the other service 25%.
-# 3. If we're running the data + index + fts, give data 40%, index 20%, and fts 15%.
-# 4. If we're running index + fts, give index 50% and fts 25%.
+# 2. If we're running the data + index services or data + fts services, give data 50% and the other service 25%.
+# 3. If we're running the data + index + fts services, give data 40%, index 20%, and fts 15%.
+# 4. If we're running the index + fts services, give index 50% and fts 25%.
 #
 # In the future, we may want to use more sophisticated strategies to better deal with servers with a tiny or huge
 # amount of memory.
@@ -486,6 +523,7 @@ function calculate_memory_settings_automatically {
   echo "$data_ramsize" "$index_ramsize" "$fts_ramsize"
 }
 
+# The main entrypoint for this code
 function run {
   local services="$DEFAULT_SERVICES"
   local hostname
