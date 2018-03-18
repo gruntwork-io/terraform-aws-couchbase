@@ -1,0 +1,45 @@
+version: '3'
+services:
+  couchbase-ubuntu-0: &couchbase_config
+    image: gruntwork/couchbase-ubuntu-test
+    entrypoint: ["/entrypoint/entrypoint.sh"]
+    container_name: couchbase-ubuntu-0
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp:unconfined
+    tmpfs:
+      - /run
+      - /run/lock
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - ../../modules/bash-commons:/opt/couchbase/bash-commons
+      - ./mock/bash-commons/aws-primitives.sh:/opt/couchbase/bash-commons/aws-primitives.sh
+      - ../../modules/configure-couchbase-server/configure-couchbase-server:/opt/couchbase/bin/configure-couchbase-server
+      - ./mock/user-data:/user-data
+      - ./mock/entrypoint:/entrypoint
+      - ./mock/systemd/mock-configure-couchbase-server.service:/lib/systemd/system/mock-configure-couchbase-server.service
+    ports:
+      - "8091:8091"
+      - "8092:8092"
+      - "8093:8093"
+      - "8094:8094"
+
+  couchbase-ubuntu-1:
+    <<: *couchbase_config
+    container_name: couchbase-ubuntu-1
+    ports:
+      - "9091:8091"
+      - "9092:8092"
+      - "9093:8093"
+      - "9094:8094"
+
+  couchbase-ubuntu-2:
+    <<: *couchbase_config
+    container_name: couchbase-ubuntu-2
+    ports:
+      - "10091:8091"
+      - "10092:8092"
+      - "10093:8093"
+      - "10094:8094"

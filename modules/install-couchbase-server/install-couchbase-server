@@ -1,0 +1,159 @@
+#!/bin/bash
+
+set -e
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly BASH_COMMONS_DIR="$SCRIPT_DIR/../bash-commons"
+
+source "$BASH_COMMONS_DIR/logging.sh"
+source "$BASH_COMMONS_DIR/assertions.sh"
+source "$BASH_COMMONS_DIR/strings.sh"
+source "$BASH_COMMONS_DIR/os.sh"
+
+readonly DEFAULT_COUCHBASE_VERSION="5.1.0"
+readonly DEFAULT_COUCHBASE_SHA256_CHECKSUM="4d6a1f159577f283f6f980f6ab9161630eb2d8fd228429029de004b1be46ad76"
+readonly DEFAULT_SWAPINESS="0"
+
+readonly SWAPINESS_CONFIG_FILE="/etc/sysctl.conf"
+readonly DISABLE_THP_BOOT_SCRIPT="/etc/init.d/disable-thp"
+
+readonly DEFAULT_COUCHBASE_DIR="/opt/couchbase"
+readonly DEFAULT_COUCHBASE_BIN_DIR="$DEFAULT_COUCHBASE_DIR/bin"
+readonly BASH_COMMONS_INSTALL_DIR="$DEFAULT_COUCHBASE_DIR/bash-commons"
+
+function print_usage {
+  echo
+  echo "Usage: install-couchbase-server [options]"
+  echo
+  echo "This script can be used to install Couchbase Server and its dependencies. This script has been tested with Ubuntu 16.04 and Amazon Linux."
+  echo
+  echo "Options:"
+  echo
+  echo -e "  --version\t\tThe version of Couchbase to install. Default: $DEFAULT_COUCHBASE_VERSION."
+  echo -e "  --checksum\t\tThe SHA-256 checksum of the Couchbase package. Required if --version is specified. You can get it from the downloads page of the Couchbase website."
+  echo -e "  --swapiness\t\tThe OS swapiness setting to use. Couchbase recommends setting this to 0. Default: $DEFAULT_SWAPINESS."
+  echo
+  echo "Example:"
+  echo
+  echo "  install-couchbase-server --version $DEFAULT_COUCHBASE_VERSION --checksum $DEFAULT_COUCHBASE_SHA256_CHECKSUM"
+}
+
+function install_couchbase_on_ubuntu {
+  local readonly version="$1"
+  local readonly checksum="$2"
+
+  # TODO: what about the community edition?
+  local readonly filepath="couchbase-server-enterprise_${version}-ubuntu16.04_amd64.deb"
+  local readonly url="https://packages.couchbase.com/releases/$version/$filepath"
+
+  log_info "Installing Couchbase dependencies on Ubuntu"
+  sudo DEBIAN_FRONTEND=noninteractive apt-get update
+  sudo apt-get install -y python-httplib2
+
+  log_info "Downloading Couchbase from $url to $filepath"
+  curl --location --silent --fail --show-error -O "$url"
+
+  log_info "Verifying checksum is $checksum"
+  echo "$checksum $filepath" | sha256sum -c
+
+  log_info "Installing Couchbase from $filepath"
+  sudo dpkg -i "$filepath"
+
+  log_info "Cleaning up $filepath"
+  rm -f "$filepath"
+}
+
+# Couchbase recommends disabling transparent huge pages.
+# https://developer.couchbase.com/documentation/server/current/install/thp-disable.html
+function disable_transparent_huge_pages {
+  log_info "Adding boot script $DISABLE_THP_BOOT_SCRIPT to disable transparent huge pages"
+  sudo cp "$SCRIPT_DIR/disable-thp" "$DISABLE_THP_BOOT_SCRIPT"
+}
+
+# Couchbase recommends setting swapiness to 0 or 1.
+# https://developer.couchbase.com/documentation/server/current/install/install-swap-space.html
+function update_swapiness {
+  local readonly swapiness="$1"
+
+  log_info "Updating OS swapiness settings to $swapiness in $SWAPINESS_CONFIG_FILE"
+
+  replace_or_append_in_file "^vm.swappiness.*=.*$" "vm.swapiness = $swapiness" "$SWAPINESS_CONFIG_FILE"
+}
+
+function install_run_couchbase_script {
+  local readonly dest_dir="$1"
+  local readonly src="$SCRIPT_DIR/../configure-couchbase-server/configure-couchbase-server"
+  local readonly dest="$dest_dir/configure-couchbase-server"
+
+  log_info "Copying $src to $dest"
+  sudo cp "$src" "$dest"
+  sudo chmod +x "$dest"
+}
+
+function install_bash_commons {
+  local readonly dest_dir="$1"
+  local readonly src_dir="$BASH_COMMONS_DIR"
+
+  log_info "Copying $src_dir to $dest_dir"
+  sudo cp -r "$src_dir" "$dest_dir"
+}
+
+function install {
+  local version="$DEFAULT_COUCHBASE_VERSION"
+  local checksum="$DEFAULT_COUCHBASE_SHA256_CHECKSUM"
+  local swapiness="$DEFAULT_SWAPINESS"
+
+  while [[ $# > 0 ]]; do
+    local key="$1"
+
+    case "$key" in
+      --version)
+        assert_not_empty "$key" "$2"
+        version="$2"
+        shift
+        ;;
+      --checksum)
+        assert_not_empty "$key" "$2"
+        checksum="$2"
+        shift
+        ;;
+      --swapiness)
+        assert_not_empty "$key" "$2"
+        swapiness="$2"
+        shift
+        ;;
+      --help)
+        print_usage
+        exit
+        ;;
+      *)
+        log_error "Unrecognized argument: $key"
+        print_usage
+        exit 1
+        ;;
+    esac
+
+    shift
+  done
+
+  assert_is_installed "curl"
+
+  log_info "Starting Couchbase install..."
+
+  if is_ubuntu; then
+    install_couchbase_on_ubuntu "$version" "$checksum"
+  else
+    log_error "This script only supports Ubuntu and Amazon Linux."
+    exit 1
+  fi
+
+  install_run_couchbase_script "$DEFAULT_COUCHBASE_BIN_DIR"
+  install_bash_commons "$BASH_COMMONS_INSTALL_DIR"
+  update_swapiness "$swapiness"
+  disable_transparent_huge_pages
+
+  log_info "Couchbase installed successfully!"
+}
+
+install "$@"
+

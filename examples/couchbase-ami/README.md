@@ -25,7 +25,8 @@ To build the Couchbase AMI:
    set the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables.
 1. Update the `variables` section of the `couchbase.json` Packer template to specify the AWS region and Couchbase
    version you wish to use.
-1. Run `packer build couchbase.json`.
+1. To build an Ubuntu AMI: `packer build -only=ubuntu-ami couchbase.json`.
+1. To build an Amazon Linux AMI: `packer build -only=amazon-linux-ami couchbase.json`.
 
 When the build finishes, it will output the IDs of the new AMIs. To see how to deploy this AMI, check out the 
 [couchbase-single-cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-single-cluster), 
@@ -81,3 +82,27 @@ the [Releases Page](https://github.com/gruntwork-io/terraform-aws-couchbase/rele
 That's because for production usage, you should always use a fixed, known version of this Module, downloaded from the 
 official Git repo via `git clone`. On the other hand, when you're just experimenting with the Module, it's OK to use a 
 local checkout of the Module, uploaded from your own computer via the `file` provisioner.
+
+
+
+## Local testing
+
+The Packer template in this example folder can build not only AMIs, but also Docker images for local testing. This is
+convenient for testing out the various scripts in the `modules` folder without having to wait for an AMI to build and
+a bunch of EC2 Instances to boot up.
+
+To build the Docker image:
+
+```
+packer build -only=ubuntu-docker couchbase.json
+```
+
+To run the Docker image:
+
+```
+docker-compose up
+```
+
+Wait 10-15 seconds and then open your browser to http://localhost:8091/ and you will see the Couchbase Web Console!
+You can use the credentials in `mock/user-data/mock-couchbase.env` to login (default: `admin/password`).
+
