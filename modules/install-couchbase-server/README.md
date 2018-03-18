@@ -47,6 +47,21 @@ sample code).
 
 Run `install-couchbase-server --help` to see all available arguments.
 
+```
+Usage: install-couchbase-server [options]
+
+This script can be used to install Couchbase Server and its dependencies. This script has been tested with Ubuntu 16.04 and Amazon Linux.
+
+Options:
+
+  --version		  The version of Couchbase to install. Default: 5.1.0.
+  --checksum		The SHA-256 checksum of the Couchbase package. Required if --version is specified. You can get it from the downloads page of the Couchbase website.
+  --swapiness		The OS swapiness setting to use. Couchbase recommends setting this to 0. Default: 0.
+
+Example:
+
+  install-couchbase-server --version 5.1.0 --checksum 4d6a1f159577f283f6f980f6ab9161630eb2d8fd228429029de004b1be46ad76
+```
 
 
 

@@ -50,7 +50,7 @@ function print_usage {
   echo
   echo "Example:"
   echo
-  echo "  run-couchbase-server --region us-east-1 --cluster-username admin --cluser-password password"
+  echo "  run-couchbase-server --cluster-username admin --cluser-password password"
 }
 
 # Get the hostname to use for this EC2 Instance. Use the public hostname if the first argument is true and the private
