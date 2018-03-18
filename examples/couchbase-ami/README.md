@@ -104,4 +104,5 @@ docker-compose up
 ```
 
 Wait 10-15 seconds and then open your browser to http://localhost:8091/ and you will see the Couchbase Web Console!
+You can use the credentials in `mock/user-data/mock-couchbase.env` to login (default: `admin/password`).
 
