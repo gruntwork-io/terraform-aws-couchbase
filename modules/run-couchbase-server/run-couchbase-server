@@ -117,6 +117,21 @@ function cluster_is_initialized {
   string_contains "$cluster_status" "healthy active"
 }
 
+function couchbase_is_running {
+  local readonly rally_point_hostname="$1"
+  local readonly cluster_name="$2"
+  local readonly cluster_port="$3"
+  local readonly cluster_username="$4"
+  local readonly cluster_password="$5"
+
+  set +e
+  local cluster_status
+  cluster_status=$(get_cluster_status "$rally_point_hostname" "$cluster_name" "$cluster_port" "$cluster_username" "$cluster_password")
+  set -e
+
+  string_contains "$cluster_status" "healthy active" || string_contains "$cluster_status" "unknown pool"
+}
+
 # Get the status of the Couchbase cluster using the server-list command. If the cluster is initialized, returns output
 # of the format:
 #
@@ -190,6 +205,8 @@ function add_rallypoint_to_cluster {
   local readonly index_ramsize="$9"
   local readonly services="${10}"
 
+  wait_for_couchbase_to_boot "$rally_point_hostname" "$cluster_name" "$cluster_port" "$cluster_username" "$cluster_password"
+
   if cluster_is_initialized "$rally_point_hostname" "$cluster_name" "$cluster_port" "$cluster_username" "$cluster_password"; then
     log_info "Cluster $cluster_name is already initialized."
     join_existing_cluster \
@@ -237,6 +254,29 @@ function wait_for_cluster_to_be_initialized {
   done
 
   log_error "Cluster $cluster_name still not initialized after $MAX_RETRIES retries."
+  exit 1
+}
+
+function wait_for_couchbase_to_boot {
+  local readonly rally_point_hostname="$1"
+  local readonly cluster_name="$2"
+  local readonly cluster_port="$3"
+  local readonly cluster_username="$4"
+  local readonly cluster_password="$5"
+
+  log_info "Checking if Couchbase server $rally_point_hostname is booted"
+
+  for (( i=1; i<="$MAX_RETRIES"; i++ )); do
+    if couchbase_is_running "$rally_point_hostname" "$cluster_name" "$cluster_port" "$cluster_username" "$cluster_password"; then
+      log_info "Couchbase server $rally_point_hostname is booted."
+      return
+    else
+      log_warn "Couchbase server $rally_point_hostname is not yet booted. Will sleep for $SLEEP_BETWEEN_RETRIES_SEC seconds and check again."
+      sleep "$SLEEP_BETWEEN_RETRIES_SEC"
+    fi
+  done
+
+  log_error "Couchbase server $rally_point_hostname still not booted after $MAX_RETRIES retries."
   exit 1
 }
 
