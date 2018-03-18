@@ -61,6 +61,12 @@
   version = "v1.0.5"
 
 [[projects]]
+  name = "github.com/stretchr/testify"
+  packages = [".","assert"]
+  revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
+  version = "v1.2.1"
+
+[[projects]]
   name = "github.com/urfave/cli"
   packages = ["."]
   revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"

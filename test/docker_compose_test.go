@@ -13,12 +13,19 @@ import (
 	"github.com/gruntwork-io/terratest/shell"
 	"github.com/gruntwork-io/terratest/http"
 	"strings"
+	"gopkg.in/couchbase/gocb.v1"
+	"github.com/stretchr/testify/assert"
+	"github.com/gruntwork-io/terratest/util"
 )
 
 // The port numbers used by docker-compose.yml in the couchbase-ami example
-var testPorts = map[string]int{
+var testWebConsolePorts = map[string]int{
 	"ubuntu": 8091,
 }
+
+// The username and password we use in all the examples, mocks, and tests
+const usernameForTest = "admin"
+const passwordForTest = "password"
 
 func TestUnitCouchbaseUbuntuInDocker(t *testing.T) {
 	t.Parallel()
@@ -35,18 +42,21 @@ func testCouchbaseInDocker(t *testing.T, osName string) {
 	}
 	couchbaseExampleDir := filepath.Join(tmpRootDir, "examples", "couchbase-ami")
 
-	test_structure.RunTestStage("setup", logger, func() {
+	test_structure.RunTestStage("setup_image", logger, func() {
 		buildCouchbaseWithPacker(t, logger, fmt.Sprintf("%s-docker", osName), "us-east-1", couchbaseExampleDir)
 	})
 
-	test_structure.RunTestStage("validation", logger, func() {
+	test_structure.RunTestStage("setup_docker", logger, func() {
 		startCouchbaseWithDockerCompose(t, osName, couchbaseExampleDir, logger)
-		defer stopCouchbaseWithDockerCompose(t, couchbaseExampleDir, logger)
+	})
 
-		testUrl := fmt.Sprintf("http://localhost:%d", testPorts[osName])
-		checkCouchbaseConsoleIsRunning(t, testUrl, logger)
+	test_structure.RunTestStage("validation", logger, func() {
+		checkCouchbaseConsoleIsRunning(t, osName, logger)
+		checkCouchbaseDataNodesWorking(t, osName, logger)
+	})
 
-		// TODO: connect to Couchbase and write some data
+	defer test_structure.RunTestStage("teardown", logger, func() {
+		stopCouchbaseWithDockerCompose(t, couchbaseExampleDir, logger)
 	})
 }
 
@@ -93,7 +103,8 @@ func stopCouchbaseWithDockerCompose(t *testing.T, exampleDir string, logger *log
 	}
 }
 
-func checkCouchbaseConsoleIsRunning(t * testing.T, url string, logger *log.Logger) {
+func checkCouchbaseConsoleIsRunning(t *testing.T, osName string, logger *log.Logger) {
+	url := fmt.Sprintf("http://localhost:%d", testWebConsolePorts[osName])
 	maxRetries := 20
 	sleepBetweenRetries := 5 * time.Second
 
@@ -104,4 +115,127 @@ func checkCouchbaseConsoleIsRunning(t * testing.T, url string, logger *log.Logge
 	if err != nil {
 		t.Fatalf("Failed to connect to Couchbase at %s: %v", url, err)
 	}
+}
+
+func checkCouchbaseDataNodesWorking(t *testing.T, osName string, logger *log.Logger) {
+	adminUrl := fmt.Sprintf("http://localhost:%d", testWebConsolePorts[osName])
+
+	uniqueId := util.UniqueId()
+	testBucketName := fmt.Sprintf("test%s", uniqueId)
+	testKey := fmt.Sprintf("test-key-%s", uniqueId)
+	testValue := TestData{
+		Id: testKey,
+		Foo: fmt.Sprintf("test-value-%s", uniqueId),
+		Bar: 42,
+	}
+
+	clusterAdmin := connectToCluster(t, adminUrl, usernameForTest, logger)
+	userName := createBucket(t, clusterAdmin, testBucketName, logger)
+
+	clusterApi := connectToCluster(t, adminUrl, userName, logger)
+	bucket := openBucket(t, clusterApi, testBucketName, logger)
+
+	writeToBucket(t, bucket, testKey, testValue, logger)
+	actualValue := readFromBucket(t, bucket, testKey, logger)
+
+	assert.Equal(t, testValue, actualValue)
+}
+
+func connectToCluster(t *testing.T, url string, clusterUsername string, logger *log.Logger) *gocb.Cluster {
+	logger.Printf("Connecting to Couchbase at %s", url)
+
+	cluster, err := gocb.Connect(url)
+	if err != nil {
+		t.Fatalf("Failed to connect to Couchbase cluster at %s: %v", url, err)
+	}
+
+	authenticator := gocb.PasswordAuthenticator{
+		Username: clusterUsername,
+		Password: passwordForTest,
+	}
+
+	if err := cluster.Authenticate(authenticator); err != nil {
+		t.Fatalf("Failed to authenticate to Couchbase cluster at %s: %v", url, err)
+	}
+
+	return cluster
+}
+
+func createBucket(t *testing.T, cluster *gocb.Cluster, bucketName string, logger *log.Logger) string {
+	logger.Printf("Creating bucket %s", bucketName)
+
+	bucketSettings := gocb.BucketSettings{
+		Name: bucketName,
+		Type: gocb.Couchbase,
+		Quota: 100,
+	}
+
+	clusterManager := cluster.Manager(usernameForTest, passwordForTest)
+	if err := clusterManager.InsertBucket(&bucketSettings); err != nil {
+		t.Fatalf("Failed to create bucket %s: %v", bucketName, err)
+	}
+
+	// It takes a little bit of time for Couchbase to create the bucket. If you don't wait, then the next step, where
+	// we try to create a user with access to the bucket, will fail with a confusing error message about the role
+	// being invalid.
+	logger.Printf("Waiting a few seconds for the bucket to be created")
+	time.Sleep(5 * time.Second)
+
+	// As of 0.5.0, Couchbase only allows buckets to be accessed by users with passwords. Therefore, we create a user
+	// that we will use to connect to the bucket later on. For more info, see:
+	// https://forums.couchbase.com/t/v5-0-new-role-based-authentication-bucket-passwords-etc/14637?u=jkurtz
+	userSettings := gocb.UserSettings{
+		Password: passwordForTest,
+		Roles: []gocb.UserRole{
+			{
+				Role: "bucket_full_access",
+				BucketName: bucketName,
+			},
+		},
+	}
+
+	userName := bucketName
+	logger.Printf("Creating user %s", userName)
+
+	if err := clusterManager.UpsertUser(gocb.LocalDomain, userName, &userSettings); err != nil {
+		t.Fatalf("Failed to create user %s: %v", userName, err)
+	}
+
+	return userName
+}
+
+func openBucket(t *testing.T, cluster *gocb.Cluster, bucketName string, logger *log.Logger) *gocb.Bucket {
+	logger.Printf("Opening bucket %s", bucketName)
+
+	bucket, err := cluster.OpenBucket(bucketName, passwordForTest)
+	if err != nil {
+		t.Fatalf("Failed to open bucket %s: %v", bucketName, err)
+	}
+
+	return bucket
+}
+
+type TestData struct {
+	Id string `json:"uid"`
+	Foo string `json:"foo"`
+	Bar int `json:"bar"`
+}
+
+func writeToBucket(t *testing.T, bucket *gocb.Bucket, key string, value TestData, logger *log.Logger) {
+	logger.Printf("Writing (%s, %s) to bucket %s", key, value, bucket.Name())
+
+	if _, err := bucket.Insert(key, value, 0); err != nil {
+		t.Fatalf("Failed to insert (%s, %s) into bucket %s: %v", key, value, bucket.Name(), err)
+	}
+}
+
+func readFromBucket(t *testing.T, bucket *gocb.Bucket, key string, logger *log.Logger) TestData {
+	logger.Printf("Reading key %s from bucket %s", key, bucket.Name())
+
+	var value TestData
+	if _, err := bucket.Get(key, &value); err != nil {
+		t.Fatalf("Failed to retrieve key %s from bucket %s: %v", key, bucket.Name(), err)
+	}
+
+	return value
 }
