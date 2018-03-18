@@ -625,9 +625,11 @@ function run {
 
   local aws_region
   aws_region=$(get_instance_region)
+  assert_not_empty_aws_response "$aws_region" "AWS region"
 
   local asg_name
   asg_name=$(get_asg_name)
+  assert_not_empty_aws_response "$asg_name" "ASG name"
 
   if [[ -z "$cluster_name" ]]; then
     cluster_name="$asg_name"
@@ -642,12 +644,13 @@ function run {
 
   if [[ -z "$hostname" ]]; then
     hostname=$(get_hostname "$use_public_hostname")
+    assert_not_empty_aws_response "$hostname" "Hostname"
   fi
 
   if [[ -z "$rally_point_hostname" ]]; then
     rally_point_hostname=$(get_rally_point_hostname "$aws_region" "$asg_name" "$use_public_hostname")
+    assert_not_empty_aws_response "$rally_point_hostname" "Rally point hostname"
   fi
-
 
   if [[ "$hostname" == "$rally_point_hostname" ]]; then
     log_info "This server is the rally point for cluster $cluster_name, $rally_point_hostname!"

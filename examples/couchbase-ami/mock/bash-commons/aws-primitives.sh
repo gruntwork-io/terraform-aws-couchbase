@@ -32,20 +32,20 @@ function get_instance_tags {
   local readonly instance_id="$1"
   local readonly instance_region="$2"
 
-  # The asg_name below is an env var from mock/user-data/mock-couchbase.env
+  # The cluster_asg_name below is an env var from mock/user-data/mock-couchbase.env
   cat << EOF
 {
   "Tags": [
     {
       "ResourceType": "instance",
       "ResourceId": "$instance_id",
-      "Value": "Production",
-      "Key": "$asg_name"
+      "Value": "$cluster_asg_name",
+      "Key": "Name"
     },
     {
       "ResourceType": "instance",
       "ResourceId": "$instance_id",
-      "Value": "$asg_name",
+      "Value": "$cluster_asg_name",
       "Key": "aws:autoscaling:groupName"
     }
   ]

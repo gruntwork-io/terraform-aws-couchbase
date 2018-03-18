@@ -5,6 +5,7 @@ set -e
 readonly AWS_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$AWS_SCRIPT_DIR/logging.sh"
 source "$AWS_SCRIPT_DIR/aws-primitives.sh"
+source "$AWS_SCRIPT_DIR/assertions.sh"
 
 readonly AWS_MAX_RETRIES=60
 readonly AWS_SLEEP_BETWEEN_RETRIES_SEC=5
@@ -19,6 +20,7 @@ function get_asg_name {
 
   local tags
   tags=$(wait_for_instance_tags "$instance_id" "$instance_region")
+  assert_not_empty_aws_response "$tags" "Tags for instance $instance_id"
 
   get_tag_value "$tags" "aws:autoscaling:groupName"
 }
@@ -70,6 +72,7 @@ function get_asg_size {
 
   local asg_json
   asg_json=$(describe_asg "$asg_name" "$aws_region")
+  assert_not_empty_aws_response "$asg_json" "Description of ASG $asg_name"
 
   echo "$asg_json" | jq -r '.AutoScalingGroups[0].DesiredCapacity'
 }
