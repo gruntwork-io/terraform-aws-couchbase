@@ -59,6 +59,7 @@
   }],
   "provisioners": [{
     "type": "shell",
+    "pause_before": "5s",
     "inline": [
       "echo 'Cleaning up systemd files so we only boot up the bare minimum services necessary in the Docker container.'",
       "sudo find /etc/systemd/system /lib/systemd/system -path '*.wants/*' -not -name '*journald*' -not -name '*systemd-tmpfiles*' -not -name '*systemd-user-sessions*' -exec rm {} \\;",
