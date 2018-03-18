@@ -1,0 +1,15 @@
+[Unit]
+Description=Run Couchbase Script
+Documentation=https://github.com/gruntwork-io/terraform-aws-couchbase
+After=couchbase-server.service
+
+[Service]
+User=root
+WorkingDirectory=/opt/couchbase/bin
+ExecStart=/user-data/user-data.sh
+Restart=no
+Type=oneshot
+EnvironmentFile=/user-data/mock-couchbase.env
+
+[Install]
+WantedBy=multi-user.target

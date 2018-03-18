@@ -2,7 +2,7 @@ version: '3'
 services:
   couchbase-ubuntu-0: &couchbase_config
     image: gruntwork/couchbase-ubuntu-test
-    entrypoint: ["/sbin/init"]
+    entrypoint: ["/entrypoint/entrypoint.sh"]
     container_name: couchbase-ubuntu-0
     privileged: true
     cap_add:
@@ -16,6 +16,9 @@ services:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
       - ./mock/bash-commons/aws.sh:/opt/couchbase/bash-commons/aws.sh
       - ../../modules/run-couchbase-server/run-couchbase-server:/opt/couchbase/bin/run-couchbase-server
+      - ./mock/user-data:/user-data
+      - ./mock/entrypoint:/entrypoint
+      - ./mock/systemd/mock-run-couchbase-server.service:/lib/systemd/system/mock-run-couchbase-server.service
     ports:
       - "8091:8091"
       - "8092:8092"
