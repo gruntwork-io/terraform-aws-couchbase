@@ -30,14 +30,13 @@ function print_usage {
   echo
   echo "Required arguments:"
   echo
-  echo -e "  --asg-name\t\t\tThe name of the Auto Scaling Group on which the Couchbase Cluster is deployed."
   echo -e "  --cluster-username\t\tThe username for the Couchbase cluster."
   echo -e "  --cluster-password\t\tThe password for the Couchbase cluster."
   echo
   echo "Optional arguments:"
   echo
   echo -e "  --services\t\t\tComma-separated list of Couchbase service to run. Default: $DEFAULT_SERVICES."
-  echo -e "  --cluster-name\t\tThe name of the Couchbase cluster. Default: use --asg-name."
+  echo -e "  --cluster-name\t\tThe name of the Couchbase cluster. Default: use the name of the Auto Scaling Group."
   echo -e "  --cluster-port\t\tThe port the Couchbase cluster will use. Default: $DEFAULT_CLUSTER_PORT."
   echo -e "  --index-storage-setting\tThe index storage mode for the index service. Must be one of: default, memopt. Default: $DEFAULT_INDEX_STORAGE_SETTING."
   echo -e "  --hostname\t\t\tThe hostname to use for this node. Default: look up the node's private hostname in EC2 metadata."
@@ -51,7 +50,7 @@ function print_usage {
   echo
   echo "Example:"
   echo
-  echo "  run-couchbase-server --asg-name couchbase-prod --region us-east-1 --cluster-username admin --cluser-password password"
+  echo "  run-couchbase-server --region us-east-1 --cluster-username admin --cluser-password password"
 }
 
 # Get the hostname to use for this EC2 Instance. Use the public hostname if the first argument is true and the private
@@ -81,7 +80,7 @@ function get_rally_point_hostname {
   log_info "Looking up rally point for ASG $asg_name in $aws_region"
 
   local instances
-  instances=$(describe_instances_in_asg "$asg_name" "$aws_region")
+  instances=$(wait_for_instances_in_asg "$asg_name" "$aws_region")
   assert_not_empty_aws_response "$instances" "Fetch list of Instances in ASG $asg_name"
 
   local rally_point
@@ -534,7 +533,6 @@ function run {
   local cluster_username
   local cluster_password
   local index_storage_setting="$DEFAULT_INDEX_STORAGE_SETTING"
-  local asg_name
   local manage_memory_manually="false"
   local data_ramsize
   local fts_ramsize
@@ -544,10 +542,6 @@ function run {
     local key="$1"
 
     case "$key" in
-      --asg-name)
-        asg_name="$2"
-        shift
-        ;;
       --services)
         assert_not_empty "$key" "$2"
         services="$2"
@@ -624,7 +618,6 @@ function run {
   assert_is_installed "aws"
   assert_is_installed "jq"
 
-  assert_not_empty "--asg-name" "$asg_name"
   assert_not_empty "--cluster-username" "$cluster_username"
   assert_not_empty "--cluster-password" "$cluster_password"
 
@@ -633,8 +626,10 @@ function run {
   local aws_region
   aws_region=$(get_instance_region)
 
+  local asg_name
+  asg_name=$(get_asg_name)
+
   if [[ -z "$cluster_name" ]]; then
-    log_info "Using ASG name $asg_name as cluster name"
     cluster_name="$asg_name"
   fi
 

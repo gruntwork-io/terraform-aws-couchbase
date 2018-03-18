@@ -4,53 +4,61 @@ set -e
 
 readonly AWS_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$AWS_SCRIPT_DIR/logging.sh"
+source "$AWS_SCRIPT_DIR/aws-primitives.sh"
 
-readonly EC2_INSTANCE_METADATA_URL="http://169.254.169.254/latest/meta-data"
-readonly EC2_INSTANCE_DYNAMIC_DATA_URL="http://169.254.169.254/latest/dynamic"
+readonly AWS_MAX_RETRIES=60
+readonly AWS_SLEEP_BETWEEN_RETRIES_SEC=5
 
-readonly MAX_RETRIES=60
-readonly SLEEP_BETWEEN_RETRIES_SEC=5
+# Get the name of the ASG this EC2 Instance is in
+function get_asg_name {
+  local instance_id
+  instance_id=$(get_instance_id)
 
-# Look up the given path in the EC2 Instance metadata endpoint
-function lookup_path_in_instance_metadata {
-  local readonly path="$1"
-  curl --silent --show-error --location "$EC2_INSTANCE_METADATA_URL/$path/"
+  local instance_region
+  instance_region=$(get_instance_region)
+
+  local tags
+  tags=$(wait_for_instance_tags "$instance_id" "$instance_region")
+
+  get_tag_value "$tags" "aws:autoscaling:groupName"
 }
 
-# Look up the given path in the EC2 Instance dynamic metadata endpoint
-function lookup_path_in_instance_dynamic_data {
-  local readonly path="$1"
-  curl --silent --show-error --location "$EC2_INSTANCE_DYNAMIC_DATA_URL/$path/"
+# Get the value for a specific tag from the tags JSON returned by the AWS describe-tags:
+# https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-tags.html
+function get_tag_value {
+  local readonly tags="$1"
+  local readonly tag_key="$2"
+
+  echo "$tags" | jq -r ".Tags[] | select(.Key == \"$tag_key\") | .Value"
 }
 
-# Get the private IP address for this EC2 Instance
-function get_instance_private_ip {
-  lookup_path_in_instance_metadata "local-ipv4"
-}
+# Get the tags for the current EC2 Instance. Tags may take time to propagate, so this method will retry until the tags
+# are available.
+function wait_for_instance_tags {
+  local readonly instance_id="$1"
+  local readonly instance_region="$2"
 
-# Get the public IP address for this EC2 Instance
-function get_instance_public_ip {
-  lookup_path_in_instance_metadata "public-ipv4"
-}
+  log_info "Looking up tags for Instance $instance_id in $instance_region"
 
-# Get the private hostname for this EC2 Instance
-function get_instance_private_hostname {
-  lookup_path_in_instance_metadata "local-hostname"
-}
+  for (( i=1; i<="$AWS_MAX_RETRIES"; i++ )); do
+    local tags
+    tags=$(get_instance_tags "$instance_id" "$instance_region")
 
-# Get the public hostname for this EC2 Instance
-function get_instance_public_hostname {
-  lookup_path_in_instance_metadata "public-hostname"
-}
+    local count_tags
+    count_tags=$(echo $tags | jq -r ".Tags? | length")
+    log_info "Found $count_tags for $instance_id."
 
-# Get the ID of this EC2 Instance
-function get_instance_id {
-  lookup_path_in_instance_metadata "instance-id"
-}
+    if [[ "$count_tags" -gt 0 ]]; then
+      echo "$tags"
+      return
+    else
+      log_warn "Tags for Instance $instance_id must not have propagated yet. Will sleep for $AWS_SLEEP_BETWEEN_RETRIES_SEC seconds and check again."
+      sleep "$AWS_SLEEP_BETWEEN_RETRIES_SEC"
+    fi
+  done
 
-# Get the region this EC2 Instance is deployed in
-function get_instance_region {
-  lookup_path_in_instance_dynamic_data "instance-identity/document" | jq -r ".region"
+  log_error "Could not find tags for Instance $instance_id in $instance_region after $AWS_MAX_RETRIES retries."
+  exit 1
 }
 
 # Get the desired capacity of the ASG with the given name in the given region
@@ -61,7 +69,7 @@ function get_asg_size {
   log_info "Looking up the size of the Auto Scaling Group $asg_name in $aws_region"
 
   local asg_json
-  asg_json=$(aws autoscaling describe-auto-scaling-groups --region "$aws_region" --auto-scaling-group-names "$asg_name")
+  asg_json=$(describe_asg "$asg_name" "$aws_region")
 
   echo "$asg_json" | jq -r '.AutoScalingGroups[0].DesiredCapacity'
 }
@@ -69,7 +77,7 @@ function get_asg_size {
 # Describe the running instances in the given ASG and region. This method will retry until it is able to get the
 # information for the number of instances that are defined in the ASG's DesiredCapacity. This ensures the method waits
 # until all the Instances have booted.
-function describe_instances_in_asg {
+function wait_for_instances_in_asg {
   local readonly asg_name="$1"
   local readonly aws_region="$2"
 
@@ -77,9 +85,9 @@ function describe_instances_in_asg {
   asg_size=$(get_asg_size "$asg_name" "$aws_region")
 
   log_info "Looking up Instances in ASG $asg_name in $aws_region"
-  for (( i=1; i<="$MAX_RETRIES"; i++ )); do
+  for (( i=1; i<="$AWS_MAX_RETRIES"; i++ )); do
     local instances
-    instances=$(aws ec2 describe-instances --region "$aws_region" --filters "Name=tag:aws:autoscaling:groupName,Values=$asg_name" "Name=instance-state-name,Values=pending,running")
+    instances=$(describe_instances_in_asg "$asg_name" "$aws_region")
 
     local count_instances
     count_instances=$(echo "$instances" | jq -r "[.Reservations[].Instances[].InstanceId] | length")
@@ -90,11 +98,11 @@ function describe_instances_in_asg {
       echo "$instances"
       return
     else
-      log_warn "Will sleep for $SLEEP_BETWEEN_RETRIES_SEC seconds and try again."
-      sleep "$SLEEP_BETWEEN_RETRIES_SEC"
+      log_warn "Will sleep for $AWS_SLEEP_BETWEEN_RETRIES_SEC seconds and try again."
+      sleep "$AWS_SLEEP_BETWEEN_RETRIES_SEC"
     fi
   done
 
-  log_error "Could not find all $asg_size Instances in ASG $asg_name in $aws_region after $MAX_RETRIES retries."
+  log_error "Could not find all $asg_size Instances in ASG $asg_name in $aws_region after $AWS_MAX_RETRIES retries."
   exit 1
 }

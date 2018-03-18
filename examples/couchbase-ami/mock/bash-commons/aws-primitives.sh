@@ -22,8 +22,61 @@ function get_instance_region {
   echo "us-east-1"
 }
 
+# Return the container ID of the current Docker container. Per https://stackoverflow.com/a/25729598/2308858
+function get_instance_id {
+  cat /proc/1/cgroup | grep 'docker/' | tail -1 | sed 's/^.*\///'
+}
+
+# This mock returns a hard-coded, simplified version of the aws ec2 describe-tags call.
+function get_instance_tags {
+  local readonly instance_id="$1"
+  local readonly instance_region="$2"
+
+  # The asg_name below is an env var from mock/user-data/mock-couchbase.env
+  cat << EOF
+{
+  "Tags": [
+    {
+      "ResourceType": "instance",
+      "ResourceId": "$instance_id",
+      "Value": "Production",
+      "Key": "$asg_name"
+    },
+    {
+      "ResourceType": "instance",
+      "ResourceId": "$instance_id",
+      "Value": "$asg_name",
+      "Key": "aws:autoscaling:groupName"
+    }
+  ]
+}
+EOF
+}
+
+# This mock returns a hard-coded, simplified version of the aws autoscaling describe-auto-scaling-groups call.
+function describe_asg {
+  local readonly asg_name="$1"
+  local readonly aws_region="$2"
+
+  cat << EOF
+{
+  "AutoScalingGroups": [
+    {
+      "AutoScalingGroupARN": "arn:aws:autoscaling:$aws_region:123456789012:autoScalingGroup:930d940e-891e-4781-a11a-7b0acd480f03:autoScalingGroupName/$asg_name",
+      "DesiredCapacity": 3,
+      "AutoScalingGroupName": "$asg_name",
+      "LaunchConfigurationName": "$asg_name",
+      "CreatedTime": "2013-08-19T20:53:25.584Z"
+    }
+  ]
+}
+EOF
+}
+
 # This mock returns a hard-coded, simplified version of the aws ec2 describe-instances call.
 function describe_instances_in_asg {
+  local readonly asg_name="$1"
+  local readonly aws_region="$2"
 
   # These hostnames are set by Docker Compose networking using the names of the services
   # (https://docs.docker.com/compose/networking/). We use getent (https://unix.stackexchange.com/a/20793/215969) to get
@@ -44,18 +97,15 @@ function describe_instances_in_asg {
           "LaunchTime": "2018-03-17T17:38:31.000Z",
           "PublicIpAddress": "$couchbase_hostname_0",
           "PrivateIpAddress": "$couchbase_hostname_0",
-          "VpcId": "vpc-0e0d9a6b",
           "InstanceId": "i-0ece993b1700c0040",
-          "ImageId": "ami-66506c1c",
           "PrivateDnsName": "$couchbase_hostname_0",
-          "SubnetId": "subnet-d377c6a4",
           "Tags": [
             {
-              "Value": "couchbase-mock-name-tag",
+              "Value": "$asg_name",
               "Key": "Name"
             },
             {
-              "Value": "couchbase-mock-name-tag",
+              "Value": "$asg_name",
               "Key": "aws:autoscaling:groupName"
             }
           ]
@@ -69,18 +119,14 @@ function describe_instances_in_asg {
           "LaunchTime": "2018-03-17T17:38:31.000Z",
           "PublicIpAddress": "$couchbase_hostname_1",
           "PrivateIpAddress": "$couchbase_hostname_1",
-          "VpcId": "vpc-0e0d9a6b",
-          "InstanceId": "i-0279ee0e9e82a0afe",
-          "ImageId": "ami-66506c1c",
           "PrivateDnsName": "$couchbase_hostname_1",
-          "SubnetId": "subnet-3b29db10",
           "Tags": [
             {
-              "Value": "couchbase-mock-name-tag",
+              "Value": "$asg_name",
               "Key": "Name"
             },
             {
-              "Value": "couchbase-mock-name-tag",
+              "Value": "$asg_name",
               "Key": "aws:autoscaling:groupName"
             }
           ]
@@ -90,18 +136,14 @@ function describe_instances_in_asg {
           "LaunchTime": "2018-03-17T17:38:31.000Z",
           "PublicIpAddress": "$couchbase_hostname_2",
           "PrivateIpAddress": "$couchbase_hostname_2",
-          "VpcId": "vpc-0e0d9a6b",
-          "InstanceId": "i-0e93dc6f436667dad",
-          "ImageId": "ami-66506c1c",
           "PrivateDnsName": "$couchbase_hostname_2",
-          "SubnetId": "subnet-1cb53110",
           "Tags": [
             {
-              "Value": "couchbase-mock-name-tag",
+              "Value": "$asg_name",
               "Key": "Name"
             },
             {
-              "Value": "couchbase-mock-name-tag",
+              "Value": "$asg_name",
               "Key": "aws:autoscaling:groupName"
             }
           ]

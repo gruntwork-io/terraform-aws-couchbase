@@ -14,7 +14,8 @@ services:
       - /run/lock
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
-      - ./mock/bash-commons/aws.sh:/opt/couchbase/bash-commons/aws.sh
+      - ../../modules/bash-commons:/opt/couchbase/bash-commons
+      - ./mock/bash-commons/aws-primitives.sh:/opt/couchbase/bash-commons/aws-primitives.sh
       - ../../modules/run-couchbase-server/run-couchbase-server:/opt/couchbase/bin/run-couchbase-server
       - ./mock/user-data:/user-data
       - ./mock/entrypoint:/entrypoint
