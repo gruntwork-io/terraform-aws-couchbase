@@ -118,7 +118,7 @@ func checkCouchbaseConsoleIsRunning(t *testing.T, osName string, logger *log.Log
 }
 
 func checkCouchbaseDataNodesWorking(t *testing.T, osName string, logger *log.Logger) {
-	adminUrl := fmt.Sprintf("http://localhost:%d", testWebConsolePorts[osName])
+	url := fmt.Sprintf("http://localhost:%d", testWebConsolePorts[osName])
 
 	uniqueId := util.UniqueId()
 	testBucketName := fmt.Sprintf("test%s", uniqueId)
@@ -129,11 +129,8 @@ func checkCouchbaseDataNodesWorking(t *testing.T, osName string, logger *log.Log
 		Bar: 42,
 	}
 
-	clusterAdmin := connectToCluster(t, adminUrl, usernameForTest, logger)
-	userName := createBucket(t, clusterAdmin, testBucketName, logger)
-
-	clusterApi := connectToCluster(t, adminUrl, userName, logger)
-	bucket := openBucket(t, clusterApi, testBucketName, logger)
+	cluster := connectToCluster(t, url, usernameForTest, logger)
+	bucket := createBucket(t, cluster, testBucketName, logger)
 
 	writeToBucket(t, bucket, testKey, testValue, logger)
 	actualValue := readFromBucket(t, bucket, testKey, logger)
@@ -161,7 +158,7 @@ func connectToCluster(t *testing.T, url string, clusterUsername string, logger *
 	return cluster
 }
 
-func createBucket(t *testing.T, cluster *gocb.Cluster, bucketName string, logger *log.Logger) string {
+func createBucket(t *testing.T, cluster *gocb.Cluster, bucketName string, logger *log.Logger) *gocb.Bucket {
 	logger.Printf("Creating bucket %s", bucketName)
 
 	bucketSettings := gocb.BucketSettings{
@@ -175,36 +172,12 @@ func createBucket(t *testing.T, cluster *gocb.Cluster, bucketName string, logger
 		t.Fatalf("Failed to create bucket %s: %v", bucketName, err)
 	}
 
-	// It takes a little bit of time for Couchbase to create the bucket. If you don't wait, then the next step, where
-	// we try to create a user with access to the bucket, will fail with a confusing error message about the role
+	// It takes a little bit of time for Couchbase to create the bucket. If you don't wait and immediately try to open
+	// the bucket, you get a confusing authentication error.
 	// being invalid.
 	logger.Printf("Waiting a few seconds for the bucket to be created")
 	time.Sleep(5 * time.Second)
 
-	// As of 0.5.0, Couchbase only allows buckets to be accessed by users with passwords. Therefore, we create a user
-	// that we will use to connect to the bucket later on. For more info, see:
-	// https://forums.couchbase.com/t/v5-0-new-role-based-authentication-bucket-passwords-etc/14637?u=jkurtz
-	userSettings := gocb.UserSettings{
-		Password: passwordForTest,
-		Roles: []gocb.UserRole{
-			{
-				Role: "bucket_full_access",
-				BucketName: bucketName,
-			},
-		},
-	}
-
-	userName := bucketName
-	logger.Printf("Creating user %s", userName)
-
-	if err := clusterManager.UpsertUser(gocb.LocalDomain, userName, &userSettings); err != nil {
-		t.Fatalf("Failed to create user %s: %v", userName, err)
-	}
-
-	return userName
-}
-
-func openBucket(t *testing.T, cluster *gocb.Cluster, bucketName string, logger *log.Logger) *gocb.Bucket {
 	logger.Printf("Opening bucket %s", bucketName)
 
 	bucket, err := cluster.OpenBucket(bucketName, passwordForTest)
