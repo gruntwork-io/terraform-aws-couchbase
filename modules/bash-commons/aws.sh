@@ -42,7 +42,7 @@ function wait_for_instance_tags {
 
   log_info "Looking up tags for Instance $instance_id in $instance_region"
 
-  for (( i=1; i<="$AWS_MAX_RETRIES"; i++ )); do
+  for (( i=0; i<"$AWS_MAX_RETRIES"; i++ )); do
     local tags
     tags=$(get_instance_tags "$instance_id" "$instance_region")
 
@@ -88,7 +88,7 @@ function wait_for_instances_in_asg {
   asg_size=$(get_asg_size "$asg_name" "$aws_region")
 
   log_info "Looking up Instances in ASG $asg_name in $aws_region"
-  for (( i=1; i<="$AWS_MAX_RETRIES"; i++ )); do
+  for (( i=0; i<"$AWS_MAX_RETRIES"; i++ )); do
     local instances
     instances=$(describe_instances_in_asg "$asg_name" "$aws_region")
 

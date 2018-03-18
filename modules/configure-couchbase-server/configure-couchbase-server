@@ -219,8 +219,6 @@ function add_rallypoint_to_cluster {
   local readonly index_ramsize="$9"
   local readonly services="${10}"
 
-  wait_for_couchbase_to_boot "$rally_point_hostname" "$cluster_name" "$cluster_port" "$cluster_username" "$cluster_password"
-
   if cluster_is_initialized "$rally_point_hostname" "$cluster_name" "$cluster_port" "$cluster_username" "$cluster_password"; then
     log_info "Cluster $cluster_name is already initialized."
     join_existing_cluster \
@@ -260,7 +258,7 @@ function wait_for_cluster_to_be_initialized {
 
   log_info "Checking if cluster $cluster_name is initialized"
 
-  for (( i=1; i<="$MAX_RETRIES"; i++ )); do
+  for (( i=0; i<"$MAX_RETRIES"; i++ )); do
     if cluster_is_initialized "$rally_point_hostname" "$cluster_name" "$cluster_port" "$cluster_username" "$cluster_password"; then
       log_info "Cluster $cluster_name is initialized."
       return
@@ -285,7 +283,7 @@ function wait_for_couchbase_to_boot {
 
   log_info "Checking if Couchbase server $node_hostname is booted"
 
-  for (( i=1; i<="$MAX_RETRIES"; i++ )); do
+  for (( i=0; i<"$MAX_RETRIES"; i++ )); do
     if couchbase_is_running "$node_hostname" "$cluster_name" "$cluster_port" "$cluster_username" "$cluster_password"; then
       log_info "Couchbase server $node_hostname has booted."
       return
@@ -338,8 +336,15 @@ function init_new_cluster {
     cluster_init_args+=("--cluster-fts-ramsize=$fts_ramsize")
   fi
 
-  # TODO: check that stdout has "SUCCESS" in it
-  couchbase_cli "${cluster_init_args[@]}"
+  local out
+  out=$(couchbase_cli "${cluster_init_args[@]}")
+
+  if string_contains "$out" "SUCCESS: Cluster initialized"; then
+    log_info "Successfully initialized cluster $cluster_name"
+  else
+    log_error "Failed to initialize cluster $cluster_name. Log output:\n$out"
+    exit 1
+  fi
 }
 
 # Add the given node with the given hostname to the given Couchbase cluster using the server-add command. Note that
@@ -369,8 +374,15 @@ function add_server_to_cluster {
   server_add_args+=("--index-storage-setting=$index_storage_setting")
   server_add_args+=("--services=$services")
 
-  # TODO: check that stdout has "SUCCESS" in it
-  couchbase_cli "${server_add_args[@]}"
+  local out
+  out=$(couchbase_cli "${server_add_args[@]}")
+
+  if string_contains "$out" "SUCCESS: Server added"; then
+    log_info "Successfully added node $node_hostname to cluster $cluster_name."
+  else
+    log_error "Failed to add node $node_hostname to cluster $cluster_name. Log output:\n$out."
+    exit 1
+  fi
 }
 
 # Rebalance the cluster. This command must be called each time you add a new node; until it's called, the node will not
@@ -382,7 +394,6 @@ function rebalance_cluster {
   local readonly cluster_username="$4"
   local readonly cluster_password="$5"
 
-  log_info "Rebalancing cluster $cluster_name with rally point $rally_point_hostname"
 
   local rebalance_args=()
 
@@ -392,8 +403,27 @@ function rebalance_cluster {
   rebalance_args+=("--password=$cluster_password")
   rebalance_args+=("--no-progress-bar")
 
-  # TODO: check that stdout has "SUCCESS" in it
-  couchbase_cli "${rebalance_args[@]}"
+  local readonly rebalance_max_retries=5
+
+  for (( i=0; i<"$rebalance_max_retries"; i++ )); do
+    log_info "Rebalancing cluster $cluster_name with rally point $rally_point_hostname"
+
+    local out
+    out=$(couchbase_cli "${rebalance_args[@]}")
+
+    if string_contains "$out" "SUCCESS: Rebalance complete"; then
+      log_info "Successfully rebalanced cluster $cluster_name."
+      return
+    elif string_contains "$out" "ERROR: Rebalance failed. See logs for detailed reason. You can try again."; then
+      log_warn "Rebalance failed. This may be because another node requested a rebalance at the same time. Will sleep for $SLEEP_BETWEEN_RETRIES_SEC seconds and try again."
+    else
+      log_error "Got unexpected error when trying to rebalance cluster $cluster_name. Log output:\n$out."
+      exit 1
+    fi
+  done
+
+  log_error "Failed to rebalance cluster after $rebalance_max_retries retries."
+  exit 1
 }
 
 # Join a node to an existing Couchbase cluster. This method is idempotent: it will add the node to the cluster if it
@@ -654,6 +684,8 @@ function run {
     rally_point_hostname=$(get_rally_point_hostname "$aws_region" "$asg_name" "$use_public_hostname")
     assert_not_empty_aws_response "$rally_point_hostname" "Rally point hostname"
   fi
+
+  wait_for_couchbase_to_boot "$hostname" "$cluster_name" "$cluster_port" "$cluster_username" "$cluster_password"
 
   if [[ "$hostname" == "$rally_point_hostname" ]]; then
     log_info "This server is the rally point for cluster $cluster_name, $rally_point_hostname!"
