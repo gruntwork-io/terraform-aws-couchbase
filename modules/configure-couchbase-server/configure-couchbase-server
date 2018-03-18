@@ -338,6 +338,7 @@ function init_new_cluster {
     cluster_init_args+=("--cluster-fts-ramsize=$fts_ramsize")
   fi
 
+  # TODO: check that stdout has "SUCCESS" in it
   couchbase_cli "${cluster_init_args[@]}"
 }
 
@@ -368,6 +369,7 @@ function add_server_to_cluster {
   server_add_args+=("--index-storage-setting=$index_storage_setting")
   server_add_args+=("--services=$services")
 
+  # TODO: check that stdout has "SUCCESS" in it
   couchbase_cli "${server_add_args[@]}"
 }
 
@@ -390,6 +392,7 @@ function rebalance_cluster {
   rebalance_args+=("--password=$cluster_password")
   rebalance_args+=("--no-progress-bar")
 
+  # TODO: check that stdout has "SUCCESS" in it
   couchbase_cli "${rebalance_args[@]}"
 }
 
