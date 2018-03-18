@@ -362,6 +362,7 @@ function rebalance_cluster {
   rebalance_args+=("--cluster=$rally_point_hostname:$cluster_port")
   rebalance_args+=("--username=$cluster_username")
   rebalance_args+=("--password=$cluster_password")
+  rebalance_args+=("--no-progress-bar")
 
   couchbase_cli "${rebalance_args[@]}"
 }
