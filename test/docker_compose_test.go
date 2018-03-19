@@ -159,7 +159,11 @@ func connectToCluster(t *testing.T, url string, clusterUsername string, logger *
 }
 
 func createBucket(t *testing.T, cluster *gocb.Cluster, bucketName string, logger *log.Logger) *gocb.Bucket {
-	logger.Printf("Creating bucket %s", bucketName)
+	description := fmt.Sprintf("Creating bucket %s", bucketName)
+	maxRetries := 10
+	sleepBetweenRetries := 5 * time.Second
+
+	logger.Printf(description)
 
 	bucketSettings := gocb.BucketSettings{
 		Name: bucketName,
@@ -168,13 +172,27 @@ func createBucket(t *testing.T, cluster *gocb.Cluster, bucketName string, logger
 	}
 
 	clusterManager := cluster.Manager(usernameForTest, passwordForTest)
-	if err := clusterManager.InsertBucket(&bucketSettings); err != nil {
+
+	_, err := util.DoWithRetry(description, maxRetries, sleepBetweenRetries, logger, func() (string, error) {
+		err := clusterManager.InsertBucket(&bucketSettings)
+		if err == nil {
+			return "", nil
+		}
+
+		if strings.Contains(err.Error(), "Cannot create buckets during rebalance") {
+			return "", err
+		}
+
+		t.Fatalf("Unexpected error while trying to create a bucket: %v", err)
+		return "", err
+	})
+
+	if err != nil {
 		t.Fatalf("Failed to create bucket %s: %v", bucketName, err)
 	}
 
 	// It takes a little bit of time for Couchbase to create the bucket. If you don't wait and immediately try to open
 	// the bucket, you get a confusing authentication error.
-	// being invalid.
 	logger.Printf("Waiting a few seconds for the bucket to be created")
 	time.Sleep(5 * time.Second)
 
