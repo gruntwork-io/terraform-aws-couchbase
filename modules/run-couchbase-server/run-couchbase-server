@@ -55,12 +55,12 @@ function print_usage {
   echo
   echo "Optional port settings:"
   echo
-  echo -e "  --rest-port\t\tThe port to use for the Couchbase Web Console and REST/HTTP API. Default: $DEFAULT_REST_PORT."
-  echo -e "  --capi-port\t\tThe port to use for Views and XDCR access. Default: $DEFAULT_CAPI_PORT."
-  echo -e "  --query-port\t\tThe port to use for the Query service REST/HTTP traffic. Default: $DEFAULT_QUERY_PORT."
-  echo -e "  --fts-port\t\tThe port to use for the Search service REST/HTTP traffic. Default: $DEFAULT_SEARCH_PORT."
+  echo -e "  --rest-port\t\t\tThe port to use for the Couchbase Web Console and REST/HTTP API. Default: $DEFAULT_REST_PORT."
+  echo -e "  --capi-port\t\t\tThe port to use for Views and XDCR access. Default: $DEFAULT_CAPI_PORT."
+  echo -e "  --query-port\t\t\tThe port to use for the Query service REST/HTTP traffic. Default: $DEFAULT_QUERY_PORT."
+  echo -e "  --fts-port\t\t\tThe port to use for the Search service REST/HTTP traffic. Default: $DEFAULT_SEARCH_PORT."
   echo -e "  --memcached-port\t\tThe port to use for the Data service. Default: $DEFAULT_MEMCACHED_PORT."
-  echo -e "  --xdcr-port\t\tThe port to use for the XDCR REST traffic. Default: $DEFAULT_XDCR_PORT."
+  echo -e "  --xdcr-port\t\t\tThe port to use for the XDCR REST traffic. Default: $DEFAULT_XDCR_PORT."
   echo
   echo "Other optional arguments:"
   echo
