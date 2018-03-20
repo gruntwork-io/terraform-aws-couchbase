@@ -73,7 +73,8 @@
   },{
     "type": "shell",
     "inline": [
-      "/tmp/terraform-aws-couchbase/modules/install-couchbase-server/install-couchbase-server"
+      "/tmp/terraform-aws-couchbase/modules/install-couchbase-server/install-couchbase-server",
+      "/tmp/terraform-aws-couchbase/modules/install-sync-gateway/install-sync-gateway"
     ]
   }],
   "post-processors": [{
