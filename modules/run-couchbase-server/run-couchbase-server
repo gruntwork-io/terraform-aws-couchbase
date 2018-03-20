@@ -242,7 +242,6 @@ function add_rallypoint_to_cluster {
       "$node_port" \
       "$cluster_username" \
       "$cluster_password" \
-      "$index_storage_setting" \
       "$rally_point_hostname" \
       "$services"
   else
@@ -373,10 +372,9 @@ function add_server_to_cluster {
   local readonly cluster_name="$3"
   local readonly cluster_username="$4"
   local readonly cluster_password="$5"
-  local readonly index_storage_setting="$6"
-  local readonly node_hostname="$7"
-  local readonly node_port="$8"
-  local readonly services="$9"
+  local readonly node_hostname="$6"
+  local readonly node_port="$7"
+  local readonly services="$8"
 
   wait_for_cluster_to_be_initialized "$rally_point_hostname" "$rally_point_port" "$cluster_name" "$cluster_username" "$cluster_password"
 
@@ -396,7 +394,6 @@ function add_server_to_cluster {
   server_add_args+=("--server-add=$node_hostname:$node_port")
   server_add_args+=("--server-add-username=$cluster_username")
   server_add_args+=("--server-add-password=$cluster_password")
-  server_add_args+=("--index-storage-setting=$index_storage_setting")
   server_add_args+=("--services=$services")
 
   # The couchbase-cli may exit with an error, so make sure that doesn't cause this whole script to exit with an error
@@ -476,9 +473,8 @@ function join_existing_cluster {
   local readonly node_port="$4"
   local readonly cluster_username="$5"
   local readonly cluster_password="$6"
-  local readonly index_storage_setting="$7"
-  local readonly node_hostname="$8"
-  local readonly services="$9"
+  local readonly node_hostname="$7"
+  local readonly services="$8"
 
   log_info "Joining cluster $cluster_name"
 
@@ -488,7 +484,6 @@ function join_existing_cluster {
     "$cluster_name" \
     "$cluster_username" \
     "$cluster_password" \
-    "$index_storage_setting" \
     "$node_hostname" \
     "$node_port" \
     "$services"
@@ -822,7 +817,6 @@ function run {
       "$rest_port" \
       "$cluster_username" \
       "$cluster_password" \
-      "$index_storage_setting" \
       "$node_hostname" \
       "$services"
   fi
