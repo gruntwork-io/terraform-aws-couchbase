@@ -13,9 +13,12 @@ import (
 	"github.com/gruntwork-io/terratest/shell"
 	"github.com/gruntwork-io/terratest/http"
 	"strings"
-	"gopkg.in/couchbase/gocb.v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/gruntwork-io/terratest/util"
+	"net/http"
+	"io/ioutil"
+	"net/url"
+	"encoding/json"
 )
 
 // The port numbers used by docker-compose.yml in the couchbase-ami example
@@ -104,87 +107,97 @@ func stopCouchbaseWithDockerCompose(t *testing.T, exampleDir string, logger *log
 }
 
 func checkCouchbaseConsoleIsRunning(t *testing.T, osName string, logger *log.Logger) {
-	url := fmt.Sprintf("http://localhost:%d", testWebConsolePorts[osName])
+	clusterUrl := fmt.Sprintf("http://localhost:%d", testWebConsolePorts[osName])
 	maxRetries := 20
 	sleepBetweenRetries := 5 * time.Second
 
-	err := http_helper.HttpGetWithRetryWithCustomValidation(url, maxRetries, sleepBetweenRetries, logger, func(status int, body string) bool {
+	err := http_helper.HttpGetWithRetryWithCustomValidation(clusterUrl, maxRetries, sleepBetweenRetries, logger, func(status int, body string) bool {
 		return status == 200 && strings.Contains(body, "Couchbase Console")
 	})
 
 	if err != nil {
-		t.Fatalf("Failed to connect to Couchbase at %s: %v", url, err)
+		t.Fatalf("Failed to connect to Couchbase at %s: %v", clusterUrl, err)
 	}
 }
 
+type TestData struct {
+	Foo string `json:"foo"`
+	Bar int `json:"bar"`
+}
+
+func (testData TestData) String() string {
+	return fmt.Sprintf("TestData{Foo: '%s', Bar: %d}", testData.Foo, testData.Bar)
+}
+
+type CouchbaseTestDataResponse struct {
+	Meta CouchbaseMeta `json:"meta"`
+	Json TestData `json:"json"`
+}
+
+type CouchbaseMeta struct {
+	Id string `json:"id"`
+	Rev string `json:"rev"`
+	Expiration int `json:"expiration"`
+	Flags int `json:"flags"`
+}
+
 func checkCouchbaseDataNodesWorking(t *testing.T, osName string, logger *log.Logger) {
-	url := fmt.Sprintf("http://localhost:%d", testWebConsolePorts[osName])
+	clusterUrl := fmt.Sprintf("http://%s:%s@localhost:%d", usernameForTest, passwordForTest, testWebConsolePorts[osName])
 
 	uniqueId := util.UniqueId()
 	testBucketName := fmt.Sprintf("test%s", uniqueId)
 	testKey := fmt.Sprintf("test-key-%s", uniqueId)
 	testValue := TestData{
-		Id: testKey,
 		Foo: fmt.Sprintf("test-value-%s", uniqueId),
 		Bar: 42,
 	}
 
-	cluster := connectToCluster(t, url, usernameForTest, logger)
-	bucket := createBucket(t, cluster, testBucketName, logger)
+	createBucket(t, clusterUrl, testBucketName, logger)
+	writeToBucket(t, clusterUrl, testBucketName, testKey, testValue, logger)
 
-	writeToBucket(t, bucket, testKey, testValue, logger)
-	actualValue := readFromBucket(t, bucket, testKey, logger)
-
+	actualValue := readFromBucket(t, clusterUrl, testBucketName, testKey, logger)
 	assert.Equal(t, testValue, actualValue)
 }
 
-func connectToCluster(t *testing.T, url string, clusterUsername string, logger *log.Logger) *gocb.Cluster {
-	logger.Printf("Connecting to Couchbase at %s", url)
-
-	cluster, err := gocb.Connect(url)
-	if err != nil {
-		t.Fatalf("Failed to connect to Couchbase cluster at %s: %v", url, err)
-	}
-
-	authenticator := gocb.PasswordAuthenticator{
-		Username: clusterUsername,
-		Password: passwordForTest,
-	}
-
-	if err := cluster.Authenticate(authenticator); err != nil {
-		t.Fatalf("Failed to authenticate to Couchbase cluster at %s: %v", url, err)
-	}
-
-	return cluster
-}
-
-func createBucket(t *testing.T, cluster *gocb.Cluster, bucketName string, logger *log.Logger) *gocb.Bucket {
+// Create a Couchbase bucket. Note that we do NOT use any Couchbase SDK here because this test runs against a
+// Dockerized cluster, and the SDK does not work with Dockerized clusters, as it tries to use IPs that are only
+// accessible from inside a Docker container. Therefore, we just use the HTTP API directly. For more info, search for
+// "Connect via SDK" on this page: https://developer.couchbase.com/documentation/server/current/install/docker-deploy-multi-node-cluster.html
+func createBucket(t *testing.T, clusterUrl string, bucketName string, logger *log.Logger) {
 	description := fmt.Sprintf("Creating bucket %s", bucketName)
 	maxRetries := 10
 	sleepBetweenRetries := 5 * time.Second
 
 	logger.Printf(description)
 
-	bucketSettings := gocb.BucketSettings{
-		Name: bucketName,
-		Type: gocb.Couchbase,
-		Quota: 100,
+	// https://developer.couchbase.com/documentation/server/3.x/admin/REST/rest-bucket-create.html
+	createBucketUrl := fmt.Sprintf("%s/pools/default/buckets", clusterUrl)
+	postParams := map[string][]string{
+		"name": {bucketName},
+		"bucketType": {"couchbase"},
+		"authType": {"sasl"},
+		"saslPassword": {passwordForTest},
+		"ramQuotaMB": {"100"},
 	}
 
-	clusterManager := cluster.Manager(usernameForTest, passwordForTest)
-
 	_, err := util.DoWithRetry(description, maxRetries, sleepBetweenRetries, logger, func() (string, error) {
-		err := clusterManager.InsertBucket(&bucketSettings)
-		if err == nil {
-			return "", nil
-		}
-
-		if strings.Contains(err.Error(), "Cannot create buckets during rebalance") {
+		statusCode, body, err := HttpPostForm(t, createBucketUrl, postParams, logger)
+		if err != nil {
 			return "", err
 		}
 
-		t.Fatalf("Unexpected error while trying to create a bucket: %v", err)
-		return "", err
+		if statusCode == 202 {
+			logger.Printf("Successfully created bucket %s", bucketName)
+			return "", nil
+		}
+
+		logger.Printf("Expected status code 202, but got %d", statusCode)
+
+		if strings.Contains(body, "Cannot create buckets during rebalance") {
+			return "", fmt.Errorf("Cluster is currently rebalancing. Cannot create bucket right now.")
+		} else {
+			return "", fmt.Errorf("Unexpected error: %v", body)
+		}
 	})
 
 	if err != nil {
@@ -194,39 +207,90 @@ func createBucket(t *testing.T, cluster *gocb.Cluster, bucketName string, logger
 	// It takes a little bit of time for Couchbase to create the bucket. If you don't wait and immediately try to open
 	// the bucket, you get a confusing authentication error.
 	logger.Printf("Waiting a few seconds for the bucket to be created")
-	time.Sleep(5 * time.Second)
+	time.Sleep(15 * time.Second)
+}
 
-	logger.Printf("Opening bucket %s", bucketName)
+// Write to a Couchbase bucket. Note that we do NOT use any Couchbase SDK here because this test runs against a
+// Dockerized cluster, and the SDK does not work with Dockerized clusters, as it tries to use IPs that are only
+// accessible from inside a Docker container. Therefore, we just use the HTTP API directly. For more info, search for
+// "Connect via SDK" on this page: https://developer.couchbase.com/documentation/server/current/install/docker-deploy-multi-node-cluster.html
+func writeToBucket(t *testing.T, clusterUrl string, bucketName string, key string, value TestData, logger *log.Logger) {
+	logger.Printf("Writing (%s, %s) to bucket %s", key, value, bucketName)
 
-	bucket, err := cluster.OpenBucket(bucketName, passwordForTest)
+	jsonBytes, err := json.Marshal(value)
 	if err != nil {
-		t.Fatalf("Failed to open bucket %s: %v", bucketName, err)
+		t.Fatalf("Failed to encode value %v as JSON: %v", value, err)
 	}
 
-	return bucket
-}
-
-type TestData struct {
-	Id string `json:"uid"`
-	Foo string `json:"foo"`
-	Bar int `json:"bar"`
-}
-
-func writeToBucket(t *testing.T, bucket *gocb.Bucket, key string, value TestData, logger *log.Logger) {
-	logger.Printf("Writing (%s, %s) to bucket %s", key, value, bucket.Name())
-
-	if _, err := bucket.Insert(key, value, 0); err != nil {
-		t.Fatalf("Failed to insert (%s, %s) into bucket %s: %v", key, value, bucket.Name(), err)
-	}
-}
-
-func readFromBucket(t *testing.T, bucket *gocb.Bucket, key string, logger *log.Logger) TestData {
-	logger.Printf("Reading key %s from bucket %s", key, bucket.Name())
-
-	var value TestData
-	if _, err := bucket.Get(key, &value); err != nil {
-		t.Fatalf("Failed to retrieve key %s from bucket %s: %v", key, bucket.Name(), err)
+	// This is an undocumented API. I found it here: https://stackoverflow.com/a/37425574/483528. You can also find it
+	// by using the Couchbase web console and inspecting the requests that it is sending.
+	bucketUrl := fmt.Sprintf("%s/pools/default/buckets/%s/docs/%s", clusterUrl, bucketName, key)
+	postParams := map[string][]string{
+		"value": {string(jsonBytes)},
 	}
 
-	return value
+	logger.Printf("Write to bucket params: %s", string(jsonBytes))
+
+	statusCode, body, err := HttpPostForm(t, bucketUrl, postParams, logger)
+	if err != nil {
+		t.Fatalf("Failed to write (%s, %s) to bucket %s: %v", key, value, bucketName, err)
+	}
+
+	if statusCode != 200 {
+		t.Fatalf("Expected status code 200 when writing (%s, %s) to bucket %s, but got %d. Repsonse body: %s", key, value, bucketName, body)
+	}
+
+	logger.Printf("Successfully wrote (%s, %s) to bucket %s", key, value, bucketName)
+}
+// Read from a Couchbase bucket. Note that we do NOT use any Couchbase SDK here because this test runs against a
+// Dockerized cluster, and the SDK does not work with Dockerized clusters, as it tries to use IPs that are only
+// accessible from inside a Docker container. Therefore, we just use the HTTP API directly. For more info, search for
+// "Connect via SDK" on this page: https://developer.couchbase.com/documentation/server/current/install/docker-deploy-multi-node-cluster.html
+func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key string, logger *log.Logger) TestData {
+	logger.Printf("Reading key %s from bucket %s", key, bucketName)
+
+	// This is an undocumented API. I found it here: https://stackoverflow.com/a/37425574/483528. You can also find it
+	// by using the Couchbase web console and inspecting the requests that it is sending.
+	bucketUrl := fmt.Sprintf("%s/pools/default/buckets/%s/docs/%s", clusterUrl, bucketName, key)
+	statusCode, body, err := http_helper.HttpGet(bucketUrl, logger)
+
+	if err != nil {
+		t.Fatalf("Failed to read key %s from bucket %s: %v", key, bucketName, err)
+	}
+
+	if statusCode != 200 {
+		t.Fatalf("Expected status code 200 when reading key %s from bucket %s, but got %d", key, bucketName, statusCode)
+	}
+
+	var value CouchbaseTestDataResponse
+	if err := json.Unmarshal([]byte(body), &value); err != nil {
+		t.Fatalf("Failed to parse body '%s' for key %s in bucket %s: %v", body, key, bucketName, err)
+	}
+
+	logger.Printf("Got back %v for key %s from bucket %s", value, key, bucketName)
+
+	return value.Json
+}
+
+func HttpPostForm(t *testing.T, postUrl string, postParams url.Values, logger *log.Logger) (int, string, error) {
+	logger.Println("Making an HTTP POST call to URL %s with body %v", postUrl, postParams)
+
+	client := http.Client{
+		// By default, Go does not impose a timeout, so an HTTP connection attempt can hang for a LONG time.
+		Timeout: 10 * time.Second,
+	}
+
+	resp, err := client.PostForm(postUrl, postParams)
+	if err != nil {
+		return -1, "", err
+	}
+
+	defer resp.Body.Close()
+	respBody, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		return -1, "", err
+	}
+
+	return resp.StatusCode, strings.TrimSpace(string(respBody)), nil
 }
