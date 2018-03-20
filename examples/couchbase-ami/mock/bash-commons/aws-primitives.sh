@@ -97,7 +97,7 @@ function describe_instances_in_asg {
           "LaunchTime": "2018-03-17T17:38:31.000Z",
           "PublicIpAddress": "$couchbase_hostname_0",
           "PrivateIpAddress": "$couchbase_hostname_0",
-          "InstanceId": "i-0ece993b1700c0040",
+          "InstanceId": "i-0ace993b1700c0040",
           "PrivateDnsName": "$couchbase_hostname_0",
           "Tags": [
             {
@@ -119,6 +119,7 @@ function describe_instances_in_asg {
           "LaunchTime": "2018-03-17T17:38:31.000Z",
           "PublicIpAddress": "$couchbase_hostname_1",
           "PrivateIpAddress": "$couchbase_hostname_1",
+          "InstanceId": "i-0bce993b1700c0040",
           "PrivateDnsName": "$couchbase_hostname_1",
           "Tags": [
             {
@@ -136,6 +137,7 @@ function describe_instances_in_asg {
           "LaunchTime": "2018-03-17T17:38:31.000Z",
           "PublicIpAddress": "$couchbase_hostname_2",
           "PrivateIpAddress": "$couchbase_hostname_2",
+          "InstanceId": "i-0cce993b1700c0040",
           "PrivateDnsName": "$couchbase_hostname_2",
           "Tags": [
             {

@@ -51,7 +51,7 @@ The general idea is to:
    module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster).   
    
 1. Configure each server in the ASGs to execute the 
-   [configure-couchbase-server](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/configure-couchbase-server) and/or
+   [run-couchbase-server](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/run-couchbase-server) and/or
    [run-sync-gateway](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/run-sync-gateway)
    script during boot.
 

@@ -33,7 +33,7 @@ module "couchbase_cluster" {
   # Configure and start Couchbase during boot. It will automatically form a cluster with all nodes that have that same tag. 
   user_data = <<-EOF
               #!/bin/bash
-              /opt/couchbase/bin/configure-couchbase-server --all --cluster-tag-key couchbase-cluster
+              /opt/couchbase/bin/run-couchbase-server --all --cluster-tag-key couchbase-cluster
               EOF
   
   # ... See vars.tf for the other parameters you must define for the couchbase-cluster module
@@ -58,7 +58,7 @@ Note the following parameters:
 * `user_data`: Use this parameter to specify a [User 
   Data](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html#user-data-shell-scripts) script that each
   server will run during boot. This is where you can use the 
-  [configure-couchbase-server](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/configure-couchbase-server) and/or
+  [run-couchbase-server](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/run-couchbase-server) and/or
   [run-sync-gateway](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/run-sync-gateway)
   scripts to configure and run Couchbase and/or Sync Gateway. 
 
@@ -151,7 +151,7 @@ can use this volume to store Couchbase data.
 ### EC2 Instance Tags
 
 This module allows you to specify a tag to add to each EC2 instance in the ASG. The
-[configure-couchbase-server](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/configure-couchbase-server) and
+[run-couchbase-server](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/run-couchbase-server) and
 [run-sync-gateway](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/run-sync-gateway) 
 scripts use these tags to auto-discover other Couchbase nodes and form a cluster.
 
