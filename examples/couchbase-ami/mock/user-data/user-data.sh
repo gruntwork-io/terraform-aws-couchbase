@@ -9,10 +9,4 @@ exec > >(tee /opt/couchbase/var/lib/couchbase/logs/mock-user-data.log|logger -t 
 # The variables below come from mock-couchbase.env or entrypoint.env
 /opt/couchbase/bin/run-couchbase-server \
   --cluster-username "${cluster_username}" \
-  --cluster-password "${cluster_password}" \
-  --rest-port "${rest_port}" \
-  --capi-port "${capi_port}" \
-  --query-port "${query_port}" \
-  --fts-port "${fts_port}" \
-  --memcached-port "${memcached_port}" \
-  --xdcr-port "${xdcr_port}"
+  --cluster-password "${cluster_password}"

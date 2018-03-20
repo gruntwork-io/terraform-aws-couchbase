@@ -2,24 +2,20 @@
 
 set -e
 
-# We are using host networking (see network_mode in docker-compose.yml), so all of these servers will be listening
-# on different ports on localhost.
-readonly COUCHBASE_NODE_HOSTNAME="127.0.0.1"
-
 function get_instance_private_ip {
-  echo -n "$COUCHBASE_NODE_HOSTNAME"
+  hostname -i
 }
 
 function get_instance_public_ip {
-  echo -n "$COUCHBASE_NODE_HOSTNAME"
+  hostname -i
 }
 
 function get_instance_private_hostname {
-  echo -n "$COUCHBASE_NODE_HOSTNAME"
+  hostname -i
 }
 
 function get_instance_public_hostname {
-  echo -n "$COUCHBASE_NODE_HOSTNAME"
+  hostname -i
 }
 
 function get_instance_region {
@@ -82,18 +78,27 @@ function describe_instances_in_asg {
   local readonly asg_name="$1"
   local readonly aws_region="$2"
 
+  # These hostnames are set by Docker Compose networking using the names of the services
+  # (https://docs.docker.com/compose/networking/). We use getent (https://unix.stackexchange.com/a/20793/215969) to get
+  # the IP addresses for these hostnames, as that's what the servers themselves will advertise (see the mock
+  # get_instance_xxx_hostname methods above).
+
+  local readonly couchbase_hostname_0=$(getent hosts couchbase-ubuntu-0 | awk '{ print $1 }')
+  local readonly couchbase_hostname_1=$(getent hosts couchbase-ubuntu-1 | awk '{ print $1 }')
+  local readonly couchbase_hostname_2=$(getent hosts couchbase-ubuntu-2 | awk '{ print $1 }')
+
   cat << EOF
 {
   "Reservations": [
     {
       "Instances": [
         {
-          "PublicDnsName": "$COUCHBASE_NODE_HOSTNAME",
+          "PublicDnsName": "$couchbase_hostname_0",
           "LaunchTime": "2018-03-17T17:38:31.000Z",
-          "PublicIpAddress": "$COUCHBASE_NODE_HOSTNAME",
-          "PrivateIpAddress": "$COUCHBASE_NODE_HOSTNAME",
+          "PublicIpAddress": "$couchbase_hostname_0",
+          "PrivateIpAddress": "$couchbase_hostname_0",
           "InstanceId": "i-0ace993b1700c0040",
-          "PrivateDnsName": "$COUCHBASE_NODE_HOSTNAME",
+          "PrivateDnsName": "$couchbase_hostname_0",
           "Tags": [
             {
               "Value": "$asg_name",
@@ -110,12 +115,12 @@ function describe_instances_in_asg {
     {
       "Instances": [
         {
-          "PublicDnsName": "$COUCHBASE_NODE_HOSTNAME",
+          "PublicDnsName": "$couchbase_hostname_1",
           "LaunchTime": "2018-03-17T17:38:31.000Z",
-          "PublicIpAddress": "$COUCHBASE_NODE_HOSTNAME",
-          "PrivateIpAddress": "$COUCHBASE_NODE_HOSTNAME",
+          "PublicIpAddress": "$couchbase_hostname_1",
+          "PrivateIpAddress": "$couchbase_hostname_1",
           "InstanceId": "i-0bce993b1700c0040",
-          "PrivateDnsName": "$COUCHBASE_NODE_HOSTNAME",
+          "PrivateDnsName": "$couchbase_hostname_1",
           "Tags": [
             {
               "Value": "$asg_name",
@@ -128,12 +133,12 @@ function describe_instances_in_asg {
           ]
         },
         {
-          "PublicDnsName": "$COUCHBASE_NODE_HOSTNAME",
+          "PublicDnsName": "$couchbase_hostname_2",
           "LaunchTime": "2018-03-17T17:38:31.000Z",
-          "PublicIpAddress": "$COUCHBASE_NODE_HOSTNAME",
-          "PrivateIpAddress": "$COUCHBASE_NODE_HOSTNAME",
+          "PublicIpAddress": "$couchbase_hostname_2",
+          "PrivateIpAddress": "$couchbase_hostname_2",
           "InstanceId": "i-0cce993b1700c0040",
-          "PrivateDnsName": "$COUCHBASE_NODE_HOSTNAME",
+          "PrivateDnsName": "$couchbase_hostname_2",
           "Tags": [
             {
               "Value": "$asg_name",

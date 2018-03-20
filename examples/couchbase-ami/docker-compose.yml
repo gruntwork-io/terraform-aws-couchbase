@@ -31,48 +31,39 @@ services:
       - ./mock/entrypoint:/entrypoint
       - ./mock/systemd/mock-run-couchbase-server.service:/lib/systemd/system/mock-run-couchbase-server.service
 
-    # We have to use host networking as so each Couchbase node can register 127.0.0.1 as its IP. If we used bridge
-    # networking, each Couchbase node would use 172.xxx.yyy.zzz as its IP, and clients outside of Docker (e.g.,
-    # automated tests running on the host OS) would not be able to reach those IPs.
-    network_mode: "host"
-
-    # entrypoint.sh will use these environment variables to override the default ports for Couchbase. We need to
-    # override these ports because we are using host networking (see network_mode above) and therefore need to use
-    # unique port numbers for each container.
-    environment:
-      REST_PORT: 8091
-      CAPI_PORT: 8092
-      QUERY_PORT: 8093
-      SEARCH_PORT: 8094
-      MEMCACHED_PORT: 11210
-      XDCR_PORT: 9998
+    # Map each container to unique ports on the host. Note that you can use the HTTP/REST APIs from the lost but NOT
+    # the Couchbase SDKs! The SDKs will try to connect to the internal node IPs, which can only be accessed from within
+    # a container. Host networking would work around this, but it doesn't work, because Couchbase doesn't allow all
+    # port numbers to be overridden, so the Erlang Port Mapper service clashes.
+    ports:
+      - "8091:8091"
+      - "8092:8092"
+      - "8093:8093"
+      - "8094:8094"
+      - "11210:11210"
+      - "9998:9998"
 
   couchbase-ubuntu-1:
     <<: *couchbase_config
     container_name: couchbase-ubuntu-1
 
-    # entrypoint.sh will use these environment variables to override the default ports for Couchbase. We need to
-    # override these ports because we are using host networking (see network_mode above) and therefore need to use
-    # unique port numbers for each container.
-    environment:
-      REST_PORT: 7091
-      CAPI_PORT: 7092
-      QUERY_PORT: 7093
-      SEARCH_PORT: 7094
-      MEMCACHED_PORT: 10210
-      XDCR_PORT: 8998
+    ports:
+      - "7091:8091"
+      - "7092:8092"
+      - "7093:8093"
+      - "7094:8094"
+      - "10210:11210"
+      - "8998:9998"
 
   couchbase-ubuntu-2:
     <<: *couchbase_config
     container_name: couchbase-ubuntu-2
 
-    # entrypoint.sh will use these environment variables to override the default ports for Couchbase. We need to
-    # override these ports because we are using host networking (see network_mode above) and therefore need to use
-    # unique port numbers for each container.
-    environment:
-      REST_PORT: 6091
-      CAPI_PORT: 6092
-      QUERY_PORT: 6093
-      SEARCH_PORT: 6094
-      MEMCACHED_PORT: 9210
-      XDCR_PORT: 7998
+    ports:
+      - "6091:8091"
+      - "6092:8092"
+      - "6093:8093"
+      - "6094:8094"
+      - "9210:11210"
+      - "7998:9998"
+
