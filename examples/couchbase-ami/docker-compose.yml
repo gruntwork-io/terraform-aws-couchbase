@@ -4,6 +4,8 @@ services:
     image: gruntwork/couchbase-ubuntu-test
     entrypoint: ["/entrypoint/entrypoint.sh"]
     container_name: couchbase-ubuntu-0
+
+    # These are all settings required to make systemd happy
     privileged: true
     cap_add:
       - SYS_ADMIN
@@ -12,31 +14,65 @@ services:
     tmpfs:
       - /run
       - /run/lock
+
     volumes:
+      # Used for systemd
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
+
+      # Mount these scripts so we get hot reload
       - ../../modules/bash-commons:/opt/couchbase/bash-commons
+      - ../../modules/run-couchbase-server/run-couchbase-server:/opt/couchbase/bin/run-couchbase-server
+
+      # Override scripts in bash-commons with mocks so we can run locally, without talking to AWS APIs
       - ./mock/bash-commons/aws-primitives.sh:/opt/couchbase/bash-commons/aws-primitives.sh
-      - ../../modules/configure-couchbase-server/configure-couchbase-server:/opt/couchbase/bin/configure-couchbase-server
+
+      # Mount the mock scripts we use to run Couchbase during Docker container boot
       - ./mock/user-data:/user-data
       - ./mock/entrypoint:/entrypoint
-      - ./mock/systemd/mock-configure-couchbase-server.service:/lib/systemd/system/mock-configure-couchbase-server.service
-    ports:
-      - "8091:8091"
-      - "8092:8092"
-      - "11210:11210"
+      - ./mock/systemd/mock-run-couchbase-server.service:/lib/systemd/system/mock-run-couchbase-server.service
+
+    # We have to use host networking as so each Couchbase node can register 127.0.0.1 as its IP. If we used bridge
+    # networking, each Couchbase node would use 172.xxx.yyy.zzz as its IP, and clients outside of Docker (e.g.,
+    # automated tests running on the host OS) would not be able to reach those IPs.
+    network_mode: "host"
+
+    # entrypoint.sh will use these environment variables to override the default ports for Couchbase. We need to
+    # override these ports because we are using host networking (see network_mode above) and therefore need to use
+    # unique port numbers for each container.
+    environment:
+      REST_PORT: 8091
+      CAPI_PORT: 8092
+      QUERY_PORT: 8093
+      SEARCH_PORT: 8094
+      MEMCACHED_PORT: 11210
+      XDCR_PORT: 9998
 
   couchbase-ubuntu-1:
     <<: *couchbase_config
     container_name: couchbase-ubuntu-1
-    ports:
-      - "9091:8091"
-      - "9092:8092"
-      - "21210:11210"
+
+    # entrypoint.sh will use these environment variables to override the default ports for Couchbase. We need to
+    # override these ports because we are using host networking (see network_mode above) and therefore need to use
+    # unique port numbers for each container.
+    environment:
+      REST_PORT: 7091
+      CAPI_PORT: 7092
+      QUERY_PORT: 7093
+      SEARCH_PORT: 7094
+      MEMCACHED_PORT: 10210
+      XDCR_PORT: 8998
 
   couchbase-ubuntu-2:
     <<: *couchbase_config
     container_name: couchbase-ubuntu-2
-    ports:
-      - "10091:8091"
-      - "10092:8092"
-      - "31210:11210"
+
+    # entrypoint.sh will use these environment variables to override the default ports for Couchbase. We need to
+    # override these ports because we are using host networking (see network_mode above) and therefore need to use
+    # unique port numbers for each container.
+    environment:
+      REST_PORT: 6091
+      CAPI_PORT: 6092
+      QUERY_PORT: 6093
+      SEARCH_PORT: 6094
+      MEMCACHED_PORT: 9210
+      XDCR_PORT: 7998

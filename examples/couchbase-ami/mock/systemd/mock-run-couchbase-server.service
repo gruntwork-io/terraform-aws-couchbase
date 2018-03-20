@@ -10,6 +10,7 @@ ExecStart=/user-data/user-data.sh
 Restart=no
 Type=oneshot
 EnvironmentFile=/user-data/mock-couchbase.env
+EnvironmentFile=/env/entrypoint.env
 
 [Install]
 WantedBy=multi-user.target
