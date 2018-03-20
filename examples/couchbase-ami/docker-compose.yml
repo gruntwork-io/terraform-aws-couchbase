@@ -31,10 +31,10 @@ services:
       - ./mock/entrypoint:/entrypoint
       - ./mock/systemd/mock-run-couchbase-server.service:/lib/systemd/system/mock-run-couchbase-server.service
 
-    # Map each container to unique ports on the host. Note that you can use the HTTP/REST APIs from the lost but NOT
-    # the Couchbase SDKs! The SDKs will try to connect to the internal node IPs, which can only be accessed from within
-    # a container. Host networking would work around this, but it doesn't work, because Couchbase doesn't allow all
-    # port numbers to be overridden, so the Erlang Port Mapper service clashes.
+    # Map each container to unique ports on the host. Note that you can talk to this container from your host OS via the
+    # HTTP/REST APIs but NOT the Couchbase SDKs! The SDKs will try to connect to the internal node IPs, which can only
+    # be accessed from within a container. Host networking would work around this, but it doesn't work, because
+    # Couchbase doesn't allow all port numbers to be overridden, so the Erlang Port Mapper service clashes.
     ports:
       - "8091:8091"
       - "8092:8092"
