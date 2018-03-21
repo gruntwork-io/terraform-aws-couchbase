@@ -74,7 +74,7 @@
     "type": "shell",
     "inline": [
       "/tmp/terraform-aws-couchbase/modules/install-couchbase-server/install-couchbase-server",
-      "/tmp/terraform-aws-couchbase/modules/install-sync-gateway/install-sync-gateway"
+      "/tmp/terraform-aws-couchbase/modules/install-sync-gateway/install-sync-gateway --config /tmp/terraform-aws-couchbase/examples/couchbase-ami/sync_gateway.json"
     ]
   }],
   "post-processors": [{

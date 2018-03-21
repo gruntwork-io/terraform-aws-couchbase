@@ -2,4 +2,220 @@
 
 set -e
 
-echo "TODO"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly BASH_COMMONS_INSTALL_DIR="$SCRIPT_DIR/../bash-commons"
+
+source "$BASH_COMMONS_INSTALL_DIR/logging.sh"
+source "$BASH_COMMONS_INSTALL_DIR/assertions.sh"
+source "$BASH_COMMONS_INSTALL_DIR/aws.sh"
+source "$BASH_COMMONS_INSTALL_DIR/os.sh"
+source "$BASH_COMMONS_INSTALL_DIR/collections.sh"
+source "$BASH_COMMONS_INSTALL_DIR/strings.sh"
+
+readonly SYNC_GATEWAY_BASE_DIR="/opt/couchbase-sync-gateway"
+readonly SYNC_GATEWAY_BIN_DIR="$SYNC_GATEWAY_BASE_DIR/bin"
+readonly SYNC_GATEWAY_CLI="$SYNC_GATEWAY_BIN_DIR/sync_gateway"
+
+readonly MAX_RETRIES=60
+readonly SLEEP_BETWEEN_RETRIES_SEC=5
+
+# The systemd unit for Sync Gateway configures it load the config file at this path
+readonly DEFAULT_SYNC_GATEWAY_CONFIG_PATH="/home/sync_gateway/sync_gateway.json"
+readonly DEFAULT_SYNC_GATEWAY_SYSTEMD_UNIT_PATH="/lib/systemd/system/sync_gateway.service"
+
+function print_usage {
+  echo
+  echo "Usage: run-sync-gateway [options]"
+  echo
+  echo "This script can be used to configure and run Couchbase Sync Gateway. This script has been tested with Ubuntu 16.04 and Amazon Linux."
+  echo
+  echo "Options:"
+  echo
+  echo -e "  --auto-fill-asg KEY=ASG_NAME[:PORT]\t\tSearch the Sync Gateway config file for KEY and replace it with the IPs (and optional PORT) of servers in the ASG called ASG_NAME. May be repeated."
+  echo -e "  --auto-fill KEY=VALUE\t\tSearch the Sync Gateway config file for KEY and replace it with VALUE. May be repeated."
+  echo -e "  --use-public-hostname\t\tIf this flag is set, use the public hostname for each server in --auto-fill. Without this flag, the private hostname will be used."
+  echo -e "  --config\t\tThe path to a JSON config file for Sync Gateway. This may contain placeholders that are dynamically filled in via the --auto-fill flag. Default: $DEFAULT_SYNC_GATEWAY_CONFIG_PATH."
+  echo
+  echo "Example:"
+  echo
+  echo "  run-sync-gateway --auto-fill-asg __SERVER_IPS__=my-couchbase-cluster:8091 --auto-fill __PORT__=4984"
+}
+
+# Parse the hostnames from the given the response of the aws describe-instances API call and return them as a
+# comma-separated list, with the given port number attached to each. Parse out the public hostnames if
+# use_public_hostname is true and private hostnames otherwise.
+function get_hostnames {
+  local readonly instances_response="$1"
+  local readonly use_public_hostname="$2"
+  local readonly port="$3"
+
+  local readonly hostname_param=$([[ "$use_public_hostname" == "true" ]] && echo "PublicDnsName" || echo "PrivateDnsName")
+  local readonly port_param=$([[ -z "$port" ]] && echo "" || echo ":$port")
+
+  local hostnames
+  hostnames=$(echo "$instances_response" | jq -r ".Reservations[].Instances[].$hostname_param")
+  assert_not_empty_aws_response "$hostnames" "Could not find hostnames in describe-instances value:\n$instances_response"
+
+  local hostnames_with_ports=()
+  local hostname
+  for hostname in "${hostnames[@]}"; do
+    assert_not_empty_aws_response "$hostname" "Get empty $hostname_param value! Full describe-instances response:\n$instances_response"
+    hostnames_with_ports+=("$hostname$port_param")
+  done
+
+  join "," "${hostnames_with_ports[@]}"
+}
+
+function update_config_path {
+  local readonly config_path="$1"
+  local readonly systemd_unit_path="$2"
+
+  log_info "Setting Sync Gateway systemd unit $systemd_unit_path config path to $config_path"
+  replace_or_append_in_file "^Environment=\"CONFIG=.*\"$" "Environment=\"CONFIG=$config_path\"" "$systemd_unit_path"
+}
+
+function auto_fill_config {
+  local readonly config="$1"
+  shift 1
+  local readonly auto_fill=($@)
+
+  if [[ -z "${auto_fill[@]}" ]]; then
+    log_info "No auto-fill params specified."
+    return
+  fi
+
+  local param
+  for param in "${auto_fill[@]}"; do
+    auto_fill_param "$config" "$param"
+  done
+}
+
+function auto_fill_config_asg {
+  local readonly config="$1"
+  local readonly use_public_hostname="$2"
+  shift 2
+  local readonly auto_fill_asg=($@)
+
+  if [[ -z "${auto_fill_asg[@]}" ]]; then
+    log_info "No ASG auto-fill params specified."
+    return
+  fi
+
+  local aws_region
+  aws_region=$(get_instance_region)
+  assert_not_empty_aws_response "$aws_region" "AWS region"
+
+  local param
+  for param in "${auto_fill_asg[@]}"; do
+    auto_fill_asg_param "$config" "$use_public_hostname" "$param" "$aws_region"
+  done
+}
+
+function auto_fill_param {
+  local readonly config="$1"
+  local readonly param="$2"
+
+  # The param is of the format KEY=VALUE. Use bash to break up a string around a delimeter:
+  # https://stackoverflow.com/a/16623897/483528.
+  local readonly placeholder_name=${param%=*}
+  local readonly placeholder_value=${param#*=}
+
+  log_info "Replacing the '$placeholder_name' placeholder in $config with $placeholder_value"
+  replace_text_in_file "$placeholder_name" "$placeholder_value" "$config"
+}
+
+function auto_fill_asg_param {
+  local readonly config="$1"
+  local readonly use_public_hostname="$2"
+  local readonly param="$3"
+  local readonly aws_region="$4"
+
+  # The param is of the format KEY=ASG_NAME:PORT (note that :PORT is optional). Use bash to break up a string around a
+  # delimeter: https://stackoverflow.com/a/16623897/483528.
+  local readonly placeholder_name=${param%=*}
+  local asg_name=${param#*=}
+  local port=""
+
+  if string_contains "$asg_name" ":"; then
+    port=${asg_name#*:}
+    asg_name=${asg_name%:*}
+  fi
+
+  local instances
+  instances=$(wait_for_instances_in_asg "$asg_name" "$aws_region")
+  assert_not_empty_aws_response "$instances" "Get info about Instances in ASG $asg_name in $aws_region"
+
+  local hostnames
+  hostnames=$(get_hostnames "$instances" "$use_public_hostname" "$port")
+  assert_not_empty_aws_response "$hostnames" "Unable to parse host names for ASG $asg_name in $aws_region"
+
+  # https://developer.couchbase.com/documentation/mobile/1.5/guides/sync-gateway/config-properties/index.html#1.5/databases-foo_db-server
+  local readonly placeholder_value="couchbase://$hostnames"
+
+  log_info "Replacing the '$placeholder_name' placeholder in $config with $placeholder_value"
+  replace_text_in_file "$placeholder_name" "$placeholder_value" "$config"
+}
+
+function start_sync_gateway {
+  log_info "Starting Sync Gateway"
+  sudo systemctl enable sync_gateway
+  sudo systemctl start sync_gateway
+}
+
+# The main entrypoint for this code
+function run {
+  local auto_fill_asg=()
+  local auto_fill=()
+  local use_public_hostname="false"
+  local config="$DEFAULT_SYNC_GATEWAY_CONFIG_PATH"
+
+  while [[ $# > 0 ]]; do
+    local key="$1"
+
+    case "$key" in
+      --auto-fill-asg)
+        assert_not_empty "$key" "$2"
+        auto_fill_asg+=("$2")
+        shift
+        ;;
+      --auto-fill)
+        assert_not_empty "$key" "$2"
+        auto_fill+=("$2")
+        shift
+        ;;
+      --use-public-hostname)
+        use_public_hostname="true"
+        ;;
+      --config)
+        assert_not_empty "$key" "$2"
+        config="$2"
+        shift
+        ;;
+      --help)
+        print_usage
+        exit
+        ;;
+      *)
+        log_error "Unrecognized argument: $key"
+        print_usage
+        exit 1
+        ;;
+    esac
+
+    shift
+  done
+
+  assert_is_installed "aws"
+  assert_is_installed "jq"
+
+  log_info "Starting configuration of Sync Gateway..."
+
+  update_config_path "$config" "$DEFAULT_SYNC_GATEWAY_SYSTEMD_UNIT_PATH"
+  auto_fill_config_asg "$config" "$use_public_hostname" "${auto_fill_asg[@]}"
+  auto_fill_config "$config" "${auto_fill[@]}"
+  start_sync_gateway
+
+  log_info "Sync Gateway configured successfully!"
+}
+
+run "$@"

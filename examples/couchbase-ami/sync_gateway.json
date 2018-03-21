@@ -1,0 +1,11 @@
+{
+  "adminInterface": "<ADMIN_INTERFACE>",
+  "interface": "<INTERFACE>",
+  "<DB_NAME>": {
+    "couchbase-example": {
+      "server": "<SERVERS>",
+      "username": "<DB_USERNAME>",
+      "password": "<DB_PASSWORD>"
+    }
+  }
+}

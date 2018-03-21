@@ -18,6 +18,9 @@ readonly DEFAULT_SYNC_GATEWAY_DIR="/opt/couchbase-sync-gateway"
 readonly DEFAULT_SYNC_GATEWAY_BIN_DIR="$DEFAULT_SYNC_GATEWAY_DIR/bin"
 readonly BASH_COMMONS_INSTALL_DIR="$DEFAULT_SYNC_GATEWAY_DIR/bash-commons"
 
+# The systemd unit for Sync Gateway configures it load the config file at this path
+readonly DEFAULT_SYNC_GATEWAY_CONFIG_PATH="/home/sync_gateway/sync_gateway.json"
+
 function print_usage {
   echo
   echo "Usage: install-sync-gateway [options]"
@@ -28,10 +31,11 @@ function print_usage {
   echo
   echo -e "  --version\tThe version of Sync Gateway to install. Default: $DEFAULT_SYNC_GATEWAY_VERSION."
   echo -e "  --checksum\tThe MD5 checksum of the Sync Gateway package. Required if --version is specified. You can get it from the downloads page of the Couchbase website."
+  echo -e "  --config\tConfigure Sync Gateway to use the specified JSON config file."
   echo
   echo "Example:"
   echo
-  echo "  install-sync-gateway --version $DEFAULT_SYNC_GATEWAY_VERSION --checksum $DEFAULT_SYNC_GATEWAY_MD5_CHECKSUM"
+  echo "  install-sync-gateway --version $DEFAULT_SYNC_GATEWAY_VERSION --checksum $DEFAULT_SYNC_GATEWAY_MD5_CHECKSUM --config my-custom-config.json"
 }
 
 function install_sync_gateway_on_ubuntu {
@@ -59,6 +63,15 @@ function install_sync_gateway_on_ubuntu {
   rm -f "$filepath"
 }
 
+function install_config {
+  local readonly config="$1"
+
+  if [[ ! -z "$config" ]]; then
+    log_info "Configuring Sync Gateway to use config file $config by copying it to $DEFAULT_SYNC_GATEWAY_CONFIG_PATH"
+    sudo cp "$config" "$DEFAULT_SYNC_GATEWAY_CONFIG_PATH"
+  fi
+}
+
 function install_run_sync_gateway_script {
   local readonly dest_dir="$1"
   local readonly src="$SCRIPT_DIR/../run-sync-gateway/run-sync-gateway"
@@ -80,6 +93,7 @@ function install_bash_commons {
 function install {
   local version="$DEFAULT_SYNC_GATEWAY_VERSION"
   local checksum="$DEFAULT_SYNC_GATEWAY_MD5_CHECKSUM"
+  local config
 
   while [[ $# > 0 ]]; do
     local key="$1"
@@ -93,6 +107,11 @@ function install {
       --checksum)
         assert_not_empty "$key" "$2"
         checksum="$2"
+        shift
+        ;;
+      --config)
+        assert_not_empty "$key" "$2"
+        config="$2"
         shift
         ;;
       --help)
@@ -121,6 +140,7 @@ function install {
     exit 1
   fi
 
+  install_config "$config"
   install_run_sync_gateway_script "$DEFAULT_SYNC_GATEWAY_BIN_DIR"
   install_bash_commons "$BASH_COMMONS_INSTALL_DIR"
 
