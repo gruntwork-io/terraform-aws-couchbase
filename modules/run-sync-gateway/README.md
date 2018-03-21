@@ -18,7 +18,7 @@ This script assumes you installed it, plus all of its dependencies (including Sy
 The default install path is `/opt/couchbase/bin`, so to configure and start Couchbase, you run:
 
 ```
-/opt/couchbase/bin/run-sync-gateway --cluster-tag-key couchbase-cluster --cluster-tag-value prod-cluster
+/opt/couchbase/bin/run-sync-gateway
 ```
 
 This will:
@@ -39,17 +39,24 @@ fully-working sample code.
 
 ## Command line Arguments
 
-The `run-sync-gateway` script accepts the following arguments:
+Run `run-sync-gateway --help` to see all available arguments.
 
-* `cluster-tag-key` (required): Automatically connect to the cluster with Instances that have this tag key and the tag 
-  value in `--cluster-tag-value`.
-* `cluster-tag-value` (required): Automatically connect to the cluster with Instances that have the tag key in 
-  `--cluster-tag-key` and this tag value.
+```
+Usage: run-sync-gateway [options]
+
+This script can be used to configure and run Couchbase Sync Gateway. This script has been tested with Ubuntu 16.04 and Amazon Linux.
+
+Options:
+
+  --auto-fill-asg KEY=ASG_NAME[:PORT]	Replace KEY in the Sync Gateway config with the IPs (and optional PORT) of servers in the ASG called ASG_NAME. May be repeated.
+  --auto-fill KEY=VALUE			          Search the Sync Gateway config file for KEY and replace it with VALUE. May be repeated.
+  --use-public-hostname			          If this flag is set, use the public hostname for each server in --auto-fill. Without this flag, the private hostname will be used.
+  --config				                    The path to a JSON config file for Sync Gateway. Default: /home/sync_gateway/sync_gateway.json.
+  --help				                      Show this help text and exit.
 
 Example:
 
-```
-/opt/couchbase/bin/run-sync-gateway --cluster-tag-key couchbase-cluster --cluster-tag-value prod-cluster 
+  run-sync-gateway --auto-fill-asg __SERVER_IPS__=my-couchbase-cluster:8091 --auto-fill __PORT__=4984 
 ```
 
 

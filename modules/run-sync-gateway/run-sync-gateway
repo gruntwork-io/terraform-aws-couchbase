@@ -31,10 +31,11 @@ function print_usage {
   echo
   echo "Options:"
   echo
-  echo -e "  --auto-fill-asg KEY=ASG_NAME[:PORT]\t\tSearch the Sync Gateway config file for KEY and replace it with the IPs (and optional PORT) of servers in the ASG called ASG_NAME. May be repeated."
-  echo -e "  --auto-fill KEY=VALUE\t\tSearch the Sync Gateway config file for KEY and replace it with VALUE. May be repeated."
-  echo -e "  --use-public-hostname\t\tIf this flag is set, use the public hostname for each server in --auto-fill. Without this flag, the private hostname will be used."
-  echo -e "  --config\t\tThe path to a JSON config file for Sync Gateway. This may contain placeholders that are dynamically filled in via the --auto-fill flag. Default: $DEFAULT_SYNC_GATEWAY_CONFIG_PATH."
+  echo -e "  --auto-fill-asg KEY=ASG_NAME[:PORT]\tReplace KEY in the Sync Gateway config with the IPs (and optional PORT) of servers in the ASG called ASG_NAME. May be repeated."
+  echo -e "  --auto-fill KEY=VALUE\t\t\tSearch the Sync Gateway config file for KEY and replace it with VALUE. May be repeated."
+  echo -e "  --use-public-hostname\t\t\tIf this flag is set, use the public hostname for each server in --auto-fill. Without this flag, the private hostname will be used."
+  echo -e "  --config\t\t\t\tThe path to a JSON config file for Sync Gateway. Default: $DEFAULT_SYNC_GATEWAY_CONFIG_PATH."
+  echo -e "  --help\t\t\t\tShow this help text and exit."
   echo
   echo "Example:"
   echo
@@ -53,7 +54,7 @@ function get_hostnames {
   local readonly port_param=$([[ -z "$port" ]] && echo "" || echo ":$port")
 
   local hostnames
-  hostnames=$(echo "$instances_response" | jq -r ".Reservations[].Instances[].$hostname_param")
+  hostnames=($(echo "$instances_response" | jq -r ".Reservations[].Instances[].$hostname_param"))
   assert_not_empty_aws_response "$hostnames" "Could not find hostnames in describe-instances value:\n$instances_response"
 
   local hostnames_with_ports=()
