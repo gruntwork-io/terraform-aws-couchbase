@@ -233,18 +233,30 @@ func writeToBucket(t *testing.T, clusterUrl string, bucketName string, key strin
 		"value": {string(jsonBytes)},
 	}
 
-	logger.Printf("Write to bucket params: %s", string(jsonBytes))
+	description := fmt.Sprintf("Write to bucket params: %s", string(jsonBytes))
+	retries := 10
+	timeBetweenRetries := 5 * time.Second
 
-	statusCode, body, err := HttpPostForm(t, bucketUrl, postParams, logger)
+	// Buckets take a while to replicate, and until they do, you get vague errors such as "Unexpected server error",
+	// so retry a few times.
+	out, err := util.DoWithRetry(description, retries, timeBetweenRetries, logger, func() (string, error) {
+		statusCode, body, err := HttpPostForm(t, bucketUrl, postParams, logger)
+		if err != nil {
+			return "", err
+		}
+
+		if statusCode != 200 {
+			return "", fmt.Errorf("Expected status code 200 when writing (%s, %s) to bucket %s, but got %d. Repsonse body: %s", key, value, bucketName, body)
+		}
+
+		return fmt.Sprintf("Successfully wrote (%s, %s) to bucket %s", key, value, bucketName), nil
+	})
+
 	if err != nil {
-		t.Fatalf("Failed to write (%s, %s) to bucket %s: %v", key, value, bucketName, err)
+		t.Fatalf("Failed to write to (%s, %s) to bucket %s: %v", key, value, bucketName, err)
 	}
 
-	if statusCode != 200 {
-		t.Fatalf("Expected status code 200 when writing (%s, %s) to bucket %s, but got %d. Repsonse body: %s", key, value, bucketName, body)
-	}
-
-	logger.Printf("Successfully wrote (%s, %s) to bucket %s", key, value, bucketName)
+	logger.Printf(out)
 }
 // Read from a Couchbase bucket. Note that we do NOT use any Couchbase SDK here because this test runs against a
 // Dockerized cluster, and the SDK does not work with Dockerized clusters, as it tries to use IPs that are only
