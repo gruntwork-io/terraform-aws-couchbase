@@ -1,4 +1,7 @@
 #!/bin/bash
+# This is a mock version of a script with the same name that replaces all the real methods, which rely on external
+# dependencies, such EC2 Metadata and AWS API calls, with mock versions that can run entirely locally. This allows us
+# to test all the scripts completely locally using Docker.
 
 set -e
 
@@ -20,6 +23,10 @@ function get_instance_public_hostname {
 
 function get_instance_region {
   echo "us-east-1"
+}
+
+function get_ec2_instance_availability_zone {
+  echo "us-east-1a"
 }
 
 # Return the container ID of the current Docker container. Per https://stackoverflow.com/a/25729598/2308858

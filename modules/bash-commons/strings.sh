@@ -77,3 +77,10 @@ function to_uppercase {
   local readonly str="$1"
   echo "$str" | awk '{print toupper($0)}'
 }
+
+# http://stackoverflow.com/a/16623897/483528
+function strip_prefix {
+  local readonly str="$1"
+  local readonly prefix="$2"
+  echo "${str#$prefix}"
+}

@@ -1,0 +1,488 @@
+#!/bin/bash
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/logging.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/aws-primitives.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/strings.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/assertions.sh"
+
+readonly MAX_VOLUME_ATTACHED_RETRIES=10
+readonly SLEEP_SEC_BETWEEN_VOLUME_ATTACH_RETRIES=10
+
+readonly FS_TAB_PATH="/etc/fstab"
+readonly DEFAULT_FILE_SYSTEM_TYPE="ext4"
+readonly DEFAULT_FILE_SYSTEM_MOUNT_OPTIONS="defaults,nofail"
+
+# An exit code we hope is unique enough that AWS is not using it. Note that exit codes must be between 0 and 255, so
+# we can't use a crazy large or negative number.
+readonly VOLUME_ALREADY_ATTACHED_ERROR=42
+
+# A global variable to store the id of the volume that gets attached. See the try_to_attach_volume_from_list function
+# for why this isn't a local variable.
+MOUNTED_VOLUME_ID=""
+
+readonly MAX_RETRIES=24
+readonly SLEEP_BETWEEN_RETRIES_SEC=5
+
+function print_usage {
+  echo
+  echo "Usage: mount-ebs-volume [OPTIONS]"
+  echo
+  echo "This script can be run on an EC2 instance to attach and mount a persistent EBS volume. It uses the AWS API to attach the volume, creates a file system on it (if it doesn't have one already), and mounts it at a specified mount point. If you're mounting volumes dynamically, such as with instances in an Auto Scaling Group, you can pass in multiple volume ids and this script will try to attach each one until it finds one in the same availability zone that is unattached. "
+  echo
+  echo "Required Arguments:"
+  echo
+  echo -e "  --aws-region\t\tThe AWS region the instance is running in (e.g. us-east-1)."
+  echo -e "  --device-name\t\tThe device name to use for the volume (e.g. /dev/xvdf)."
+  echo -e "  --mount-point\t\tThe path at which the volume should be mounted (e.g. /foo/bar)."
+  echo -e "  --owner\t\tThe user who should own the mount-point (e.g. ubuntu)."
+  echo
+  echo "Optional Arguments:"
+  echo
+  echo -e "  --volume-id\t\tThe id of the EBS volume to mount (e.g. vol-12345) at --device-name. If specified multiple times, this script will try each volume until it finds one it can attach."
+  echo -e "  --volume-with-same-tag\t\tMount the volume that has the same value for this tag as this EC2 instance. Useful when you tag your EBS Volumes and corresponding Instances with matching tags."
+  echo -e "  --file-system-type\tThe type of file system in the volume. Will be created if the volume doesn't already have one. Optional. Default: $DEFAULT_FILE_SYSTEM_TYPE."
+  echo -e "  --file-system-mount-options\tThe options with which to mount the file system. Default: $DEFAULT_FILE_SYSTEM_MOUNT_OPTIONS."
+  echo -e "  --help\t\tShow this help text and exit."
+  echo
+  echo "Example:"
+  echo
+  echo "  mount-ebs-volume --aws-region us-east-1 --volume-id vol-123456 --volume-id vol-7891011 --device-name /dev/xvdf --mount-point /data --owner ubuntu"
+}
+
+# Uses the AWS API to fetch JSON describing the given EBS volume ids in the given AWS region. If the operation fails,
+# retry. The reason we retry is because the describe-volumes operation may fail to attach for transient reasons. For
+# example, we may be giving IAM permissions to a specific EC2 Instance ID to attach a specific EBS Volume ID. When you
+# create or replace that Instance, the IAM permissions can only be created AFTER the instance has been created (since
+# we need the instance ID in the IAM policy), and it's possible those permissions are not yet in place when the
+# Instance is booting and running this script.
+function describe_volumes {
+  local readonly aws_region="$1"
+  local readonly volume_ids=($2)
+
+  for (( i=0; i<"$MAX_RETRIES"; i++ )); do
+    set +e
+    local output
+    output=$(aws ec2 describe-volumes --region "$aws_region" --volume-ids ${volume_ids[@]})
+    local readonly exit_code=$?
+    set -e
+
+    if [[ "$exit_code" -eq 0 ]]; then
+      echo "$output"
+      return 0
+    else
+      log_warn "Failed to call describe-volumes on volumes ${volume_ids[@]}. Got exit code $exit_code. So log output above for stderr."
+      log_info "Sleeping for $SLEEP_BETWEEN_RETRIES_SEC seconds and will try again."
+      sleep "$SLEEP_BETWEEN_RETRIES_SEC"
+    fi
+  done
+
+  log_error "Max retries ($MAX_RETRIES) exceeded while trying to call describe-volumes for volumes ${volume_ids[@]}. See log output above for errors."
+  return 1
+}
+
+# Attach one of the EBS volumes from the given list of ids. This function will filter the list to volumes that are not
+# already attached and are in the same availability zone as this instance. If there is more than one such volume
+# in the list, one will be picked at random.
+function attach_volume_from_list {
+  local readonly aws_region="$1"
+  local readonly device_name="$2"
+  shift 2
+  local readonly volume_ids="$@"
+
+  local availability_zone=""
+  local instance_id=""
+  local ebs_volumes=""
+  local ebs_volumes_unattached_in_az=""
+
+  availability_zone=$(get_ec2_instance_availability_zone)
+  instance_id=$(get_ec2_instance_id)
+
+  log_info "Searching for EBS volumes with ids: $volume_ids"
+  ebs_volumes=$(describe_volumes "$aws_region" "$volume_ids")
+
+  log_info "Filtering EBS volumes for those that are in $availability_zone and are unattached"
+  ebs_volumes_unattached_in_az=$(echo "$ebs_volumes"  | jq ".Volumes[] | select(.AvailabilityZone == \"$availability_zone\") | select(.Attachments | length == 0)")
+
+  if [[ -z "$ebs_volumes_unattached_in_az" ]]; then
+    log_error "EBS Volumes $volume_ids are either all attached or not in the availability zone $availability_zone."
+    exit 1
+  else
+    try_to_attach_volume_from_list "$aws_region" "$device_name" "$instance_id" "$ebs_volumes_unattached_in_az"
+  fi
+}
+
+# Find the value this EC2 Instance has for the given tag and then find an attach an EBS Volume with the same tag.
+function attach_volume_with_same_tag {
+  local readonly aws_region="$1"
+  local readonly device_name="$2"
+  local readonly tag_key="$3"
+
+  log_info "Looking for EBS volume with same value for tag $tag_key as this Instance"
+
+  local ebs_volume_id
+  ebs_volume_id=$(find_ebs_volume_with_same_tag "$aws_region" "$tag_key")
+
+  if [[ -z "$ebs_volume_id" || "$ebs_volume_id" == "null" ]]; then
+    log_error "Unable to find EBS volume with same tag for key $tag_key as this EC2 Instance."
+    exit 1
+  fi
+
+  attach_volume_from_list "$aws_region" "$device_name" "$ebs_volume_id"
+}
+
+function find_ebs_volume_with_same_tag {
+  local readonly aws_region="$1"
+  local readonly tag_key="$2"
+
+  local tag_value
+  tag_value=$(get_value_for_tag "$aws_region" "$tag_key")
+
+  if [[ -z "$tag_value" || "$tag_value" == "null" ]]; then
+    return
+  fi
+
+  local availability_zone
+  availability_zone=$(get_ec2_instance_availability_zone)
+
+  for (( i=0; i<"$MAX_RETRIES"; i++ )); do
+    set +e
+    local output
+    output=$(aws ec2 describe-volumes --region "$aws_region" --filters "Name=tag:$tag_key,Values=$tag_value" "Name=status,Values=available" "Name=availability-zone,Values=$availability_zone")
+    local readonly exit_code=$?
+    set -e
+
+    if [[ "$exit_code" -eq 0 ]]; then
+      echo "$output" | jq -r '.Volumes[0].VolumeId'
+      return 0
+    else
+      log_warn "Failed to call describe-volumes on with tag $tag_key=$tag_value. Got exit code $exit_code. So log output above for sterr."
+      log_info "Sleeping for $SLEEP_BETWEEN_RETRIES_SEC seconds and will try again."
+      sleep "$SLEEP_BETWEEN_RETRIES_SEC"
+    fi
+  done
+
+  log_error "Max retries ($MAX_RETRIES) exceeded while trying to call describe-volumes with tag $tag_key=$tag_value. See log output above for errors."
+  return 1
+}
+
+function get_value_for_tag {
+  local readonly aws_region="$1"
+  local readonly tag_key="$2"
+
+  local instance_id
+  instance_id=$(get_ec2_instance_id)
+
+  # It can take a while for tags to propagate, especially with ASGs, so retry a few times
+  for (( i=0; i<"$MAX_RETRIES"; i++ )); do
+    log_info "Looking up the value EC2 Instance $instance_id has for tag $tag_key"
+
+    set +e
+    local output
+    output=$(aws ec2 describe-tags --region "$aws_region" --filters "Name=resource-id,Values=$instance_id" "Name=key,Values=$tag_key")
+    set -e
+
+    local tag_value
+    tag_value=$(echo "$output" | jq -r '.Tags[0].Value')
+
+    if [[ -z "$tag_value" || "$tag_value" == "null" ]]; then
+      log_info "Could not find a value for tag $tag_key on Instance $instance_id. Tags can take a while to propagate, so will sleep for $SLEEP_BETWEEN_RETRIES_SEC seconds and try again."
+      sleep "$SLEEP_BETWEEN_RETRIES_SEC"
+    else
+      log_info "Found value $tag_value for tag $tag_key on Instance $instance_id!"
+      echo "$tag_value"
+      return
+    fi
+  done
+
+  log_error "Could not find a value for tag $tag_key on $instance_id after $MAX_RETRIES retries."
+  exit 1
+}
+
+# Loop through the given list of EBS volumes, which are assumed to be in the current Availability Zone and unattached,
+# and try to attach one. If you get an error that volume is already attached to another instance, just try the next
+# one. Keep trying until you succeed, run out of volumes, or hit any other type of error.
+function try_to_attach_volume_from_list {
+  local readonly aws_region="$1"
+  local readonly device_name="$2"
+  local readonly instance_id="$3"
+  local readonly ebs_volumes_unattached_in_az="$4"
+
+  local volume_ids=""
+  volume_ids=($(echo "$ebs_volumes_unattached_in_az" | jq -r ".VolumeId"))
+
+  local volume_id=""
+  for volume_id in "${volume_ids[@]}"; do
+    # The try_to_attach_volume command may fail if the volume is already attached, which is expected if some other
+    # instance happened to attach it at the same time, so we add the '&& :' at the end to ensure the whole script
+    # doesn't exit. For more info, see: http://stackoverflow.com/a/27793459/483528
+    try_to_attach_volume "$aws_region" "$volume_id" "$device_name" "$instance_id" && :
+    local readonly exit_code=$?
+
+    case $exit_code in
+      0)
+        log_info "Volume $volume_id is now mounted."
+        # We need to know the id of the volume we attached so we can mount it and report it back to the user. Ideally,
+        # this function would just return this value once it successfully attaches a volume, but bash functions can
+        # only return integers. Another option is to echo the name to stdout, but this function writes logging output
+        # to stdout, and it's messy to have to parse the volume name out from amongst that output. Therefore,
+        # we just store the id in a global variables (global to this script, that is).
+        MOUNTED_VOLUME_ID="$volume_id"
+        return
+        ;;
+      $VOLUME_ALREADY_ATTACHED_ERROR)
+        log_info "Volume $volume_id is already attached to another instance. Will try a different volume."
+        ;;
+      *)
+        log_error "Unexpected exit code $exit_code when trying to mount volume $volume_id. See the output above for explanation."
+        exit $exit_code
+    esac
+  done
+
+  log_error "Unable to attach any of the volumes."
+  exit 1
+}
+
+# Try to attach the given volume at the given device name and mount it at the given mount point. If the volume attaches
+# successfully, return 0. If this volume is already attached to some other instance, returns the error code
+# VOLUME_ALREADY_ATTACHED_ERROR. In all other cases, keep retrying up to max retries. The reason we retry is because
+# the volume may fail to attach for transient reasons. For example, we may be giving IAM permissions to a specific EC2
+# Instance ID to attach a specific EBS Volume ID. When you create or replace that Instance, the IAM permissions can
+# only be created AFTER the instance has been created (since we need the instance ID in the IAM policy), and it's
+# possible those permissions are not yet in place when the Instance is booting and running this script.
+function try_to_attach_volume {
+  local readonly aws_region="$1"
+  local readonly volume_id="$2"
+  local readonly device_name="$3"
+  local readonly instance_id="$4"
+
+  local i
+
+  for (( i=0; i<"$MAX_RETRIES"; i++ )); do
+    log_info "Attempting to attach volume $volume_id with device name $device_name"
+
+    # A few notes about this complicated code:
+    #
+    # 1. We want to capture stdout and stderr so we can check the error message is the one we expect, so we duplicate &1
+    #    and use tee to pipe stdout/stderr into it as described here: http://stackoverflow.com/a/12451419/483528
+    # 2. Since we need to capture the exit code of the first command in our pipe and not the tee command, we use
+    #    PIPESTATUS as described here: http://unix.stackexchange.com/a/14276
+    set +e
+    exec 5>&1
+    local output=""
+    output=$(aws ec2 attach-volume --region "$aws_region" --volume-id "$volume_id" --instance-id "$instance_id" --device "$device_name" | tee >(cat - >&5); return "${PIPESTATUS[0]}")
+    local readonly exit_code=$?
+    set -e
+
+    if [[ "$exit_code" -eq 0 ]]; then
+      return 0
+    elif [[ "$exit_code" -eq 255 ]] && $(string_contains "$output" "VolumeInUse"); then
+      return "$VOLUME_ALREADY_ATTACHED_ERROR"
+    else
+      log_warn "Failed to attach volume $volume_id. Got exit code $exit_code and output:\n$output"
+      log_info "Sleeping for $SLEEP_BETWEEN_RETRIES_SEC seconds and will try again."
+      sleep "$SLEEP_BETWEEN_RETRIES_SEC"
+    fi
+  done
+
+  log_error "Max retries ($MAX_RETRIES) exceeded while trying to attach volume $volume_id. See log output above for errors."
+  return 1
+}
+
+# Formats the device name for the way the linux lsblk utility expects it
+function format_name_for_lsblk {
+  local readonly device_name="$1"
+  strip_prefix "$device_name" "/dev/"
+}
+
+function device_already_formatted {
+  local readonly device_name="$1"
+  local readonly file_system_type="$2"
+
+  parted "$device_name" print | grep "$file_system_type" > /dev/null
+}
+
+function create_file_system {
+  local readonly device_name="$1"
+  local readonly file_system_type="$2"
+
+  if [[ "$file_system_type" == "xfs" ]]; then
+    assert_is_installed "mkfs.xfs"
+  fi
+
+  if $(device_already_formatted "$device_name" "$file_system_type"); then
+    log_info "$device_name already has a file system of type $file_system_type, will not re-format."
+  else
+    case "$file_system_type" in
+      "ext4")
+        log_info "Creating $file_system_type file system on $device_name..."
+        mkfs.ext4 -F "$device_name"
+        return
+        ;;
+      "xfs")
+        log_info "Creating $file_system_type file system on $device_name..."
+        mkfs.xfs -f "$device_name"
+        return
+        ;;
+      *)
+        log_error "The file system type '$file_system_type' is not currently supported by this script."
+        exit 1
+    esac
+  fi
+}
+
+function is_volume_attached {
+  local readonly lsblk_name="$1"
+  lsblk | grep -q "$lsblk_name"
+}
+
+function wait_until_volume_attached {
+  local readonly lsblk_name="$1"
+  local retries=0
+
+  log_info "Waiting for volume $lsblk_name to be attached..."
+  while $(! is_volume_attached "$lsblk_name"); do
+    if [[ "$retries" -ge "$MAX_VOLUME_ATTACHED_RETRIES" ]]; then
+      log_error "Volume $lsblk_name is still not attached after $retries retries."
+      exit 1
+    else
+      retries=$(($retries + 1))
+      log_info "Volume $lsblk_name is still not attached. Will retry after $SLEEP_SEC_BETWEEN_VOLUME_ATTACH_RETRIES seconds..."
+      sleep "$SLEEP_SEC_BETWEEN_VOLUME_ATTACH_RETRIES"
+    fi
+  done
+
+  log_info "Volume $lsblk_name is now attached."
+}
+
+function mount_volume {
+  local readonly device_name="$1"
+  local readonly file_system_type="$2"
+  local readonly mount_point="$3"
+  local readonly owner="$4"
+  local readonly mount_options="$5"
+
+  if [[ -d "$mount_point" ]]; then
+    log_error "$mount_point already exists. Cannot mount $device_name there."
+    exit 1
+  else
+    log_info "Creating mount point $mount_point..."
+    mkdir "$mount_point"
+
+    if $(file_contains_text "$FS_TAB_PATH" "^$device_name"); then
+      log_info "$FS_TAB_PATH already contains device $device_name. Will not add it again."
+    else
+      log_info "Adding device $device_name to $FS_TAB_PATH with mount point $mount_point..."
+      echo "$device_name       $mount_point   $file_system_type    $mount_options  0 2" >> "$FS_TAB_PATH"
+    fi
+
+    log_info "Mounting volumes..."
+    mount -a
+
+    log_info "Changing ownership of $mount_point to $owner..."
+    chown "$owner" "$mount_point"
+  fi
+}
+
+function check_prerequisites {
+  assert_uid_is_root_or_sudo
+  assert_is_installed "aws"
+  assert_is_installed "jq"
+  assert_is_installed "curl"
+}
+
+function configure_ebs_volume {
+  local aws_region=""
+  local volume_ids=()
+  local volume_with_same_tag=""
+  local device_name=""
+  local mount_point=""
+  local owner=""
+  local file_system_type="$DEFAULT_FILE_SYSTEM_TYPE"
+  local file_system_mount_options="$DEFAULT_FILE_SYSTEM_MOUNT_OPTIONS"
+
+  while [[ $# > 0 ]]; do
+    local key="$1"
+
+    case "$key" in
+      --aws-region)
+        aws_region="$2"
+        shift
+        ;;
+      --volume-id)
+        volume_ids+=("$2")
+        shift
+        ;;
+      --volume-with-same-tag)
+        volume_with_same_tag="$2"
+        shift
+        ;;
+      --device-name)
+        device_name="$2"
+        shift
+        ;;
+      --mount-point)
+        mount_point="$2"
+        shift
+        ;;
+      --owner)
+        owner="$2"
+        shift
+        ;;
+      --file-system-type)
+        file_system_type="$2"
+        shift
+        ;;
+      --file-system-mount-options)
+        file_system_mount_options="$2"
+        shift
+        ;;
+      --help)
+        print_usage
+        exit
+        ;;
+      *)
+        log_error "Unrecognized argument: $key"
+        print_usage
+        exit 1
+        ;;
+    esac
+
+    shift
+  done
+
+  check_prerequisites
+
+  assert_not_empty "--aws-region" "$aws_region"
+  assert_not_empty "--device-name" "$device_name"
+  assert_not_empty "--mount-point" "$mount_point"
+  assert_not_empty "--owner" "$owner"
+  assert_not_empty "--file-system-type" "$file_system_type"
+
+  local lsblk_name
+  lsblk_name=$(format_name_for_lsblk "$device_name")
+
+  if $(is_volume_attached "$lsblk_name"); then
+    log_warn "A volume is already attached with device name $device_name. Will not try to attach a different volume."
+  elif [[ ! -z "${volume_ids[@]}" ]]; then
+    attach_volume_from_list "$aws_region" "$device_name" "${volume_ids[@]}"
+  elif [[ ! -z "$volume_with_same_tag" ]]; then
+    attach_volume_with_same_tag "$aws_region" "$device_name" "$volume_with_same_tag"
+  else
+    log_error "No volume is attached at $device_name and none was specified via the --volume-ids or --volume-with-same-tag parameter."
+    exit 1
+  fi
+
+  wait_until_volume_attached "$lsblk_name"
+  create_file_system "$device_name" "$file_system_type"
+  mount_volume "$device_name" "$file_system_type" "$mount_point" "$owner" "$file_system_mount_options"
+
+  # Output the results in a way that's easy for other scripts to parse
+  log_info "Success! Volume mounted with the following details:"
+  log_info "device_name=$device_name"
+  log_info "mount_point=$mount_point"
+  log_info "volume_id=$MOUNTED_VOLUME_ID"
+}
+
+configure_ebs_volume "$@"
