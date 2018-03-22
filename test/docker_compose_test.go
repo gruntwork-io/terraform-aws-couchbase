@@ -25,6 +25,9 @@ import (
 var testWebConsolePorts = map[string]int{
 	"ubuntu": 8091,
 }
+var testSyncGatewayPorts = map[string]int{
+	"ubuntu": 4984,
+}
 
 // The username and password we use in all the examples, mocks, and tests
 const usernameForTest = "admin"
@@ -56,6 +59,7 @@ func testCouchbaseInDocker(t *testing.T, osName string) {
 	test_structure.RunTestStage("validation", logger, func() {
 		checkCouchbaseConsoleIsRunning(t, osName, logger)
 		checkCouchbaseDataNodesWorking(t, osName, logger)
+		checkSyncGatewayWorking(t, osName, logger)
 	})
 
 	defer test_structure.RunTestStage("teardown", logger, func() {
@@ -293,4 +297,18 @@ func HttpPostForm(t *testing.T, postUrl string, postParams url.Values, logger *l
 	}
 
 	return resp.StatusCode, strings.TrimSpace(string(respBody)), nil
+}
+
+func checkSyncGatewayWorking(t *testing.T, osName string, logger *log.Logger) {
+	clusterUrl := fmt.Sprintf("http://localhost:%d/mock-couchbase-asg", testSyncGatewayPorts[osName])
+	maxRetries := 20
+	sleepBetweenRetries := 5 * time.Second
+
+	err := http_helper.HttpGetWithRetryWithCustomValidation(clusterUrl, maxRetries, sleepBetweenRetries, logger, func(status int, body string) bool {
+		return status == 200 && strings.Contains(body, `"state":"Online"`)
+	})
+
+	if err != nil {
+		t.Fatalf("Unable to connect to Sync Gateway at %s: %v", clusterUrl, err)
+	}
 }
