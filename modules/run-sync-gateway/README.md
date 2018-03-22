@@ -101,7 +101,7 @@ module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modu
 
 
 
-## Debugging issues
+## Debugging tips and tricks
 
 Some tips and tricks for debugging issues with your Couchbase cluster:
 

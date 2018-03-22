@@ -81,7 +81,8 @@ output the DNS name of the load balancer, and you can connect to that URL to con
 For replication with Couchbase Lite and other external clients, you should connect to the [REST 
 API](https://developer.couchbase.com/documentation/mobile/1.5/guides/sync-gateway/rest-api-client/index.html) (default
 port 4984). For unrestricted access to the database and administrative tasks, you should connect to the [admin 
-UI](https://github.com/couchbaselabs/sync_gateway_admin_ui) (default port 4985). 
+UI](https://github.com/couchbaselabs/sync_gateway_admin_ui) (default port 4985, though it's typically only accessible
+from localhost, as it provides admin access to everything in the DB!). 
 
 
 ### Getting IP addresses
