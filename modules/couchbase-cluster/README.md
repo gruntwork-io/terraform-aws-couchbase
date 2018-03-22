@@ -26,10 +26,10 @@ module "couchbase_cluster" {
   # install-sync-gateway modules.
   ami_id = "ami-abcd1234"
   
-  # Configure and start Couchbase during boot. It will automatically form a cluster with all nodes that have that same tag. 
+  # Configure and start Couchbase during boot. 
   user_data = <<-EOF
               #!/bin/bash
-              /opt/couchbase/bin/run-couchbase-server --all --cluster-tag-key couchbase-cluster
+              /opt/couchbase/bin/run-couchbase-server --username admin --password password
               EOF
   
   # ... See vars.tf for the other parameters you must define for the couchbase-cluster module
