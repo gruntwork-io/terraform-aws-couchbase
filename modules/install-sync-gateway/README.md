@@ -45,14 +45,22 @@ sample code).
 
 ## Command line Arguments
 
-The `install-sync-gateway` script accepts the following arguments:
+Run `install-sync-gateway --help` to see all available arguments.
 
-* `version VERSION`: Install Sync Gateway version VERSION. Required. 
+```
+Usage: install-sync-gateway [options]
+
+This script can be used to install Couchbase Sync Gateway and its dependencies. This script has been tested with Ubuntu 16.04 and Amazon Linux.
+
+Options:
+
+  --version	  The version of Sync Gateway to install. Default: 1.5.1.
+  --checksum	The MD5 checksum of the Sync Gateway package. Required if --version is specified. You can get it from the downloads page of the Couchbase website.
+  --config	  Configure Sync Gateway to use the specified JSON config file.
 
 Example:
 
-```
-install-couchbase-server --version 1.5.1
+  install-sync-gateway --version 1.5.1 --checksum 363186920c2f504368172311b649d09a --config my-custom-config.json
 ```
 
 

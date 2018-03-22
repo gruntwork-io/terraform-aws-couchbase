@@ -55,12 +55,12 @@ function print_usage {
   echo
   echo "Optional port settings:"
   echo
-  echo -e "  --rest-port\t\tThe port to use for the Couchbase Web Console and REST/HTTP API. Default: $DEFAULT_REST_PORT."
-  echo -e "  --capi-port\t\tThe port to use for Views and XDCR access. Default: $DEFAULT_CAPI_PORT."
-  echo -e "  --query-port\t\tThe port to use for the Query service REST/HTTP traffic. Default: $DEFAULT_QUERY_PORT."
-  echo -e "  --fts-port\t\tThe port to use for the Search service REST/HTTP traffic. Default: $DEFAULT_SEARCH_PORT."
+  echo -e "  --rest-port\t\t\tThe port to use for the Couchbase Web Console and REST/HTTP API. Default: $DEFAULT_REST_PORT."
+  echo -e "  --capi-port\t\t\tThe port to use for Views and XDCR access. Default: $DEFAULT_CAPI_PORT."
+  echo -e "  --query-port\t\t\tThe port to use for the Query service REST/HTTP traffic. Default: $DEFAULT_QUERY_PORT."
+  echo -e "  --fts-port\t\t\tThe port to use for the Search service REST/HTTP traffic. Default: $DEFAULT_SEARCH_PORT."
   echo -e "  --memcached-port\t\tThe port to use for the Data service. Default: $DEFAULT_MEMCACHED_PORT."
-  echo -e "  --xdcr-port\t\tThe port to use for the XDCR REST traffic. Default: $DEFAULT_XDCR_PORT."
+  echo -e "  --xdcr-port\t\t\tThe port to use for the XDCR REST traffic. Default: $DEFAULT_XDCR_PORT."
   echo
   echo "Other optional arguments:"
   echo
@@ -69,6 +69,7 @@ function print_usage {
   echo -e "  --data-ramsize\t\tThe data service memory quota in MB. Only used if --manage-memory-manually is set."
   echo -e "  --index-ramsize\t\tThe index service memory quota in MB. Only used if --manage-memory-manually is set."
   echo -e "  --fts-ramsize\t\t\tThe full-text service memory quota in MB. Only used if --manage-memory-manually is set."
+  echo -e "  --create-bucket-for-testing\t\tCreate a bucket in the Couchbase cluster. Should ONLY be used for testing!"
   echo -e "  --help\t\t\tShow this help text and exit."
   echo
   echo "Example:"
@@ -242,7 +243,6 @@ function add_rallypoint_to_cluster {
       "$node_port" \
       "$cluster_username" \
       "$cluster_password" \
-      "$index_storage_setting" \
       "$rally_point_hostname" \
       "$services"
   else
@@ -373,10 +373,9 @@ function add_server_to_cluster {
   local readonly cluster_name="$3"
   local readonly cluster_username="$4"
   local readonly cluster_password="$5"
-  local readonly index_storage_setting="$6"
-  local readonly node_hostname="$7"
-  local readonly node_port="$8"
-  local readonly services="$9"
+  local readonly node_hostname="$6"
+  local readonly node_port="$7"
+  local readonly services="$8"
 
   wait_for_cluster_to_be_initialized "$rally_point_hostname" "$rally_point_port" "$cluster_name" "$cluster_username" "$cluster_password"
 
@@ -396,7 +395,6 @@ function add_server_to_cluster {
   server_add_args+=("--server-add=$node_hostname:$node_port")
   server_add_args+=("--server-add-username=$cluster_username")
   server_add_args+=("--server-add-password=$cluster_password")
-  server_add_args+=("--index-storage-setting=$index_storage_setting")
   server_add_args+=("--services=$services")
 
   # The couchbase-cli may exit with an error, so make sure that doesn't cause this whole script to exit with an error
@@ -476,9 +474,8 @@ function join_existing_cluster {
   local readonly node_port="$4"
   local readonly cluster_username="$5"
   local readonly cluster_password="$6"
-  local readonly index_storage_setting="$7"
-  local readonly node_hostname="$8"
-  local readonly services="$9"
+  local readonly node_hostname="$7"
+  local readonly services="$8"
 
   log_info "Joining cluster $cluster_name"
 
@@ -488,7 +485,6 @@ function join_existing_cluster {
     "$cluster_name" \
     "$cluster_username" \
     "$cluster_password" \
-    "$index_storage_setting" \
     "$node_hostname" \
     "$node_port" \
     "$services"
@@ -619,6 +615,37 @@ function start_couchbase {
   sudo systemctl start couchbase-server
 }
 
+function create_bucket_for_testing {
+  local readonly bucket_name="$1"
+  local readonly node_hostname="$2"
+  local readonly node_port="$3"
+  local readonly username="$4"
+  local readonly password="$5"
+
+  log_info "Creating bucket $bucket_name for testing"
+
+  local create_bucket_args=()
+  create_bucket_args+=("bucket-create")
+  create_bucket_args+=("--cluster=$node_hostname:$node_port")
+  create_bucket_args+=("--username=$username")
+  create_bucket_args+=("--password=$password")
+  create_bucket_args+=("--bucket=$bucket_name")
+  create_bucket_args+=("--bucket-type=couchbase")
+  create_bucket_args+=("--bucket-ramsize=100")
+
+  set +e
+  local out
+  out=$("$COUCHBASE_CLI" "${create_bucket_args[@]}")
+  set -e
+
+  if string_contains "$out" "SUCCESS: Bucket created"; then
+    log_info "Successfully created bucket $bucket_name."
+  else
+    log_error "Failed to create bucket $bucket_name. Log output:\n$out."
+    exit 1
+  fi
+}
+
 # The main entrypoint for this code
 function run {
   local services="$DEFAULT_SERVICES"
@@ -641,6 +668,8 @@ function run {
   local fts_port="$DEFAULT_SEARCH_PORT"
   local memcached_port="$DEFAULT_MEMCACHED_PORT"
   local xdcr_port="$DEFAULT_XDCR_PORT"
+
+  local bucket_for_testing
 
   while [[ $# > 0 ]]; do
     local key="$1"
@@ -735,6 +764,11 @@ function run {
         xdcr_port="$2"
         shift
         ;;
+      --create-bucket-for-testing)
+        assert_not_empty "$key" "$2"
+        bucket_for_testing="$2"
+        shift
+        ;;
       --help)
         print_usage
         exit
@@ -813,6 +847,10 @@ function run {
       "$fts_ramsize" \
       "$index_ramsize" \
       "$services"
+
+    if [[ ! -z "$bucket_for_testing" ]]; then
+      create_bucket_for_testing "$bucket_for_testing" "$node_hostname" "$rest_port" "$cluster_username" "$cluster_password"
+    fi
   else
     log_info "The rally point for cluster $cluster_name is $rally_point_hostname."
     join_existing_cluster \
@@ -822,7 +860,6 @@ function run {
       "$rest_port" \
       "$cluster_username" \
       "$cluster_password" \
-      "$index_storage_setting" \
       "$node_hostname" \
       "$services"
   fi

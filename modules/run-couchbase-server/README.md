@@ -52,22 +52,34 @@ Run `run-couchbase-server --help` to see all available arguments.
 ```
 Usage: run-couchbase-server [options]
 
-This script can be used to configure and run a Couchbase Server. This script has been tested with Ubuntu 16.04 and Amazon Linux.
+This script can be used to configure and initialize a Couchbase Server. This script has been tested with Ubuntu 16.04 and Amazon Linux.
 
 Required arguments:
 
-  --cluster-username		  The username for the Couchbase cluster.
-  --cluster-password		  The password for the Couchbase cluster.
+  --cluster-username		    The username for the Couchbase cluster.
+  --cluster-password		    The password for the Couchbase cluster.
 
-Optional arguments:
+Important optional arguments:
 
   --services			          Comma-separated list of Couchbase service to run. Default: data,index,query,fts.
   --cluster-name		        The name of the Couchbase cluster. Default: use the name of the Auto Scaling Group.
-  --cluster-port		        The port the Couchbase cluster will use. Default: 8091.
-  --index-storage-setting   The index storage mode for the index service. Must be one of: default, memopt. Default: default.
   --hostname			          The hostname to use for this node. Default: look up the node's private hostname in EC2 metadata.
   --use-public-hostname		  If this flag is set, use the node's public hostname from EC2 metadata.
   --rally-point-hostname	  The hostname of the rally point server that initialized the cluster. If not set, automatically pick a rally point server in the ASG.
+  --rally-point-port		    The port the rally point (the leader of the cluster) uses. Default: 8091.
+
+Optional port settings:
+
+  --rest-port			          The port to use for the Couchbase Web Console and REST/HTTP API. Default: 8091.
+  --capi-port			          The port to use for Views and XDCR access. Default: 8092.
+  --query-port			        The port to use for the Query service REST/HTTP traffic. Default: 8093.
+  --fts-port			          The port to use for the Search service REST/HTTP traffic. Default: 8094.
+  --memcached-port		      The port to use for the Data service. Default: 11210.
+  --xdcr-port			          The port to use for the XDCR REST traffic. Default: 9998.
+
+Other optional arguments:
+
+  --index-storage-setting	  The index storage mode for the index service. Must be one of: default, memopt. Default: default.
   --manage-memory-manually  If this flag is set, you can set memory settings manually via the --data-ramsize, --fts-ramsize, and --index-ramsize arguments.
   --data-ramsize		        The data service memory quota in MB. Only used if --manage-memory-manually is set.
   --index-ramsize		        The index service memory quota in MB. Only used if --manage-memory-manually is set.
@@ -116,10 +128,11 @@ module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modu
 
 
 
-## Debugging issues
+## Debugging tips and tricks
 
 Some tips and tricks for debugging issues with your Couchbase cluster:
 
 * Use [https://github.com/couchbaselabs/sdk-doctor](sdk-doctor) to diagnose connection issues. 
 * When using Couchbase SDK tools, set `LCB_LOGLEVEL=5` to get more logging output from Couchbase clients.
 * Log file locations: https://developer.couchbase.com/documentation/server/3.x/admin/Misc/Trbl-logs.html.
+* Use `systemctl status couchbase-server` to see if systemd thinks the Couchbase process is running.

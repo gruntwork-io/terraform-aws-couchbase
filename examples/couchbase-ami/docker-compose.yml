@@ -22,9 +22,11 @@ services:
       # Mount these scripts so we get hot reload
       - ../../modules/bash-commons:/opt/couchbase/bash-commons
       - ../../modules/run-couchbase-server/run-couchbase-server:/opt/couchbase/bin/run-couchbase-server
+      - ../../modules/run-sync-gateway/run-sync-gateway:/opt/couchbase-sync-gateway/bin/run-sync-gateway
 
       # Override scripts in bash-commons with mocks so we can run locally, without talking to AWS APIs
       - ./mock/bash-commons/aws-primitives.sh:/opt/couchbase/bash-commons/aws-primitives.sh
+      - ./mock/bash-commons/aws-primitives.sh:/opt/couchbase-sync-gateway/bash-commons/aws-primitives.sh
 
       # Mount the mock scripts we use to run Couchbase during Docker container boot
       - ./mock/user-data:/user-data
@@ -42,6 +44,8 @@ services:
       - "8094:8094"
       - "11210:11210"
       - "9998:9998"
+      - "4984:4984"
+      - "4985:4985"
 
   couchbase-ubuntu-1:
     <<: *couchbase_config
@@ -54,6 +58,8 @@ services:
       - "7094:8094"
       - "10210:11210"
       - "8998:9998"
+      - "3984:4984"
+      - "3985:4985"
 
   couchbase-ubuntu-2:
     <<: *couchbase_config
@@ -66,4 +72,6 @@ services:
       - "6094:8094"
       - "9210:11210"
       - "7998:9998"
+      - "2984:4984"
+      - "2985:4985"
 
