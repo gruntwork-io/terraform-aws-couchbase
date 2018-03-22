@@ -6,9 +6,12 @@ set -e
 # output from our container, so here, we tail a couple useful log files in the background, so the logs still end up
 # in stdout, but this script can keep on running.
 readonly COUCHBASE_LOGS_DIR="/opt/couchbase/var/lib/couchbase/logs"
+readonly SYNC_GATEWAY_LOGS_DIR="/home/sync_gateway/logs"
 tail -f --retry \
   "$COUCHBASE_LOGS_DIR/couchdb.log" \
-  "$COUCHBASE_LOGS_DIR/mock-user-data.log" 2>/dev/null &
+  "$COUCHBASE_LOGS_DIR/mock-user-data.log" \
+  "$SYNC_GATEWAY_LOGS_DIR/sync-gateway.log" \
+  2>/dev/null &
 
 # We need systemd to run to fire up Couchbase itself. To run systemd, we have to run /sbin/init at the end of this
 # script. So how can we run the code we need on boot that normally lives in User Data? Well, our solution is to run

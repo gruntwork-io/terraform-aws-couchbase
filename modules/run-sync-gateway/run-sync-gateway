@@ -151,7 +151,7 @@ function auto_fill_asg_param {
   assert_not_empty_aws_response "$hostnames" "Unable to parse host names for ASG $asg_name in $aws_region"
 
   # https://developer.couchbase.com/documentation/mobile/1.5/guides/sync-gateway/config-properties/index.html#1.5/databases-foo_db-server
-  local readonly placeholder_value="couchbase://$hostnames"
+  local readonly placeholder_value="http://$hostnames"
 
   log_info "Replacing the '$placeholder_name' placeholder in $config with $placeholder_value"
   replace_text_in_file "$placeholder_name" "$placeholder_value" "$config"

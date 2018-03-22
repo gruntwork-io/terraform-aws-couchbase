@@ -135,3 +135,4 @@ Some tips and tricks for debugging issues with your Couchbase cluster:
 * Use [https://github.com/couchbaselabs/sdk-doctor](sdk-doctor) to diagnose connection issues. 
 * When using Couchbase SDK tools, set `LCB_LOGLEVEL=5` to get more logging output from Couchbase clients.
 * Log file locations: https://developer.couchbase.com/documentation/server/3.x/admin/Misc/Trbl-logs.html.
+* Use `systemctl status couchbase-server` to see if systemd thinks the Couchbase process is running.

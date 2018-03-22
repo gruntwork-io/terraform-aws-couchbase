@@ -74,3 +74,12 @@ Role](http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) that has th
 These permissions are automatically added by the [couchbase-cluster 
 module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster).
 
+
+
+
+## Debugging issues
+
+Some tips and tricks for debugging issues with your Couchbase cluster:
+
+* Sync Gateway logs can be found at: `/home/sync_gateway/logs/sync`.
+* Use `systemctl status sync_gateway` to see if systemd thinks the Couchbase process is running.
