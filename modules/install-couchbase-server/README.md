@@ -54,7 +54,7 @@ This script can be used to install Couchbase Server and its dependencies. This s
 
 Options:
 
-  --version		  The version of Couchbase to install. Default: 5.1.0.
+  --version		The version of Couchbase to install. Default: 5.1.0.
   --checksum		The SHA-256 checksum of the Couchbase package. Required if --version is specified. You can get it from the downloads page of the Couchbase website.
   --swapiness		The OS swapiness setting to use. Couchbase recommends setting this to 0. Default: 0.
 
