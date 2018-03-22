@@ -16,6 +16,8 @@ readonly COUCHBASE_BASE_DIR="/opt/couchbase"
 readonly COUCHBASE_BIN_DIR="$COUCHBASE_BASE_DIR/bin"
 readonly COUCHBASE_CLI="$COUCHBASE_BIN_DIR/couchbase-cli"
 
+readonly DEFAULT_DATA_DIR="$COUCHBASE_BASE_DIR/var/lib/couchbase/data"
+
 readonly DEFAULT_SERVICES="data,index,query,fts"
 readonly DEFAULT_INDEX_STORAGE_SETTING="default"
 
@@ -52,6 +54,8 @@ function print_usage {
   echo -e "  --use-public-hostname\t\tIf this flag is set, use the node's public hostname from EC2 metadata."
   echo -e "  --rally-point-hostname\tThe hostname of the rally point server that initialized the cluster. If not set, automatically pick a rally point server in the ASG."
   echo -e "  --rally-point-port\t\tThe port the rally point (the leader of the cluster) uses. Default: $DEFAULT_REST_PORT."
+  echo -e "  --data-dir\t\t\tThe path to store data files create by the Couchbase data service. Default: $DEFAULT_DATA_DIR."
+  echo -e "  --index-dir\t\t\tThe path to store files create by the Couchbase index service. Default: $DEFAULT_DATA_DIR."
   echo
   echo "Optional port settings:"
   echo
@@ -69,7 +73,7 @@ function print_usage {
   echo -e "  --data-ramsize\t\tThe data service memory quota in MB. Only used if --manage-memory-manually is set."
   echo -e "  --index-ramsize\t\tThe index service memory quota in MB. Only used if --manage-memory-manually is set."
   echo -e "  --fts-ramsize\t\t\tThe full-text service memory quota in MB. Only used if --manage-memory-manually is set."
-  echo -e "  --create-bucket-for-testing\t\tCreate a bucket in the Couchbase cluster. Should ONLY be used for testing!"
+  echo -e "  --create-bucket-for-testing\tCreate a bucket in the Couchbase cluster. Should ONLY be used for testing!"
   echo -e "  --help\t\t\tShow this help text and exit."
   echo
   echo "Example:"
@@ -609,6 +613,37 @@ function configure_couchbase_ports {
   replace_or_append_in_file "^port.*=.*$" "port = $capi_port" "$COUCHBASE_CAPI_CONFIG_PATH"
 }
 
+function configure_couchbase_dirs {
+  local readonly node_hostname="$1"
+  local readonly node_port="$2"
+  local readonly username="$3"
+  local readonly password="$4"
+  local readonly data_dir="$5"
+  local readonly index_dir="$6"
+
+  log_info "Initializing Couchbase node $node_hostname with data dir $data_dir and index dir $index_dir"
+
+  local node_init_args=()
+  node_init_args+=("node-init")
+  node_init_args+=("--cluster=$node_hostname:$node_port")
+  node_init_args+=("--username=$username")
+  node_init_args+=("--password=$password")
+  node_init_args+=("--node-init-data-path=$data_dir")
+  node_init_args+=("--node-init-index-path=$index_dir")
+
+  set +e
+  local out
+  out=$("$COUCHBASE_CLI" "${node_init_args[@]}")
+  set -e
+
+  if string_contains "$out" "SUCCESS: Node initialized"; then
+    log_info "Successfully initialized Couchbase node $node_hostname."
+  else
+    log_error "Failed to initialize Couchbase node $node_hostname. Log output:\n$out."
+    exit 1
+  fi
+}
+
 function start_couchbase {
   log_info "Starting Couchbase"
   sudo systemctl enable couchbase-server
@@ -648,15 +683,18 @@ function create_bucket_for_testing {
 
 # The main entrypoint for this code
 function run {
+  local cluster_name
   local services="$DEFAULT_SERVICES"
+
   local node_hostname
   local rally_point_hostname
   local use_public_hostname="false"
-  local cluster_name
   local rally_point_port="$DEFAULT_REST_PORT"
+  local index_storage_setting="$DEFAULT_INDEX_STORAGE_SETTING"
+
   local cluster_username
   local cluster_password
-  local index_storage_setting="$DEFAULT_INDEX_STORAGE_SETTING"
+
   local manage_memory_manually="false"
   local data_ramsize
   local fts_ramsize
@@ -668,6 +706,9 @@ function run {
   local fts_port="$DEFAULT_SEARCH_PORT"
   local memcached_port="$DEFAULT_MEMCACHED_PORT"
   local xdcr_port="$DEFAULT_XDCR_PORT"
+
+  local data_dir="$DEFAULT_DATA_DIR"
+  local index_dir="$DEFAULT_DATA_DIR"
 
   local bucket_for_testing
 
@@ -711,6 +752,16 @@ function run {
       --rally-point-port)
         assert_not_empty "$key" "$2"
         rally_point_port="$2"
+        shift
+        ;;
+      --data-dir)
+        assert_not_empty "$key" "$2"
+        data_dir="$2"
+        shift
+        ;;
+      --index-dir)
+        assert_not_empty "$key" "$2"
+        index_dir="$2"
         shift
         ;;
       --use-public-hostname)
@@ -832,6 +883,8 @@ function run {
   start_couchbase
 
   wait_for_couchbase_to_boot "$node_hostname" "$rest_port" "$cluster_username" "$cluster_password"
+
+  configure_couchbase_dirs "$node_hostname" "$rest_port" "$cluster_username" "$cluster_password" "$data_dir" "$index_dir"
 
   if [[ "$node_hostname" == "$rally_point_hostname" ]]; then
     log_info "This server is the rally point for cluster $cluster_name, $rally_point_hostname!"
