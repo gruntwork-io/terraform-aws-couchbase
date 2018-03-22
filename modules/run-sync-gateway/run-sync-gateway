@@ -39,7 +39,7 @@ function print_usage {
   echo
   echo "Example:"
   echo
-  echo "  run-sync-gateway --auto-fill-asg __SERVER_IPS__=my-couchbase-cluster:8091 --auto-fill __PORT__=4984"
+  echo "  run-sync-gateway --auto-fill-asg <SERVER_IPS>=my-couchbase-cluster:8091 --auto-fill <PORT>=4984"
 }
 
 # Parse the hostnames from the given the response of the aws describe-instances API call and return them as a

@@ -15,18 +15,42 @@ There is a good chance it will work on other flavors of Debian, CentOS, and RHEL
 
 This script assumes you installed it, plus all of its dependencies (including Sync Gateway itself), using the 
 [install-sync-gateway module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/install-sync-gateway). 
-The default install path is `/opt/couchbase/bin`, so to configure and start Couchbase, you run:
+As part of the installation process, we recommend that you create a [Sync Gateway JSON config 
+file](https://developer.couchbase.com/documentation/mobile/1.5/guides/sync-gateway/config-properties/index.html) and 
+install it using the `--config` option of the `install-sync-gteway` script.
+
+You may notice that some of the configs, such as the IPs of the Couchbase servers, should be filled in dynamically, 
+when the server is booting up. You can do this using the `run-sync-gateway` script! Simply leave placeholders in your
+Sync Gateway config file like this (see the [couchbase-ami
+folder](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-ami) for a full example):
+
+```json
+{
+  "interface": "<:PORT>",
+  "databases": {
+    "my-db": {
+      "server": "<SERVER_IPS>"
+    }
+  }
+}
+```  
+
+Now you can fill in those placeholders and start Sync Gateway by executing the `run-sync-gateway` script as follows:
 
 ```
-/opt/couchbase/bin/run-sync-gateway
+/opt/couchbase/bin/run-sync-gateway --auto-fill-asg <SERVER_IPS>=my-couchbase-cluster --auto-fill <PORT>=4984
 ```
 
 This will:
 
-1. Use EC2 tags to find all the nodes in the cluster.
+1. Replace all instances of the text `<SERVER_IPS>` in the Sync Gateway config file with the IPs of the servers in the
+   Auto Scaling Group called `my-couchbase-cluster`. The `run-sync-gateway` script will find these IPs automatically 
+   using the AWS APIs.
 
-1. Fill in the Sync Gateway config file with the details of the discovered Couchbase servers.   
-   
+1. Replace all instances of the text `<PORT>` in the Sync Gateway config file with `4984`.
+
+1. Start Sync Gateway on the local node.
+
 We recommend using the `run-sync-gateway` command as part of [User 
 Data](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html#user-data-shell-scripts), so that it executes
 when the EC2 Instance is first booting. 
@@ -48,7 +72,7 @@ This script can be used to configure and run Couchbase Sync Gateway. This script
 
 Options:
 
-  --auto-fill-asg KEY=ASG_NAME[:PORT]	Replace KEY in the Sync Gateway config with the IPs (and optional PORT) of servers in the ASG called ASG_NAME. May be repeated.
+  --auto-fill-asg KEY=ASG_NAME[:PORT] Replace KEY in the Sync Gateway config with the IPs (and optional PORT) of servers in the ASG called ASG_NAME. May be repeated.
   --auto-fill KEY=VALUE			          Search the Sync Gateway config file for KEY and replace it with VALUE. May be repeated.
   --use-public-hostname			          If this flag is set, use the public hostname for each server in --auto-fill. Without this flag, the private hostname will be used.
   --config				                    The path to a JSON config file for Sync Gateway. Default: /home/sync_gateway/sync_gateway.json.
@@ -56,7 +80,7 @@ Options:
 
 Example:
 
-  run-sync-gateway --auto-fill-asg __SERVER_IPS__=my-couchbase-cluster:8091 --auto-fill __PORT__=4984 
+  run-sync-gateway --auto-fill-asg <SERVER_IPS>=my-couchbase-cluster --auto-fill <PORT>=4984
 ```
 
 
