@@ -1,10 +1,14 @@
-# Sync Gateway Load Balancer
+# Load Balancer
 
 This folder contains a [Terraform](https://www.terraform.io/) module that can be used to deploy an [Application Load 
-Balancer (ALB)](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/introduction.html) in front of Sync
-Gateway. You can deploy Sync Gateway using the 
-[install-sync-gateway](https://github.com/gruntwork/terraform-aws-couchbase/tree/master/modules/install-sync-gateway) and 
-[couchbase-cluster](https://github.com/gruntwork/terraform-aws-couchbase/tree/master/modules/couchbase-cluster) modules. 
+Balancer (ALB)](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/introduction.html) in front of 
+your Couchbase and/or Sync Gateway cluster to:
+
+1. Perform health checks on the servers in the cluster and automatically replace them when they fail.
+1. Distribute traffic across multiple Sync Gateway nodes. Note that you should NOT use a load balancer to distribute 
+   traffic across Couchbase nodes (see [the Couchbase FAQ](https://blog.couchbase.com/couchbase-101-q-and-a/)
+   for more info).  
+
 
 
 
@@ -16,7 +20,7 @@ code by adding a `module` configuration and setting its `source` parameter to UR
 ```hcl
 module "sync_gateway_elb" {
   # TODO: replace <VERSION> with the latest version from the releases page: https://github.com/gruntwork-io/terraform-aws-couchbase/releases
-  source = "github.com/gruntwork/terraform-aws-couchbase//modules/sync-gateway-load-balancer?ref=<VERSION>"
+  source = "github.com/gruntwork/terraform-aws-couchbase//modules/load-balancer?ref=<VERSION>"
   
   # ... See vars.tf for the other parameters you must define for the vault-cluster module
 }
@@ -34,7 +38,7 @@ module "sync_gateway_cluster" {
 
 Note the following parameters:
 
-* `source`: Use this parameter to specify the URL of the sync-gateway-load-balancer module. The double slash (`//`) is 
+* `source`: Use this parameter to specify the URL of the load-balancer module. The double slash (`//`) is 
   intentional and required. Terraform uses it to specify subfolders within a Git repo (see [module 
   sources](https://www.terraform.io/docs/modules/sources.html)). The `ref` parameter specifies a specific Git tag in 
   this repo. That way, instead of using the latest version of this module from the `master` branch, which 

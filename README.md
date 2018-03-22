@@ -55,8 +55,8 @@ The general idea is to:
    [run-sync-gateway](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/run-sync-gateway)
    script during boot.
 
-1. (Optional): Deploy a load balancer in front of the ASGs using the [sync-gateway-load-balancer 
-   module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/sync-gateway-load-balancer).
+1. (Optional): Deploy a load balancer in front of the ASGs using the [load-balancer 
+   module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/load-balancer).
 
 See the [examples folder](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples) for working
 sample code.

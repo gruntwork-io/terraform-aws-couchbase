@@ -70,7 +70,7 @@ fully-working sample code.
 
 ### Connecting to Sync Gateway
 
-We recommend deploying a load balancer in front of Sync Gateway using the [sync-gateway-load-balancer
+We recommend deploying a load balancer in front of Sync Gateway using the [load-balancer
 module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples). If you do that, the module will
 output the DNS name of the load balancer, and you can connect to that URL to connect to the Sync Gateway. 
 
@@ -257,4 +257,61 @@ You can associate an [EC2 Key Pair](http://docs.aws.amazon.com/AWSEC2/latest/Use
 of the EC2 Instances in this cluster by specifying the Key Pair's name in the `ssh_key_name` variable. If you don't
 want to associate a Key Pair with these servers, set `ssh_key_name` to an empty string.
 
+
+
+
+## How do you connect load balancers to the Auto Scaling Group (ASG)?
+
+You may wish to use a load balancer with your Couchbase and/or Sync Gateway cluster to:
+
+1. Perform health checks on the servers in the cluster and automatically replace them when they fail.
+1. Distribute traffic across multiple Sync Gateway nodes. Note that you should NOT use a load balancer to distribute 
+   traffic across Couchbase nodes (see [the Couchbase FAQ](https://blog.couchbase.com/couchbase-101-q-and-a/)
+   for more info).
+
+You can use the [load-balancer module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/load-balancer) 
+to create the load balancer and you can use the
+[`aws_autoscaling_attachment`](https://www.terraform.io/docs/providers/aws/r/autoscaling_attachment.html) resource to
+attach it to the ASG in this module.
+
+For example, if you are using the new application or network load balancers:
+
+```hcl
+resource "aws_lb_target_group" "test" {
+  // ...
+}
+
+# Create a new Sync Gateway Cluster
+module "sync_gateway" {
+  source ="..."
+  // ...
+}
+
+# Create a new load balancer attachment
+resource "aws_autoscaling_attachment" "asg_attachment_bar" {
+  autoscaling_group_name = "${module.sync_gateway.asg_name}"
+  alb_target_group_arn   = "${aws_alb_target_group.test.arn}"
+}
+```
+
+If you are using a "classic" load balancer:
+
+```hcl
+# Create a new load balancer
+resource "aws_elb" "bar" {
+  // ...
+}
+
+# Create a new Sync Gateway Cluster
+module "sync_gateway" {
+  source ="..."
+  // ...
+}
+
+# Create a new load balancer attachment
+resource "aws_autoscaling_attachment" "asg_attachment_bar" {
+  autoscaling_group_name = "${module.sync_gateway.asg_name}"
+  elb                    = "${aws_elb.bar.id}"
+}
+```
 
