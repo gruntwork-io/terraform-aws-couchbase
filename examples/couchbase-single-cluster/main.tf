@@ -84,8 +84,8 @@ module "couchbase" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# THE USER DATA SCRIPT THAT WILL RUN ON EACH CONSUL SERVER EC2 INSTANCE WHEN IT'S BOOTING
-# This script will configure and start Consul
+# THE USER DATA SCRIPT THAT WILL RUN ON EACH EC2 INSTANCE WHEN IT'S BOOTING
+# This script will configure and start Couchbase and Sync Gateway
 # ---------------------------------------------------------------------------------------------------------------------
 
 data "template_file" "user_data_server" {
@@ -101,11 +101,14 @@ data "template_file" "user_data_server" {
 
     sync_gateway_interface       = ":${module.sync_gateway_security_group_rules.interface_port}"
     sync_gateway_admin_interface = "127.0.0.1:${module.sync_gateway_security_group_rules.admin_interface_port}"
-    data_volume_device_name      = "${local.data_volume_device_name}"
-    data_volume_mount_point      = "${local.data_volume_mount_point}"
-    index_volume_device_name     = "${local.index_volume_device_name}"
-    index_volume_mount_point     = "${local.index_volume_mount_point}"
-    volume_owner                 = "${local.volume_owner}"
+
+    # Pass in the data about the EBS volumes so they can be mounted
+
+    data_volume_device_name  = "${local.data_volume_device_name}"
+    data_volume_mount_point  = "${local.data_volume_mount_point}"
+    index_volume_device_name = "${local.index_volume_device_name}"
+    index_volume_mount_point = "${local.index_volume_mount_point}"
+    volume_owner             = "${local.volume_owner}"
   }
 }
 
@@ -211,8 +214,9 @@ module "iam_policies" {
 
 # ---------------------------------------------------------------------------------------------------------------------
 # DEPLOY COUCHBASE IN THE DEFAULT VPC AND SUBNETS
-# Using the default VPC and subnets makes this example easy to run and test, but it means Consul is accessible from the
-# public Internet. For a production deployment, we strongly recommend deploying into a custom VPC with private subnets.
+# Using the default VPC and subnets makes this example easy to run and test, but it means Couchbase is accessible from
+# the public Internet. For a production deployment, we strongly recommend deploying into a custom VPC with private
+# subnets.
 # ---------------------------------------------------------------------------------------------------------------------
 
 data "aws_vpc" "default" {
