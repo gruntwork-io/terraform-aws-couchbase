@@ -89,20 +89,6 @@ local checkout of the Module, uploaded from your own computer via the `file` pro
 
 The Packer template in this example folder can build not only AMIs, but also Docker images for local testing. This is
 convenient for testing out the various scripts in the `modules` folder without having to wait for an AMI to build and
-a bunch of EC2 Instances to boot up.
-
-To build the Docker image:
-
-```
-packer build -only=ubuntu-docker couchbase.json
-```
-
-To run the Docker image:
-
-```
-docker-compose up
-```
-
-Wait 10-15 seconds and then open your browser to http://localhost:8091/ and you will see the Couchbase Web Console!
-You can use the credentials in `mock/user-data/mock-couchbase.env` to login (default: `admin/password`).
-
+a bunch of EC2 Instances to boot up. See the [local-mocks 
+folder](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/install-couchbase-server) for
+instructions.

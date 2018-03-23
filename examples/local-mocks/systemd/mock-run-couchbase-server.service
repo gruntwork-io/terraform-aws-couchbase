@@ -9,7 +9,7 @@ WorkingDirectory=/opt/couchbase/bin
 ExecStart=/user-data/user-data.sh
 Restart=no
 Type=oneshot
-EnvironmentFile=/user-data/mock-couchbase.env
+EnvironmentFile=/lib/systemd/system/mock-couchbase.env
 
 [Install]
 WantedBy=multi-user.target
