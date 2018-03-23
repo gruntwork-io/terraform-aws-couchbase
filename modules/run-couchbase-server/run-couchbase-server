@@ -552,38 +552,47 @@ function assert_memory_settings_specified_manually {
 #
 # In the future, we may want to use more sophisticated strategies to better deal with servers with a tiny or huge
 # amount of memory.
+#
+# Important note on the memory math below: bash cannot do floating point arithmetic! So we have to use solely integer
+# math.
 function calculate_memory_settings_automatically {
   local readonly services="$1"
 
   log_info "Calculating memory settings automatically..."
 
-  # Note on the memory math below: bash cannot do floating point arithmetic! So we have to use solely integer math.
-  local available_memory_mb
-  available_memory_mb=$(get_available_memory_mb)
+  local total_memory_mb
+  total_memory_mb=$(get_available_memory_mb)
+
+  # It took some digging through the Couchbase source code, but the maximum quote they will allow you to use is 80% of
+  # the total available memory on the server, so we should divide that up amongst all the services.
+  # https://github.com/couchbase/ns_server/blob/bc1460747b634ac85af8dd118857d1f494256cc5/src/memory_quota.erl#L78-L84
+  # https://github.com/couchbase/ns_server/blob/7cdac3af08ce0d8640e9066d268026f4de32a580/include/ns_common.hrl#L206
+  local readonly available_memory=$(($total_memory_mb * 80 / 100))
 
   local data_ramsize
   local index_ramsize
   local fts_ramsize
 
   if string_contains "$services" "data" && string_contains "$services" "index" && string_contains "$services" "fts"; then
-    data_ramsize=$(($available_memory_mb * 35 / 100))
-    index_ramsize=$(($available_memory_mb * 15 / 100))
-    fts_ramsize=$(($available_memory_mb * 15 / 100))
+    data_ramsize=$(($available_memory * 35 / 100))
+    index_ramsize=$(($available_memory * 15 / 100))
+    fts_ramsize=$(($available_memory * 15 / 100))
   elif string_contains "$services" "data" && string_contains "$services" "index"; then
-    data_ramsize=$(($available_memory_mb * 40 / 100))
-    index_ramsize=$(($available_memory_mb * 25 / 100))
+    data_ramsize=$(($available_memory * 40 / 100))
+    index_ramsize=$(($available_memory * 25 / 100))
   elif string_contains "$services" "data" && string_contains "$services" "fts"; then
-    data_ramsize=$(($available_memory_mb * 40 / 100))
-    fts_ramsize=$(($available_memory_mb * 25 / 100))
+    data_ramsize=$(($available_memory * 40 / 100))
+    fts_ramsize=$(($available_memory * 25 / 100))
   elif string_contains "$services" "data"; then
-    data_ramsize=$(($available_memory_mb * 65 / 100))
+    data_ramsize=$(($available_memory * 65 / 100))
   elif string_contains "$services" "index"; then
-    index_ramsize=$(($available_memory_mb * 65 / 100))
+    index_ramsize=$(($available_memory * 65 / 100))
   elif string_contains "$services" "fts"; then
-    fts_ramsize=$(($available_memory_mb * 65 / 100))
+    fts_ramsize=$(($available_memory * 65 / 100))
   fi
 
-  # Enforce some minimums
+  # Couchbase enforces minimums on memory quotas too:
+  # https://github.com/couchbase/ns_server/blob/bc1460747b634ac85af8dd118857d1f494256cc5/src/memory_quota.erl#L169-L178
   if [[ "$data_ramsize" -lt 256 ]]; then
     data_ramsize=256
   fi
@@ -616,11 +625,11 @@ function configure_couchbase_ports {
   #
   # https://developer.couchbase.com/documentation/server/current/install/install-ports.html
 
-  replace_or_append_in_file "^\{rest_port.*\}\.$" "{rest_port, $rest_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
-  replace_or_append_in_file "^\{query_port.*\}\.$" "{query_port, $query_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
-  replace_or_append_in_file "^\{fts_http_port.*\}\.$" "{fts_http_port, $fts_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
-  replace_or_append_in_file "^\{memcached_port.*\}\.$" "{memcached_port, $memcached_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
-  replace_or_append_in_file "^\{xdcr_rest_port.*\}\.$" "{xdcr_rest_port, $xdcr_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
+  replace_or_append_in_file "^{rest_port.*}\.$" "{rest_port, $rest_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
+  replace_or_append_in_file "^{query_port.*}\.$" "{query_port, $query_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
+  replace_or_append_in_file "^{fts_http_port.*}\.$" "{fts_http_port, $fts_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
+  replace_or_append_in_file "^{memcached_port.*}\.$" "{memcached_port, $memcached_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
+  replace_or_append_in_file "^{xdcr_rest_port.*}\.$" "{xdcr_rest_port, $xdcr_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
   replace_or_append_in_file "^port.*=.*$" "port = $capi_port" "$COUCHBASE_CAPI_CONFIG_PATH"
 }
 

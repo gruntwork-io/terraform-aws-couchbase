@@ -26,7 +26,7 @@ function replace_text_in_file {
   local readonly replacement_text="$2"
   local readonly file="$3"
 
-  sudo sed -i -e "s|$original_text_regex|$replacement_text|" "$file" > /dev/null
+  sudo sed -i "s|$original_text_regex|$replacement_text|" "$file" > /dev/null
 }
 
 function replace_or_append_in_file {
