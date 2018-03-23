@@ -49,9 +49,9 @@ resource "aws_alb_listener" "https" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# CREATE A TARGET GROUP FOR COUCHBASE SERVER
-# Note that we only use this target group for health checks. We do not add any listener rules for Couchbase Server
-# because using a load balancer with Couchbase is NOT recommended: https://blog.couchbase.com/couchbase-101-q-and-a/
+# CREATE A TARGET GROUP AND LOAD BALANCER RULES FOR COUCHBASE SERVER
+# Note that we only recommend creating Load Balancer Rules for the Couchbase Web Console. Using a Load Balancer with
+# any of the Couchbase APIs is NOT recommended: https://blog.couchbase.com/couchbase-101-q-and-a/
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_alb_target_group" "couchbase_server" {
@@ -73,6 +73,34 @@ resource "aws_alb_target_group" "couchbase_server" {
     unhealthy_threshold = "${var.couchbase_server_health_check_unhealthy_threshold}"
     matcher             = "${var.couchbase_server_health_check_matcher}"
   }
+}
+
+resource "aws_alb_listener_rule" "couchbase_server_http" {
+  count = "${var.include_couchbase_server_target_group * var.include_http_listener}"
+
+  listener_arn = "${element(concat(aws_alb_listener.http.*.arn, list("")), 0)}"
+  priority     = "${var.couchbase_server_listener_rule_priority_http}"
+
+  action {
+    target_group_arn = "${element(concat(aws_alb_target_group.couchbase_server.*.arn, list("")), 0)}"
+    type             = "forward"
+  }
+
+  condition = "${var.couchbase_server_listener_rule_condition}"
+}
+
+resource "aws_alb_listener_rule" "couchbase_server_https" {
+  count = "${var.include_couchbase_server_target_group * var.include_https_listener}"
+
+  listener_arn = "${element(concat(aws_alb_listener.https.*.arn, list("")), 0)}"
+  priority     = "${var.couchbase_server_listener_rule_priority_https}"
+
+  action {
+    target_group_arn = "${element(concat(aws_alb_target_group.couchbase_server.*.arn, list("")), 0)}"
+    type             = "forward"
+  }
+
+  condition = "${var.couchbase_server_listener_rule_condition}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

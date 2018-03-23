@@ -140,6 +140,28 @@ variable "couchbase_server_health_check_matcher" {
   default     = "200"
 }
 
+variable "couchbase_server_listener_rule_priority_http" {
+  description = "The priority for the Couchbase Server ALB HTTP listener rule. Only used if var.include_couchbase_server_target_group and var.include_http_listener is true."
+  default     = 100
+}
+
+variable "couchbase_server_listener_rule_priority_https" {
+  description = "The priority for the Couchbase Server ALB HTTPS listener rule. Only used if var.include_couchbase_server_target_group and var.include_https_listener is true."
+  default     = 100
+}
+
+variable "couchbase_server_listener_rule_condition" {
+  description = "The condition block for the Couchbase Server listener rules. This can be used to configure which paths and domain names on the Load Balancer are routed to the Couchbase Server. We ONLY recommend accessing the Couchbase Server Web Console (/ui) via a Load Balancer! Must contain an object with keys field and values. See the Condition Block documentation for details: https://www.terraform.io/docs/providers/aws/r/lb_listener_rule.html. Only used if var.include_couchbase_server_target_group is true."
+  type        = "list"
+
+  default = [
+    {
+      field  = "path-pattern"
+      values = ["/ui/*"]
+    },
+  ]
+}
+
 variable "include_sync_gateway_target_group" {
   description = "Set to true to include a target group, health checks, and listener rules for Sync Gateway."
   default     = true
@@ -192,12 +214,12 @@ variable "sync_gateway_health_check_matcher" {
 
 variable "sync_gateway_listener_rule_priority_http" {
   description = "The priority for the Sync Gateway ALB HTTP listener rule. Only used if var.include_sync_gateway_target_group and var.include_http_listener is true."
-  default     = 100
+  default     = 110
 }
 
 variable "sync_gateway_listener_rule_priority_https" {
   description = "The priority for the Sync Gateway ALB HTTPS listener rule. Only used if var.include_sync_gateway_target_group and var.include_https_listener is true."
-  default     = 100
+  default     = 110
 }
 
 variable "sync_gateway_listener_rule_condition" {

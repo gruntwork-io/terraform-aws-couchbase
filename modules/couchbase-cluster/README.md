@@ -81,38 +81,43 @@ UI](https://github.com/couchbaselabs/sync_gateway_admin_ui) (default port 4985, 
 from localhost, as it provides admin access to everything in the DB!). 
 
 
-### Getting IP addresses
+### Connecting to the Couchbase Server Web Console
 
-For all other Couchbase servers, since they run in an Auto Scaling Group (ASG) where servers can be 
-added/replaced/removed at any time, you can't get their IP addresses from Terraform. Instead, you'll need to look up 
-the IPs using the AWS APIs. Each server created by the `couchbase-cluster` module is tagged with the `cluster_tag_key`
-and `cluster_tag_value` params you passed in and you can use the AWS APIs to find the IPs for all servers with that
-tag.
+We recommend deploying a load balancer in front of your Couchbase Servers using the [load-balancer
+module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples). If you do that, the module will
+output the DNS name of the load balancer, and you can connect to that URL to connect to access the [Couchbase 
+Web Console](https://developer.couchbase.com/documentation/server/current/admin/ui-intro.html) at the `/ui` path. 
+
+
+### Connecting to Couchbase Server via the SDK
+
+Using a Load Balancer to talk to Couchbase APIs (e.g., via an SDK) is NOT recommended (see [the Couchbase 
+FAQ](https://blog.couchbase.com/couchbase-101-q-and-a/) for more info), so you will need to get the IPs of the 
+individual servers and connect to them directly. Since those servers run in an Auto Scaling Group (ASG) where servers 
+can be added/replaced/removed at any time, you can't get their IP addresses from Terraform. Instead, you'll need to look up 
+the IPs using the AWS APIs. 
+
+The easiest way to do that is to use the AWS SDK to look up the servers using EC2 Tags. Each server deployed by
+the `couchbase-cluster` module has its `Name` and `aws:autoscaling:groupName` tag set to the value you pass in via the
+`cluster_name` parameter. You can also specify custom tags via the `tags` parameter. You can use the AWS SDK to find
+the IPs of all servers with those tags. 
 
 For example, using the [AWS CLI](https://aws.amazon.com/cli/), you can get the IPs for servers in `us-east-1` with 
-the tag `couchbase-cluster=couchbase-cluster-example` as follows:
+the tag `Name=couchbase-example` as follows:
 
 ```bash
 aws ec2 describe-instances \
     --region "us-east-1" \
     --filter \
-      "Name=tag:couchbase-cluster,Values=couchbase-cluster-example" \
+      "Name=tag:Name,Values=couchbase-example" \
       "Name=instance-state-name,Values=running"
 ```
 
-You can then use the [Couchbase SDK](https://developer.couchbase.com/documentation/server/4.0/sdks/intro.html) for your
-programming language to connect to these IPs. See the [Network Configuration
+This will return a bunch of JSON that contains the IPs of the servers. You can then use the [Couchbase 
+SDK](https://developer.couchbase.com/documentation/server/4.0/sdks/intro.html) for your programming language to connect 
+to these IPs. See the [Network Configuration 
 documentation](https://developer.couchbase.com/documentation/server/current/install/install-ports.html) to see what
 ports different Couchbase services use.
-
-
-### Connecting to the Web Console
-
-Every Couchbase server runs the [Web 
-Console](https://developer.couchbase.com/documentation/server/current/admin/ui-intro.html) (default port 8091).
-This is an online UI you can open in your browser to manage your Couchbase cluster. Follow the docs in
-[Getting IP addresses](#getting-ip-addresses) to get the IP of a Couchbase node and open that IP up at port 8091 to
-see the web console.
 
 
 

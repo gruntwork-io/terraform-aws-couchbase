@@ -5,9 +5,10 @@ Balancer (ALB)](https://docs.aws.amazon.com/elasticloadbalancing/latest/applicat
 your Couchbase and/or Sync Gateway cluster to:
 
 1. Perform health checks on the servers in the cluster and automatically replace them when they fail.
-1. Distribute traffic across multiple Sync Gateway nodes. Note that you should NOT use a load balancer to distribute 
-   traffic across Couchbase nodes (see [the Couchbase FAQ](https://blog.couchbase.com/couchbase-101-q-and-a/)
+1. Distribute traffic across Couchbase Server nodes. Note that you should ONLY use the load balancer for the Couchbase
+   Web Console and NOT any of the API paths (see [the Couchbase FAQ](https://blog.couchbase.com/couchbase-101-q-and-a/)
    for more info).  
+1. Distribute traffic across multiple Sync Gateway nodes. 
 
 
 
@@ -93,11 +94,15 @@ The ALB in this module is configured as follows:
    [IAM](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_server-certs.html).
    
 1. **Target Groups**: If the `include_couchbase_server_target_group` parameter is true (default: `true`), this module
-   will create a Target Group and health checks for your Couchbase Servers. Note that we do not create any Listener
-   Rules (routes) for Couchbase, as we do NOT recommend talking to Couchbase Servers via a load balancer (see [the 
-   Couchbase FAQ](https://blog.couchbase.com/couchbase-101-q-and-a/) for more info). If the 
+   will create a Target Group, health checks, and Listener Rules for your Couchbase Servers. Note that we only 
+   recommend creating creating Listener Rules for the Couchbase Server Web Console (`/ui`) and NOT any of the API 
+   endpoints (see [the Couchbase FAQ](https://blog.couchbase.com/couchbase-101-q-and-a/) for more info). If the 
    `include_sync_gateway_target_group` parameter is true (default: `true`), this module will create a Target Group,
    health checks, and Listener Rules for your Sync Gateway.
+ 
+1. **Listener Rules**: The default Listener Rules are to route `/ui` to the Couchbase Server nodes and all other paths
+   to Sync Gateway. You can modify these using the `couchbase_server_listener_rule_condition` and 
+   `sync_gateway_listener_rule_condition` parameters.
  
 1. **Health Checks**: The Target Groups will perform health checks on Couchbase and/or Sync Gateway and only route
    traffic to healthy servers. If you configure your Auto Scaling Group to use ELB health checks by setting

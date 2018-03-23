@@ -9,7 +9,7 @@ consists of one Auto Scaling Group (ASG) that runs all Couchbase services and Sy
 
 We've also attached a Load Balancer to the cluster using the [load-balancer 
 module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/load-balancer) to perform health
-checks and distribute traffic across the Sync Gateway nodes.
+checks and distribute traffic across the ASG.
 
 You will need to create an [Amazon Machine Image (AMI)](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) 
 that has Couchbase installed, which you can do using the [couchbase-ami 
