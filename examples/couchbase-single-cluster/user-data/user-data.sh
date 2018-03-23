@@ -49,4 +49,5 @@ readonly CLUSTER_PASSWORD="password"
   --auto-fill "<ADMIN_INTERFACE>=${sync_gateway_admin_interface}" \
   --auto-fill "<DB_NAME>=${cluster_asg_name}" \
   --auto-fill "<DB_USERNAME>=$CLUSTER_USERNAME" \
-  --auto-fill "<DB_PASSWORD>=$CLUSTER_PASSWORD"
+  --auto-fill "<DB_PASSWORD>=$CLUSTER_PASSWORD" \
+  --use-public-hostname
