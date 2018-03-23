@@ -329,7 +329,7 @@ function init_new_cluster {
   local readonly index_ramsize="$9"
   local readonly services="${10}"
 
-  log_info "Initializing cluster $cluster_name"
+  log_info "Initializing cluster $cluster_name with rally point $rally_point_hostname and port $rally_point_port"
 
   local cluster_init_args=()
 
@@ -641,15 +641,16 @@ function configure_couchbase_dirs {
   local readonly data_dir="$5"
   local readonly index_dir="$6"
 
-  log_info "Initializing Couchbase node $node_hostname with data dir $data_dir and index dir $index_dir"
+  log_info "Initializing Couchbase node on localhost with $node_hostname, data dir $data_dir, and index dir $index_dir"
 
   local node_init_args=()
   node_init_args+=("node-init")
-  node_init_args+=("--cluster=$node_hostname:$node_port")
+  node_init_args+=("--cluster=127.0.0.1:$node_port")
   node_init_args+=("--username=$username")
   node_init_args+=("--password=$password")
   node_init_args+=("--node-init-data-path=$data_dir")
   node_init_args+=("--node-init-index-path=$index_dir")
+  node_init_args+=("--node-init-hostname=$node_hostname")
 
   set +e
   local out
