@@ -28,8 +28,11 @@ services:
       - ../../../modules/run-sync-gateway/run-sync-gateway:/opt/couchbase-sync-gateway/bin/run-sync-gateway
 
       # Override scripts in bash-commons with mocks so we can run locally, without talking to AWS APIs
+      # TODO: install bash-commons into a single, common location so we don't have multiple copies
       - ../../local-mocks/bash-commons/aws-primitives.sh:/opt/couchbase/bash-commons/aws-primitives.sh
       - ../../local-mocks/bash-commons/mount-ebs-volume:/opt/couchbase/bash-commons/mount-ebs-volume
+      - ../../local-mocks/bash-commons/aws-primitives.sh:/opt/couchbase-sync-gateway/bash-commons/aws-primitives.sh
+      - ../../local-mocks/bash-commons/mount-ebs-volume:/opt/couchbase-sync-gateway/bash-commons/mount-ebs-volume
 
       # Mount the mock scripts we use to run Couchbase during Docker container boot
       - ../user-data:/user-data
