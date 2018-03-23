@@ -117,7 +117,7 @@ function get_rally_point_hostname {
 
   local hostname_field=".PrivateDnsName"
   if [[ "$use_public_hostname" == "true" ]]; then
-    hostname_field=".PrivateDnsName"
+    hostname_field=".PublicDnsName"
   fi
 
   local hostname
