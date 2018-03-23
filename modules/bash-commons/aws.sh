@@ -18,20 +18,35 @@ function get_asg_name {
   local instance_region
   instance_region=$(get_instance_region)
 
-  local tags
-  tags=$(wait_for_instance_tags "$instance_id" "$instance_region")
-  assert_not_empty_aws_response "$tags" "Tags for instance $instance_id"
-
-  get_tag_value "$tags" "aws:autoscaling:groupName"
+  get_instance_tag "$instance_id" "$instance_region" "aws:autoscaling:groupName"
 }
 
 # Get the value for a specific tag from the tags JSON returned by the AWS describe-tags:
 # https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-tags.html
-function get_tag_value {
-  local readonly tags="$1"
-  local readonly tag_key="$2"
+function get_instance_tag {
+  local readonly instance_id="$1"
+  local readonly instance_region="$2"
+  local readonly tag_key="$3"
 
-  echo "$tags" | jq -r ".Tags[] | select(.Key == \"$tag_key\") | .Value"
+  for (( i=0; i<"$AWS_MAX_RETRIES"; i++ )); do
+    local tags
+    tags=$(wait_for_instance_tags "$instance_id" "$instance_region")
+    assert_not_empty_aws_response "$tags" "tags for Instance $instance_id in $instance_region"
+
+    local tag_value
+    tag_value=$(echo "$tags" | jq -r ".Tags[] | select(.Key == \"$tag_key\") | .Value")
+
+    if is_empty_aws_response "$tag_value"; then
+      log_warn "Instance $instance_id in $instance_region does not yet seem to have tag $tag_key. Will sleep for $AWS_SLEEP_BETWEEN_RETRIES_SEC and check again."
+      sleep "$AWS_SLEEP_BETWEEN_RETRIES_SEC"
+    else
+      log_info "Found value '$tag_value' for tag $tag_key for Instance $instance_id in $instance_region"
+      echo -n "$tag_value"
+    fi
+  done
+
+  log_error "Could not find value for tag $tag_key for Instance $instance_id in $instance_region after $AWS_MAX_RETRIES retries."
+  exit 1
 }
 
 # Get the tags for the current EC2 Instance. Tags may take time to propagate, so this method will retry until the tags
