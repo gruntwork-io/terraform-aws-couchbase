@@ -33,27 +33,27 @@ var testSyncGatewayPorts = map[string]int{
 const usernameForTest = "admin"
 const passwordForTest = "password"
 
-func TestUnitCouchbaseUbuntuInDocker(t *testing.T) {
+func TestUnitCouchbaseSingleClusterUbuntuInDocker(t *testing.T) {
 	t.Parallel()
-	testCouchbaseInDocker(t, "ubuntu")
+	testCouchbaseInDocker(t, "TestUnitCouchbaseSingleClusterUbuntuInDocker","ubuntu")
 }
 
-func testCouchbaseInDocker(t *testing.T, osName string) {
-	testName := fmt.Sprintf("TestCouchbaseInDocker-%s", osName)
+func testCouchbaseInDocker(t *testing.T, testName string, osName string) {
 	logger := terralog.NewLogger(testName)
 
 	tmpRootDir, err := files.CopyTerraformFolderToTemp("../", testName)
 	if err != nil {
 		t.Fatal(err)
 	}
-	couchbaseExampleDir := filepath.Join(tmpRootDir, "examples", "couchbase-ami")
+	couchbaseAmiDir := filepath.Join(tmpRootDir, "examples", "couchbase-ami")
+	couchbaseSingleClusterDockerDir := filepath.Join(tmpRootDir, "examples", "couchbase-single-cluster", "local-test")
 
 	test_structure.RunTestStage("setup_image", logger, func() {
-		buildCouchbaseWithPacker(t, logger, fmt.Sprintf("%s-docker", osName), "us-east-1", couchbaseExampleDir)
+		buildCouchbaseWithPacker(t, logger, fmt.Sprintf("%s-docker", osName), "us-east-1", couchbaseAmiDir)
 	})
 
 	test_structure.RunTestStage("setup_docker", logger, func() {
-		startCouchbaseWithDockerCompose(t, osName, couchbaseExampleDir, logger)
+		startCouchbaseWithDockerCompose(t, osName, couchbaseSingleClusterDockerDir, logger)
 	})
 
 	test_structure.RunTestStage("validation", logger, func() {
@@ -63,7 +63,7 @@ func testCouchbaseInDocker(t *testing.T, osName string) {
 	})
 
 	defer test_structure.RunTestStage("teardown", logger, func() {
-		stopCouchbaseWithDockerCompose(t, couchbaseExampleDir, logger)
+		stopCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, logger)
 	})
 }
 
