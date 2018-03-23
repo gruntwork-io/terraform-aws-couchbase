@@ -100,7 +100,7 @@ variable "root_volume_delete_on_termination" {
 
 variable "root_volume_iops" {
   description = "The amount of provisioned IOPS for the root volume. Only used if volume type is io1."
-  default     = ""
+  default     = 0
 }
 
 variable "ebs_block_devices" {

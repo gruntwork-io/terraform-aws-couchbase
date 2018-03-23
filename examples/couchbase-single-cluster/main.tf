@@ -89,7 +89,7 @@ module "couchbase" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 data "template_file" "user_data_server" {
-  template = "${file("${path.module}/examples/root-example/user-data-server.sh")}"
+  template = "${file("${path.module}/user-data/user-data.sh")}"
 
   vars {
     aws_region       = "${var.aws_region}"
