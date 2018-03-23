@@ -566,21 +566,32 @@ function calculate_memory_settings_automatically {
   local fts_ramsize
 
   if string_contains "$services" "data" && string_contains "$services" "index" && string_contains "$services" "fts"; then
-    data_ramsize=$(($available_memory_mb * 40 / 100))
-    index_ramsize=$(($available_memory_mb * 20 / 100))
+    data_ramsize=$(($available_memory_mb * 35 / 100))
+    index_ramsize=$(($available_memory_mb * 15 / 100))
     fts_ramsize=$(($available_memory_mb * 15 / 100))
   elif string_contains "$services" "data" && string_contains "$services" "index"; then
-    data_ramsize=$(($available_memory_mb * 50 / 100))
+    data_ramsize=$(($available_memory_mb * 40 / 100))
     index_ramsize=$(($available_memory_mb * 25 / 100))
   elif string_contains "$services" "data" && string_contains "$services" "fts"; then
-    data_ramsize=$(($available_memory_mb * 50 / 100))
+    data_ramsize=$(($available_memory_mb * 40 / 100))
     fts_ramsize=$(($available_memory_mb * 25 / 100))
   elif string_contains "$services" "data"; then
-    data_ramsize=$(($available_memory_mb * 75 / 100))
+    data_ramsize=$(($available_memory_mb * 65 / 100))
   elif string_contains "$services" "index"; then
-    index_ramsize=$(($available_memory_mb * 75 / 100))
+    index_ramsize=$(($available_memory_mb * 65 / 100))
   elif string_contains "$services" "fts"; then
-    fts_ramsize=$(($available_memory_mb * 75 / 100))
+    fts_ramsize=$(($available_memory_mb * 65 / 100))
+  fi
+
+  # Enforce some minimums
+  if [[ "$data_ramsize" -lt 256 ]]; then
+    data_ramsize=256
+  fi
+  if [[ "$index_ramsize" -lt 256 ]]; then
+    index_ramsize=256
+  fi
+  if [[ "$fts_ramsize" -lt 256 ]]; then
+    fts_ramsize=256
   fi
 
   log_info "Setting data_ramsize = $data_ramsize, index_ramsize = $index_ramsize, fts_ramsize = $fts_ramsize."
