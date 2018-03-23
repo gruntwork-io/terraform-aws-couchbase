@@ -95,7 +95,7 @@ function wait_for_instances_in_asg {
     local count_instances
     count_instances=$(echo "$instances" | jq -r "[.Reservations[].Instances[].InstanceId] | length")
 
-    log_info "Found $count_instances / $count_instances Instances in ASG $asg_name in $aws_region."
+    log_info "Found $count_instances / $asg_size Instances in ASG $asg_name in $aws_region."
 
     if [[ "$count_instances" -eq "$asg_size" ]]; then
       echo "$instances"
