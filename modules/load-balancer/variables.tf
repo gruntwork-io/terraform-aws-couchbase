@@ -59,10 +59,9 @@ variable "tags" {
   default     = {}
 }
 
-# https://developer.couchbase.com/documentation/mobile/1.5/guides/sync-gateway/nginx/index.html#aws-elastic-load-balancer-elb
 variable "idle_timeout" {
-  description = "The time in seconds that the connection is allowed to be idle. Since Sync Gateway and Couchbase Lite can have long running connections for changes feeds, we recommend setting the idle timeout to the maximum value of 3,600 seconds (1 hour)."
-  default     = 3600
+  description = "The time in seconds that the connection is allowed to be idle."
+  default     = 30
 }
 
 variable "include_http_listener" {
@@ -90,161 +89,17 @@ variable "https_port" {
   default     = 443
 }
 
-variable "include_couchbase_server_target_group" {
-  description = "Set to true to include a target group and health checks for Couchbase Servers."
-  default     = true
-}
-
-variable "couchbase_server_port" {
-  description = "The port your Couchbase Servers are listening on. Only used if var.include_couchbase_server_target_group is true."
-  default     = 8091
-}
-
-variable "couchbase_server_protocol" {
-  description = "The protocol the Load Balancer should use to talk to your Couchbase Servers. Must be one of: HTTP, HTTPS. Only used if var.include_couchbase_server_target_group is true."
-  default     = "HTTP"
-}
-
-variable "couchbase_server_deregistration_delay" {
-  description = "The amount time for the Load Balancer to wait before changing the state of a deregistering Couchbase Server from draining to unused. The range is 0-3600 seconds. Only used if var.include_couchbase_server_target_group is true."
-  default     = 300
-}
-
-variable "couchbase_server_health_check_interval" {
-  description = "The approximate amount of time, in seconds, between health checks of Couchbase Servers. Minimum value 5 seconds, Maximum value 300 seconds. Only used if var.include_couchbase_server_target_group is true."
-  default     = 30
-}
-
-variable "couchbase_server_health_check_path" {
-  description = "The path to use for Couchbase Server health check requests. Only used if var.include_couchbase_server_target_group is true."
-  default     = "/ui/index.html"
-}
-
-variable "couchbase_server_health_check_timeout" {
-  description = "The amount of time, in seconds, during which no response from a Couchbase Server means a failed health check. Must be between 2 and 60 seconds. Only used if var.include_couchbase_server_target_group is true."
-  default     = 5
-}
-
-variable "couchbase_server_health_check_healthy_threshold" {
-  description = "The number of times the health check must pass before a Couchbase Server is considered healthy. Only used if var.include_couchbase_server_target_group is true."
-  default     = 2
-}
-
-variable "couchbase_server_health_check_unhealthy_threshold" {
-  description = "The number of times the health check must fail before a Couchbase Server is considered unhealthy. Only used if var.include_couchbase_server_target_group is true."
-  default     = 2
-}
-
-variable "couchbase_server_health_check_matcher" {
-  description = "The HTTP codes to use when checking for a successful response from a Couchbase Server. You can specify multiple comma-separated values (for example, \"200,202\") or a range of values (for example, \"200-299\"). Only used if var.include_couchbase_server_target_group is true."
-  default     = "200"
-}
-
-variable "couchbase_server_listener_rule_priority_http" {
-  description = "The priority for the Couchbase Server ALB HTTP listener rule. Only used if var.include_couchbase_server_target_group and var.include_http_listener is true."
-  default     = 100
-}
-
-variable "couchbase_server_listener_rule_priority_https" {
-  description = "The priority for the Couchbase Server ALB HTTPS listener rule. Only used if var.include_couchbase_server_target_group and var.include_https_listener is true."
-  default     = 100
-}
-
-variable "couchbase_server_listener_rule_condition" {
-  description = "The condition block for the Couchbase Server listener rules. This can be used to configure which paths and domain names on the Load Balancer are routed to the Couchbase Server. We ONLY recommend accessing the Couchbase Server Web Console (/ui) via a Load Balancer! Must contain an object with keys field and values. See the Condition Block documentation for details: https://www.terraform.io/docs/providers/aws/r/lb_listener_rule.html. Only used if var.include_couchbase_server_target_group is true."
+variable "route53_records" {
+  description = "A list of DNS A records to create in Route 53 that point at this Load Balancer. Each item in the list should be an object with the keys 'domain' (the domain name to create) and 'zone_id' (the Route 53 Hosted Zone ID in which to create the DNS A record)."
   type        = "list"
+  default     = []
 
-  default = [
-    {
-      field  = "path-pattern"
-      values = ["/ui/*"]
-    },
-  ]
-}
-
-variable "include_sync_gateway_target_group" {
-  description = "Set to true to include a target group, health checks, and listener rules for Sync Gateway."
-  default     = true
-}
-
-variable "sync_gateway_port" {
-  description = "The port your Sync Gateway is listening on. Only used if var.include_sync_gateway_target_group is true."
-  default     = 4984
-}
-
-variable "sync_gateway_protocol" {
-  description = "The protocol the Load Balancer should use to talk to your Sync Gateway. Must be one of: HTTP, HTTPS. Only used if var.include_sync_gateway_target_group is true."
-  default     = "HTTP"
-}
-
-variable "sync_gateway_deregistration_delay" {
-  description = "The amount time for the Load Balancer to wait before changing the state of a deregistering Sync Gateway server from draining to unused. The range is 0-3600 seconds. Only used if var.include_sync_gateway_target_group is true."
-  default     = 300
-}
-
-variable "sync_gateway_health_check_interval" {
-  description = "The approximate amount of time, in seconds, between health checks of Sync Gateway servers. Minimum value 5 seconds, Maximum value 300 seconds. Only used if var.include_sync_gateway_target_group is true."
-  default     = 30
-}
-
-variable "sync_gateway_health_check_path" {
-  description = "The path to use for Sync Gateway health check requests. Only used if var.include_sync_gateway_target_group is true."
-  default     = "/"
-}
-
-variable "sync_gateway_health_check_timeout" {
-  description = "The amount of time, in seconds, during which no response from a Sync Gateway means a failed health check. Must be between 2 and 60 seconds. Only used if var.include_sync_gateway_target_group is true."
-  default     = 5
-}
-
-variable "sync_gateway_health_check_healthy_threshold" {
-  description = "The number of times the health check must pass before a Sync Gateway is considered healthy. Only used if var.include_sync_gateway_target_group is true."
-  default     = 2
-}
-
-variable "sync_gateway_health_check_unhealthy_threshold" {
-  description = "The number of times the health check must fail before a Sync Gateway is considered unhealthy. Only used if var.include_sync_gateway_target_group is true."
-  default     = 2
-}
-
-variable "sync_gateway_health_check_matcher" {
-  description = "The HTTP codes to use when checking for a successful response from a Sync Gateway. You can specify multiple comma-separated values (for example, \"200,202\") or a range of values (for example, \"200-299\"). Only used if var.include_sync_gateway_target_group is true."
-  default     = "200"
-}
-
-variable "sync_gateway_listener_rule_priority_http" {
-  description = "The priority for the Sync Gateway ALB HTTP listener rule. Only used if var.include_sync_gateway_target_group and var.include_http_listener is true."
-  default     = 110
-}
-
-variable "sync_gateway_listener_rule_priority_https" {
-  description = "The priority for the Sync Gateway ALB HTTPS listener rule. Only used if var.include_sync_gateway_target_group and var.include_https_listener is true."
-  default     = 110
-}
-
-variable "sync_gateway_listener_rule_condition" {
-  description = "The condition block for the Sync Gateway listener rule. This can be used to configure which paths and domain names on the Load Balancer are routed to the Sync Gateway. Must contain an object with keys field and values. See the Condition Block documentation for details: https://www.terraform.io/docs/providers/aws/r/lb_listener_rule.html. Only used if var.include_sync_gateway_target_group is true."
-  type        = "list"
-
-  default = [
-    {
-      field  = "path-pattern"
-      values = ["*"]
-    },
-  ]
-}
-
-variable "create_route53_entry" {
-  description = "If set to true, create a DNS A record in Route 53 for var.domain_name."
-  default     = false
-}
-
-variable "route53_hosted_zone_id" {
-  description = "The ID of the Route 53 Hosted Zone in which to create a DNS A record that points to this Load Balancer. Only used if var.create_route53_entry is true."
-  default     = "replace-me"
-}
-
-variable "domain_name" {
-  description = "The domain name to use in the DNS A record in Route 53 that points to this Load Balancer. Only used if var.create_route53_entry is true."
-  default     = "replace-me"
+  # Example:
+  #
+  # default = [
+  #   {
+  #     domain  = "foo.acme.com"
+  #     zone_id = "Z1234ABCDEFG"
+  #   }
+  # ]
 }

@@ -113,52 +113,90 @@ data "template_file" "user_data_server" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# DEPLOY A LOAD BALANCER
-# We use this load balancer to (1) perform health checks and (2) route traffic across the Sync Gateway nodes.
+# DEPLOY A LOAD BALANCER FOR COUCHBASE
+# We use this load balancer to (1) perform health checks and (2) route traffic to the Couchbase Web Console. Note that
+# we do NOT route any traffic to other Couchbase APIs/ports: https://blog.couchbase.com/couchbase-101-q-and-a/
 # ---------------------------------------------------------------------------------------------------------------------
 
-module "load_balancer" {
+module "couchbase_load_balancer" {
   # When using these modules in your own code, you will need to use a Git URL with a ref attribute that pins you
   # to a specific version of the modules, such as the following example:
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/load-balancer?ref=v0.0.1"
   source = "../../modules/load-balancer"
 
-  name = "${var.cluster_name}"
-
+  name       = "${var.cluster_name}"
   vpc_id     = "${data.aws_vpc.default.id}"
   subnet_ids = "${data.aws_subnet_ids.default.ids}"
 
   # To make testing easier, we allow inbound connections from any IP. In production usage, you may want to only allow
   # connectsion from certain trusted servers, or even use an internal load balancer, so it's only accessible from
   # within the VPC
+
   allow_http_inbound_from_cidr_blocks = ["0.0.0.0/0"]
-
-  internal = false
-
-  # Configure the ports used by Couchbase and Sync Gateway
-  couchbase_server_port = "${module.couchbase_security_group_rules.rest_port}"
-  sync_gateway_port     = "${module.sync_gateway_security_group_rules.interface_port}"
-
+  internal                            = false
   # An example of custom tags
   tags = {
     Name = "${var.cluster_name}"
   }
 }
 
-# ---------------------------------------------------------------------------------------------------------------------
-# ATTACH THE LOAD BALANCER'S TARGET GROUPS TO OUR AUTO SCALING GROUP
-# This way, when new servers are deployed in the ASG, they will automatically register in the appropriate Target Group
-# and begin performing health checks.
-# ---------------------------------------------------------------------------------------------------------------------
+module "couchbase_target_group" {
+  # When using these modules in your own code, you will need to use a Git URL with a ref attribute that pins you
+  # to a specific version of the modules, such as the following example:
+  # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/load-balancer-target-group?ref=v0.0.1"
+  source = "../../modules/load-balancer-target-group"
 
-resource "aws_autoscaling_attachment" "couchbase_server" {
-  autoscaling_group_name = "${module.couchbase.asg_name}"
-  alb_target_group_arn   = "${module.load_balancer.couchbase_server_target_group_arn}"
+  target_group_name = "${var.cluster_name}-cb"
+  asg_name          = "${module.couchbase.asg_name}"
+  port              = "${module.couchbase_security_group_rules.rest_port}"
+  health_check_path = "/ui/index.html"
+  vpc_id            = "${data.aws_vpc.default.id}"
+  http_listener_arn = "${module.couchbase_load_balancer.http_listener_arn}"
 }
 
-resource "aws_autoscaling_attachment" "sync_gateway" {
-  autoscaling_group_name = "${module.couchbase.asg_name}"
-  alb_target_group_arn   = "${module.load_balancer.sync_gateway_target_group_arn}"
+# ---------------------------------------------------------------------------------------------------------------------
+# DEPLOY A LOAD BALANCER FOR SYNC GATEWAY
+# We use this load balancer to (1) perform health checks and (2) route traffic to Sync Gateway
+# ---------------------------------------------------------------------------------------------------------------------
+
+module "sync_gateway_load_balancer" {
+  # When using these modules in your own code, you will need to use a Git URL with a ref attribute that pins you
+  # to a specific version of the modules, such as the following example:
+  # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/load-balancer?ref=v0.0.1"
+  source = "../../modules/load-balancer"
+
+  name       = "${var.cluster_name}-sg"
+  vpc_id     = "${data.aws_vpc.default.id}"
+  subnet_ids = "${data.aws_subnet_ids.default.ids}"
+
+  # To make testing easier, we allow inbound connections from any IP. In production usage, you may want to only allow
+  # connectsion from certain trusted servers, or even use an internal load balancer, so it's only accessible from
+  # within the VPC
+
+  allow_http_inbound_from_cidr_blocks = ["0.0.0.0/0"]
+  internal                            = false
+  # Since Sync Gateway and Couchbase Lite can have long running connections for changes feeds, we recommend setting the
+  # idle timeout to the maximum value of 3,600 seconds (1 hour)
+  # https://developer.couchbase.com/documentation/mobile/1.5/guides/sync-gateway/nginx/index.html#aws-elastic-load-balancer-elb
+  idle_timeout = 3600
+  # An example of custom tags
+  tags = {
+    Name = "${var.cluster_name}"
+  }
+}
+
+module "sync_gateway_target_group" {
+  # When using these modules in your own code, you will need to use a Git URL with a ref attribute that pins you
+  # to a specific version of the modules, such as the following example:
+  # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/load-balancer-target-group?ref=v0.0.1"
+  source = "../../modules/load-balancer-target-group"
+
+  target_group_name = "${var.cluster_name}-sg"
+  asg_name          = "${module.couchbase.asg_name}"
+  port              = "${module.sync_gateway_security_group_rules.interface_port}"
+  health_check_path = "/"
+  vpc_id            = "${data.aws_vpc.default.id}"
+  http_listener_arn = "${module.sync_gateway_load_balancer.http_listener_arn}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

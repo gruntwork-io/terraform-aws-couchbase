@@ -2,13 +2,13 @@
 # CREATE AN THE LOAD BALANCER
 # ---------------------------------------------------------------------------------------------------------------------
 
-resource "aws_alb" "couchbase" {
+resource "aws_alb" "lb" {
   name               = "${var.name}"
   load_balancer_type = "application"
   idle_timeout       = "${var.idle_timeout}"
 
   internal        = "${var.internal}"
-  security_groups = ["${aws_security_group.couchbase.id}"]
+  security_groups = ["${aws_security_group.sg.id}"]
   subnets         = ["${var.subnet_ids}"]
 
   enable_http2    = "${var.enable_http2}"
@@ -24,7 +24,7 @@ resource "aws_alb" "couchbase" {
 resource "aws_alb_listener" "http" {
   count = "${var.include_http_listener}"
 
-  load_balancer_arn = "${aws_alb.couchbase.arn}"
+  load_balancer_arn = "${aws_alb.lb.arn}"
   port              = "${var.http_port}"
   protocol          = "HTTP"
 
@@ -37,7 +37,7 @@ resource "aws_alb_listener" "http" {
 resource "aws_alb_listener" "https" {
   count = "${var.include_https_listener}"
 
-  load_balancer_arn = "${aws_alb.couchbase.arn}"
+  load_balancer_arn = "${aws_alb.lb.arn}"
   port              = "${var.https_port}"
   protocol          = "HTTPS"
   certificate_arn   = "${var.certificate_arn}"
@@ -46,117 +46,6 @@ resource "aws_alb_listener" "https" {
     target_group_arn = "${length(var.default_target_group_arn) > 0 ? var.default_target_group_arn : element(concat(aws_alb_target_group.black_hole.*.arn, list("")), 0)}"
     type             = "forward"
   }
-}
-
-# ---------------------------------------------------------------------------------------------------------------------
-# CREATE A TARGET GROUP AND LOAD BALANCER RULES FOR COUCHBASE SERVER
-# Note that we only recommend creating Load Balancer Rules for the Couchbase Web Console. Using a Load Balancer with
-# any of the Couchbase APIs is NOT recommended: https://blog.couchbase.com/couchbase-101-q-and-a/
-# ---------------------------------------------------------------------------------------------------------------------
-
-resource "aws_alb_target_group" "couchbase_server" {
-  count = "${var.include_couchbase_server_target_group}"
-
-  name                 = "${var.name}-server"
-  port                 = "${var.couchbase_server_port}"
-  protocol             = "${var.couchbase_server_protocol}"
-  vpc_id               = "${var.vpc_id}"
-  deregistration_delay = "${var.couchbase_server_deregistration_delay}"
-
-  health_check {
-    port                = "traffic-port"
-    interval            = "${var.couchbase_server_health_check_interval}"
-    path                = "${var.couchbase_server_health_check_path}"
-    protocol            = "${var.couchbase_server_protocol}"
-    timeout             = "${var.couchbase_server_health_check_timeout}"
-    healthy_threshold   = "${var.couchbase_server_health_check_healthy_threshold}"
-    unhealthy_threshold = "${var.couchbase_server_health_check_unhealthy_threshold}"
-    matcher             = "${var.couchbase_server_health_check_matcher}"
-  }
-}
-
-resource "aws_alb_listener_rule" "couchbase_server_http" {
-  count = "${var.include_couchbase_server_target_group * var.include_http_listener}"
-
-  listener_arn = "${element(concat(aws_alb_listener.http.*.arn, list("")), 0)}"
-  priority     = "${var.couchbase_server_listener_rule_priority_http}"
-
-  action {
-    target_group_arn = "${element(concat(aws_alb_target_group.couchbase_server.*.arn, list("")), 0)}"
-    type             = "forward"
-  }
-
-  condition = "${var.couchbase_server_listener_rule_condition}"
-}
-
-resource "aws_alb_listener_rule" "couchbase_server_https" {
-  count = "${var.include_couchbase_server_target_group * var.include_https_listener}"
-
-  listener_arn = "${element(concat(aws_alb_listener.https.*.arn, list("")), 0)}"
-  priority     = "${var.couchbase_server_listener_rule_priority_https}"
-
-  action {
-    target_group_arn = "${element(concat(aws_alb_target_group.couchbase_server.*.arn, list("")), 0)}"
-    type             = "forward"
-  }
-
-  condition = "${var.couchbase_server_listener_rule_condition}"
-}
-
-# ---------------------------------------------------------------------------------------------------------------------
-# CREATE A TARGET GROUP AND LOAD BALANCER RULES FOR SYNC GATEWAY
-# This can be used to route traffic across all Sync Gateway servers. Note that we only expose the normal Sync Gateway
-# interface port and NOT the admin port, as the admin port allows admin access to ALL Couchbase data, and should only
-# be accessible from localhost.
-# ---------------------------------------------------------------------------------------------------------------------
-
-resource "aws_alb_target_group" "sync_gateway" {
-  count = "${var.include_sync_gateway_target_group}"
-
-  name                 = "${var.name}-sync-gateway"
-  port                 = "${var.sync_gateway_port}"
-  protocol             = "${var.sync_gateway_protocol}"
-  vpc_id               = "${var.vpc_id}"
-  deregistration_delay = "${var.sync_gateway_deregistration_delay}"
-
-  health_check {
-    port                = "traffic-port"
-    interval            = "${var.sync_gateway_health_check_interval}"
-    path                = "${var.sync_gateway_health_check_path}"
-    protocol            = "${var.sync_gateway_protocol}"
-    timeout             = "${var.sync_gateway_health_check_timeout}"
-    healthy_threshold   = "${var.sync_gateway_health_check_healthy_threshold}"
-    unhealthy_threshold = "${var.sync_gateway_health_check_unhealthy_threshold}"
-    matcher             = "${var.sync_gateway_health_check_matcher}"
-  }
-}
-
-resource "aws_alb_listener_rule" "sync_gateway_http" {
-  count = "${var.include_sync_gateway_target_group * var.include_http_listener}"
-
-  listener_arn = "${element(concat(aws_alb_listener.http.*.arn, list("")), 0)}"
-  priority     = "${var.sync_gateway_listener_rule_priority_http}"
-
-  action {
-    target_group_arn = "${element(concat(aws_alb_target_group.sync_gateway.*.arn, list("")), 0)}"
-    type             = "forward"
-  }
-
-  condition = "${var.sync_gateway_listener_rule_condition}"
-}
-
-resource "aws_alb_listener_rule" "sync_gateway_https" {
-  count = "${var.include_sync_gateway_target_group * var.include_https_listener}"
-
-  listener_arn = "${element(concat(aws_alb_listener.https.*.arn, list("")), 0)}"
-  priority     = "${var.sync_gateway_listener_rule_priority_https}"
-
-  action {
-    target_group_arn = "${element(concat(aws_alb_target_group.sync_gateway.*.arn, list("")), 0)}"
-    type             = "forward"
-  }
-
-  condition = "${var.sync_gateway_listener_rule_condition}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -174,7 +63,7 @@ resource "aws_alb_listener_rule" "sync_gateway_https" {
 resource "aws_alb_target_group" "black_hole" {
   count = "${length(var.default_target_group_arn) == 0 ? 1 : 0}"
 
-  name     = "${var.name}-black-hole"
+  name     = "${var.name}-hole"
   protocol = "HTTP"
   port     = 12345
   vpc_id   = "${var.vpc_id}"
@@ -184,7 +73,7 @@ resource "aws_alb_target_group" "black_hole" {
 # CREATE A SECURITY GROUP TO CONTROL TRAFFIC THAT CAN GO IN AND OUT OF THE LOAD BALANCER
 # ---------------------------------------------------------------------------------------------------------------------
 
-resource "aws_security_group" "couchbase" {
+resource "aws_security_group" "sg" {
   name   = "${var.name}-lb"
   vpc_id = "${var.vpc_id}"
 }
@@ -194,7 +83,7 @@ resource "aws_security_group_rule" "allow_all_outbound" {
   from_port         = 0
   to_port           = 0
   protocol          = "-1"
-  security_group_id = "${aws_security_group.couchbase.id}"
+  security_group_id = "${aws_security_group.sg.id}"
   cidr_blocks       = ["0.0.0.0/0"]
 }
 
@@ -204,7 +93,7 @@ resource "aws_security_group_rule" "allow_http_inbound_from_cidr_blocks" {
   from_port         = "${var.http_port}"
   to_port           = "${var.http_port}"
   protocol          = "tcp"
-  security_group_id = "${aws_security_group.couchbase.id}"
+  security_group_id = "${aws_security_group.sg.id}"
   cidr_blocks       = ["${var.allow_http_inbound_from_cidr_blocks}"]
 }
 
@@ -214,7 +103,7 @@ resource "aws_security_group_rule" "allow_http_inbound_from_security_groups" {
   from_port                = "${var.http_port}"
   to_port                  = "${var.http_port}"
   protocol                 = "tcp"
-  security_group_id        = "${aws_security_group.couchbase.id}"
+  security_group_id        = "${aws_security_group.sg.id}"
   source_security_group_id = "${element(var.allow_http_inbound_from_security_groups, count.index)}"
 }
 
@@ -224,7 +113,7 @@ resource "aws_security_group_rule" "allow_https_inbound_from_cidr_blocks" {
   from_port         = "${var.https_port}"
   to_port           = "${var.https_port}"
   protocol          = "tcp"
-  security_group_id = "${aws_security_group.couchbase.id}"
+  security_group_id = "${aws_security_group.sg.id}"
   cidr_blocks       = ["${var.allow_http_inbound_from_cidr_blocks}"]
 }
 
@@ -234,23 +123,23 @@ resource "aws_security_group_rule" "allow_https_inbound_from_security_groups" {
   from_port                = "${var.https_port}"
   to_port                  = "${var.https_port}"
   protocol                 = "tcp"
-  security_group_id        = "${aws_security_group.couchbase.id}"
+  security_group_id        = "${aws_security_group.sg.id}"
   source_security_group_id = "${element(var.allow_http_inbound_from_security_groups, count.index)}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# CREATE AN OPTIONAL DNS A RECORD IN ROUTE 53 POINTING AT THE LOAD BALANCER
+# CREATE OPTIONAL DNS A RECORDS IN ROUTE 53 POINTING AT THE LOAD BALANCER
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_route53_record" "load_balancer" {
-  count   = "${var.create_route53_entry}"
-  name    = "${var.domain_name}"
-  zone_id = "${var.route53_hosted_zone_id}"
+  count   = "${length(var.route53_records)}"
+  name    = "${lookup(var.route53_records[count.index], "domain")}"
+  zone_id = "${lookup(var.route53_records[count.index], "zone_id")}"
   type    = "A"
 
   alias {
-    name                   = "${aws_alb.couchbase.dns_name}"
-    zone_id                = "${aws_alb.couchbase.zone_id}"
+    name                   = "${aws_alb.lb.dns_name}"
+    zone_id                = "${aws_alb.lb.zone_id}"
     evaluate_target_health = true
   }
 }

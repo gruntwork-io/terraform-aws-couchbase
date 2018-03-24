@@ -10,6 +10,14 @@ your Couchbase and/or Sync Gateway cluster to:
    for more info).  
 1. Distribute traffic across multiple Sync Gateway nodes. 
 
+Note that this module solely deploys the Load Balancer, as you may want to share one load balancer across multiple
+applications. To deploy Target Groups, health checks, and routing rules, use the 
+[load-balancer-target-group](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/load-balancer-target-group)
+module.
+
+See the [examples folder](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples) for fully 
+working sample code.
+
 
 
 
@@ -19,36 +27,21 @@ This folder defines a [Terraform module](https://www.terraform.io/docs/modules/u
 code by adding a `module` configuration and setting its `source` parameter to URL of this folder:
 
 ```hcl
-module "load_balancer" {
+module "couchbase_load_balancer" {
   # TODO: replace <VERSION> with the latest version from the releases page: https://github.com/gruntwork-io/terraform-aws-couchbase/releases
   source = "github.com/gruntwork/terraform-aws-couchbase//modules/load-balancer?ref=<VERSION>"
   
-    name = "example-load-balancer"
-  
-    allow_http_inbound_from_cidr_blocks = ["0.0.0.0/0"]
+  name       = "couchbase-load-balancer"
+  vpc_id     = "vpc-abcd1234"
+  subnet_ids = ["subnet-abcd1234", "subnet-efgh5678"]
 
-  # ... See vars.tf for the other parameters you must define for the vault-cluster module
-}
+  allow_http_inbound_from_cidr_blocks = ["0.0.0.0/0"]
 
-# Create a Couchbase cluster
-module "couchbase" {
-  # TODO: replace <VERSION> with the latest version from the releases page: https://github.com/gruntwork-io/terraform-aws-couchbase/releases
-  source = "github.com/gruntwork/terraform-aws-couchbase//modules/couchbase-cluster?ref=<VERSION>"
-
-  health_check_type = "ELB"
-  # ... (other params omitted) ...
-}
-
-resource "aws_autoscaling_attachment" "couchbase_server" {
-  autoscaling_group_name = "${module.couchbase.asg_name}"
-  alb_target_group_arn   = "${module.load_balancer.couchbase_server_target_group_arn}"
-}
-
-resource "aws_autoscaling_attachment" "sync_gateway" {
-  autoscaling_group_name = "${module.couchbase.asg_name}"
-  alb_target_group_arn   = "${module.load_balancer.sync_gateway_target_group_arn}"
+  # ... See vars.tf for the other parameters you must define for this module
 }
 ```
+
+The above code will create a Load Balancer.
 
 Note the following:
 
@@ -60,21 +53,6 @@ Note the following:
 
 * `allow_http_inbound_from_cidr_blocks`: Use this variable to specify which IP address ranges can connect to the Load
   Balancer. You can also use `allow_http_inbound_from_security_groups` to allow specific security groups to connect.
-
-* `health_check_type`: This parameter tells the Couchbase cluster to use the load balancer for health checks, rather 
-  than the simpler EC2 health checks. This way, a server will be replaced as soon as it stops responding properly to
-  requests, rather than only if the EC2 Instance dies completely. 
-
-* `aws_autoscaling_attachment`: Use this resource to attach the Auto Scaling Group used in your Couchbase cluster to
-  the Target Groups in the Load Balancer. This way, every time a new server boots in the cluster, it will automatically 
-  register with the appropriate Target Group and begin doing health checks. Note that there are two Target Groups, 
-  one for Couchbase Servers (`couchbase_server_target_group_arn`) and one for Sync Gateway 
-  (`sync_gateway_target_group_arn`).
-
-You can find the other parameters in [vars.tf](vars.tf).
-
-Check out the [examples folder](https://github.com/gruntwork/terraform-aws-couchbase/tree/master/examples) for working 
-sample code.
 
 
 
@@ -93,24 +71,7 @@ The ALB in this module is configured as follows:
    [ACM](https://aws.amazon.com/certificate-manager/) or 
    [IAM](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_server-certs.html).
    
-1. **Target Groups**: If the `include_couchbase_server_target_group` parameter is true (default: `true`), this module
-   will create a Target Group, health checks, and Listener Rules for your Couchbase Servers. Note that we only 
-   recommend creating creating Listener Rules for the Couchbase Server Web Console (`/ui`) and NOT any of the API 
-   endpoints (see [the Couchbase FAQ](https://blog.couchbase.com/couchbase-101-q-and-a/) for more info). If the 
-   `include_sync_gateway_target_group` parameter is true (default: `true`), this module will create a Target Group,
-   health checks, and Listener Rules for your Sync Gateway.
- 
-1. **Listener Rules**: The default Listener Rules are to route `/ui` to the Couchbase Server nodes and all other paths
-   to Sync Gateway. You can modify these using the `couchbase_server_listener_rule_condition` and 
-   `sync_gateway_listener_rule_condition` parameters.
- 
-1. **Health Checks**: The Target Groups will perform health checks on Couchbase and/or Sync Gateway and only route
-   traffic to healthy servers. If you configure your Auto Scaling Group to use ELB health checks by setting
-   `health_check_type = "ELB"` in the [couchbase-cluster 
-   module](https://github.com/gruntwork/terraform-aws-couchbase/tree/master/modules/couchbase-cluster), then
-   servers that fail health checks will be replaced automatically.
-   
-1. **DNS**: If you set the `create_dns_entry` variable to `true`, this module will create a DNS A Record in [Route 
-   53](https://aws.amazon.com/route53/) that points your specified `domain_name` at the ALB. This allows you to use
-   this domain name to access Sync Gateway. Note that the TLS certificate you use with the HTTPS listener should be 
-   configured with this same domain name!
+1. **DNS**: You can use the `route53_records` variable to create one more more DNS A Records in [Route 
+   53](https://aws.amazon.com/route53/) that point to the Load Balancer. This allows you to use custom domain names to
+   access the Load Balancer. Note that the TLS certificate you use with the HTTPS listener must be issued for the 
+   same domain name(s)!
