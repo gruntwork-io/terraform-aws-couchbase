@@ -234,7 +234,7 @@ func writeToBucket(t *testing.T, clusterUrl string, bucketName string, key strin
 	}
 
 	description := fmt.Sprintf("Write to bucket params: %s", string(jsonBytes))
-	retries := 10
+	retries := 30
 	timeBetweenRetries := 5 * time.Second
 
 	// Buckets take a while to replicate, and until they do, you get vague errors such as "Unexpected server error",
