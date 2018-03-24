@@ -291,7 +291,11 @@ function wait_for_cluster_to_be_initialized {
 
   log_info "Checking if cluster $cluster_name is initialized"
 
-  for (( i=0; i<"$MAX_RETRIES"; i++ )); do
+  # It can take a WHILE to initialize the cluster on first boot, especially with the slow t2.micro instances we use
+  # for testing, so we use more retries here than elsewhere.
+  local readonly cluster_init_retires=120
+
+  for (( i=0; i<"$cluster_init_retires"; i++ )); do
     if cluster_is_initialized "$rally_point_hostname" "$rally_point_port" "$cluster_username" "$cluster_password"; then
       log_info "Cluster $cluster_name is initialized."
       return
@@ -301,7 +305,7 @@ function wait_for_cluster_to_be_initialized {
     fi
   done
 
-  log_error "Cluster $cluster_name still not initialized after $MAX_RETRIES retries."
+  log_error "Cluster $cluster_name still not initialized after $cluster_init_retires retries."
   exit 1
 }
 
