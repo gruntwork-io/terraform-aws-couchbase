@@ -34,7 +34,7 @@ module "couchbase" {
   cluster_name  = "${var.cluster_name}"
   min_size      = 3
   max_size      = 3
-  instance_type = "t2.micro"
+  instance_type = "t2.medium"
 
   ami_id    = "${var.ami_id}"
   user_data = "${data.template_file.user_data_server.rendered}"
