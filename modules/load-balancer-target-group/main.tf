@@ -20,6 +20,12 @@ resource "aws_alb_target_group" "tg" {
     unhealthy_threshold = "${var.health_check_unhealthy_threshold}"
     matcher             = "${var.health_check_matcher}"
   }
+
+  stickiness {
+    type            = "lb_cookie"
+    cookie_duration = "${var.stickiness_cookie_duration}"
+    enabled         = "${var.enable_stickiness}"
+  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

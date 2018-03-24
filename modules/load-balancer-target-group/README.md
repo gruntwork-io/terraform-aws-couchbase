@@ -81,6 +81,10 @@ module "couchbase_target_group" {
   health_check_path = "/ui/index.html"
   http_listener_arn = "${module.couchbase_load_balancer.http_listener_arn}"
   
+  # The Couchbase Web Console uses web sockets, so it's best to enable stickiness so each user is routed to the same
+  # server
+  enable_stickiness = true
+
   # ... See vars.tf for the other parameters you must define for this module
 }
 
@@ -178,6 +182,10 @@ module "couchbase_target_group" {
   health_check_path = "/ui/index.html"
   http_listener_arn = "${module.load_balancer.http_listener_arn}"
   
+  # The Couchbase Web Console uses web sockets, so it's best to enable stickiness so each user is routed to the same
+  # server
+  enable_stickiness = true
+    
   # ... See vars.tf for the other parameters you must define for this module
 }
 

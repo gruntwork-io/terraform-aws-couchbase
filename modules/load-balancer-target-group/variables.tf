@@ -104,3 +104,13 @@ variable "https_listener_rule_priority" {
   description = "The priority for the ALB HTTPS listener rule. Only used if var.create_https_listener_rule is true."
   default     = 100
 }
+
+variable "enable_stickiness" {
+  description = "Set to true to enable stickiness, so a given user always gets routed to the same server. We recommend enabling this for the Couchbase Web Console."
+  default     = false
+}
+
+variable "stickiness_cookie_duration" {
+  description = "The time period, in seconds, during which requests from a client should be routed to the same target. After this time period expires, the load balancer-generated cookie is considered stale. The range is 1 second to 1 week (604800 seconds). Only used if var.enable_stickiness is true."
+  default     = 86400                                                                                                                                                                                                                                                                                         # 1 day
+}
