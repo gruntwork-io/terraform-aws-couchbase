@@ -72,15 +72,15 @@ This script can be used to configure and run Couchbase Sync Gateway. This script
 
 Options:
 
-  --auto-fill-asg KEY=ASG_NAME[:PORT] Replace KEY in the Sync Gateway config with the IPs (and optional PORT) of servers in the ASG called ASG_NAME. May be repeated.
-  --auto-fill KEY=VALUE			          Search the Sync Gateway config file for KEY and replace it with VALUE. May be repeated.
-  --use-public-hostname			          If this flag is set, use the public hostname for each server in --auto-fill. Without this flag, the private hostname will be used.
-  --config				                    The path to a JSON config file for Sync Gateway. Default: /home/sync_gateway/sync_gateway.json.
-  --help				                      Show this help text and exit.
+  --auto-fill-asg KEY=ASG_NAME[:PORT]	Replace KEY in the Sync Gateway config with the IPs (and optional PORT) of servers in the ASG called ASG_NAME. May be repeated.
+  --auto-fill KEY=VALUE			Search the Sync Gateway config file for KEY and replace it with VALUE. May be repeated.
+  --use-public-hostname			If this flag is set, use the public hostname for each server in --auto-fill. Without this flag, the private hostname will be used.
+  --config				The path to a JSON config file for Sync Gateway. Default: /home/sync_gateway/sync_gateway.json.
+  --help				Show this help text and exit.
 
 Example:
 
-  run-sync-gateway --auto-fill-asg <SERVER_IPS>=my-couchbase-cluster --auto-fill <PORT>=4984
+  run-sync-gateway --auto-fill-asg <SERVER_IPS>=my-couchbase-cluster:8091 --auto-fill <PORT>=4984
 ```
 
 

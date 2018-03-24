@@ -26,14 +26,10 @@ module "couchbase_cluster" {
   # install-sync-gateway modules.
   ami_id = "ami-abcd1234"
   
-  # Add this tag to each node in the cluster
-  cluster_tag_key   = "couchbase-cluster"
-  cluster_tag_value = "couchbase-cluster-example"
-  
-  # Configure and start Couchbase during boot. It will automatically form a cluster with all nodes that have that same tag. 
+  # Configure and start Couchbase during boot. 
   user_data = <<-EOF
               #!/bin/bash
-              /opt/couchbase/bin/run-couchbase-server --all --cluster-tag-key couchbase-cluster
+              /opt/couchbase/bin/run-couchbase-server --username admin --password password
               EOF
   
   # ... See vars.tf for the other parameters you must define for the couchbase-cluster module
@@ -74,7 +70,7 @@ fully-working sample code.
 
 ### Connecting to Sync Gateway
 
-We recommend deploying a load balancer in front of Sync Gateway using the [sync-gateway-load-balancer
+We recommend deploying a load balancer in front of Sync Gateway using the [load-balancer
 module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples). If you do that, the module will
 output the DNS name of the load balancer, and you can connect to that URL to connect to the Sync Gateway. 
 
@@ -85,38 +81,43 @@ UI](https://github.com/couchbaselabs/sync_gateway_admin_ui) (default port 4985, 
 from localhost, as it provides admin access to everything in the DB!). 
 
 
-### Getting IP addresses
+### Connecting to the Couchbase Server Web Console
 
-For all other Couchbase servers, since they run in an Auto Scaling Group (ASG) where servers can be 
-added/replaced/removed at any time, you can't get their IP addresses from Terraform. Instead, you'll need to look up 
-the IPs using the AWS APIs. Each server created by the `couchbase-cluster` module is tagged with the `cluster_tag_key`
-and `cluster_tag_value` params you passed in and you can use the AWS APIs to find the IPs for all servers with that
-tag.
+We recommend deploying a load balancer in front of your Couchbase Servers using the [load-balancer
+module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples). If you do that, the module will
+output the DNS name of the load balancer, and you can connect to that URL to connect to access the [Couchbase 
+Web Console](https://developer.couchbase.com/documentation/server/current/admin/ui-intro.html) at the `/ui` path. 
+
+
+### Connecting to Couchbase Server via the SDK
+
+Using a Load Balancer to talk to Couchbase APIs (e.g., via an SDK) is NOT recommended (see [the Couchbase 
+FAQ](https://blog.couchbase.com/couchbase-101-q-and-a/) for more info), so you will need to get the IPs of the 
+individual servers and connect to them directly. Since those servers run in an Auto Scaling Group (ASG) where servers 
+can be added/replaced/removed at any time, you can't get their IP addresses from Terraform. Instead, you'll need to look up 
+the IPs using the AWS APIs. 
+
+The easiest way to do that is to use the AWS SDK to look up the servers using EC2 Tags. Each server deployed by
+the `couchbase-cluster` module has its `Name` and `aws:autoscaling:groupName` tag set to the value you pass in via the
+`cluster_name` parameter. You can also specify custom tags via the `tags` parameter. You can use the AWS SDK to find
+the IPs of all servers with those tags. 
 
 For example, using the [AWS CLI](https://aws.amazon.com/cli/), you can get the IPs for servers in `us-east-1` with 
-the tag `couchbase-cluster=couchbase-cluster-example` as follows:
+the tag `Name=couchbase-example` as follows:
 
 ```bash
 aws ec2 describe-instances \
     --region "us-east-1" \
     --filter \
-      "Name=tag:couchbase-cluster,Values=couchbase-cluster-example" \
+      "Name=tag:Name,Values=couchbase-example" \
       "Name=instance-state-name,Values=running"
 ```
 
-You can then use the [Couchbase SDK](https://developer.couchbase.com/documentation/server/4.0/sdks/intro.html) for your
-programming language to connect to these IPs. See the [Network Configuration
+This will return a bunch of JSON that contains the IPs of the servers. You can then use the [Couchbase 
+SDK](https://developer.couchbase.com/documentation/server/4.0/sdks/intro.html) for your programming language to connect 
+to these IPs. See the [Network Configuration 
 documentation](https://developer.couchbase.com/documentation/server/current/install/install-ports.html) to see what
 ports different Couchbase services use.
-
-
-### Connecting to the Web Console
-
-Every Couchbase server runs the [Web 
-Console](https://developer.couchbase.com/documentation/server/current/admin/ui-intro.html) (default port 8091).
-This is an online UI you can open in your browser to manage your Couchbase cluster. Follow the docs in
-[Getting IP addresses](#getting-ip-addresses) to get the IP of a Couchbase node and open that IP up at port 8091 to
-see the web console.
 
 
 
@@ -127,7 +128,6 @@ This module creates the following:
 
 * [Auto Scaling Group](#auto-scaling-group)
 * [EBS Volumes](#ebs-volumes)
-* [EC2 Instance Tags](#ec2-instance-tags)
 * [Security Group](#security-group)
 * [IAM Role and Permissions](#iam-role-and-permissions)
 
@@ -146,25 +146,22 @@ modules. You pass in the ID of the AMI to run using the `ami_id` input parameter
 ### EBS Volumes
 
 This module can optionally create an [EBS volume](https://aws.amazon.com/ebs/) for each EC2 Instance in the ASG. You 
-can use this volume to store Couchbase data.  
-
-
-### EC2 Instance Tags
-
-This module allows you to specify a tag to add to each EC2 instance in the ASG. The
-[run-couchbase-server](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/run-couchbase-server) and
-[run-sync-gateway](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/run-sync-gateway) 
-scripts use these tags to auto-discover other Couchbase nodes and form a cluster.
+can use these volume to store Couchbase data. As explained in [the 
+documentation](https://developer.couchbase.com/documentation/server/current/cloud/couchbase-aws-best-practices.html#topic_ghd_55f_nbb__aws-storage),
+we recommend using two EBS Volumes, one for the Couchbase data dir and one for the index dir.  
 
 
 ### Security Group
 
-Each EC2 Instance in the ASG has a Security Group that allows:
+Each EC2 Instance in the ASG has a Security Group that allows minimal connectivity:
  
 * All outbound requests
-* All the inbound ports specified in the [Couchbase documentation](https://developer.couchbase.com/documentation/server/current/install/install-ports.html)
+* Inbound SSH access from the CIDR blocks and security groups you specify
 
-The Security Group ID is exported as an output variable if you need to add additional rules. 
+The Security Group ID is exported as an output variable which you can use with the 
+[couchbase-server-security-group-rules](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-server-security-group-rules) and
+[sync-gateway-security-group-rules](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/sync-gateway-security-group-rules)
+modules to open up all the ports necessary for Couchbase and Sync Gateway. 
 
 Check out the [Security section](#security) for more details. 
 
@@ -172,10 +169,7 @@ Check out the [Security section](#security) for more details.
 ### IAM Role and Permissions
 
 Each EC2 Instance in the ASG has an [IAM Role](http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) attached. 
-We give this IAM role a small set of IAM permissions that each EC2 Instance can use to automatically discover the other 
-Instances in its ASG and form a cluster with them. 
-
-The IAM Role ARN is exported as an output variable if you need to add additional permissions. 
+The IAM Role ARN and ID are exported as output variables if you need to add additional permissions. 
 
 
 
@@ -250,18 +244,15 @@ If you wish to use dedicated instances, you can set the `tenancy` parameter to `
 
 This module attaches a security group to each EC2 Instance that allows inbound requests as follows:
 
-* **Couchbase**: For all the [ports used by Couchbase](https://developer.couchbase.com/documentation/server/current/install/install-ports.html), 
-  you can use the `allowed_inbound_cidr_blocks` parameter to control the list of 
-  [CIDR blocks](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing) that will be allowed access and the 
-  `allowed_inbound_security_group_ids` parameter to control the security groups that will be allowed access.
-
 * **SSH**: For the SSH port (default: 22), you can use the `allowed_ssh_cidr_blocks` parameter to control the list of   
   [CIDR blocks](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing) that will be allowed access. You can use 
   the `allowed_inbound_ssh_security_group_ids` parameter to control the list of source Security Groups that will be 
   allowed access.
   
-Note that all the ports mentioned above are configurable via the `xxx_port` variables (e.g. `couchbase_rest_port`). See
-[vars.tf](vars.tf) for the full list.  
+The ID of the security group is exported as an output variable, which you can use with the 
+[couchbase-server-security-group-rules](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-server-security-group-rules) and
+[sync-gateway-security-group-rules](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/sync-gateway-security-group-rules)
+modules to open up all the ports necessary for Couchbase and Sync Gateway.
   
   
 
@@ -270,5 +261,3 @@ Note that all the ports mentioned above are configurable via the `xxx_port` vari
 You can associate an [EC2 Key Pair](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html) with each
 of the EC2 Instances in this cluster by specifying the Key Pair's name in the `ssh_key_name` variable. If you don't
 want to associate a Key Pair with these servers, set `ssh_key_name` to an empty string.
-
-

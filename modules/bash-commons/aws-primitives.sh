@@ -47,6 +47,11 @@ function get_instance_region {
   lookup_path_in_instance_dynamic_data "instance-identity/document" | jq -r ".region"
 }
 
+# Get the availability zone this EC2 Instance is deployed in
+function get_ec2_instance_availability_zone {
+  lookup_path_in_instance_metadata "placement/availability-zone"
+}
+
 # Get the tags for the given intance and region
 function get_instance_tags {
   local readonly instance_id="$1"

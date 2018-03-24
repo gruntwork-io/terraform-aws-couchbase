@@ -1,3 +1,6 @@
+# This file can be used with Docker and Docker Compose to run this Couchbase example locally. This is solely meant to
+# make testing and iterating faster and easier. See examples/local-mocks for instructions.
+
 version: '3'
 services:
   couchbase-ubuntu-0: &couchbase_config
@@ -20,18 +23,22 @@ services:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
 
       # Mount these scripts so we get hot reload
-      - ../../modules/bash-commons:/opt/couchbase/bash-commons
-      - ../../modules/run-couchbase-server/run-couchbase-server:/opt/couchbase/bin/run-couchbase-server
-      - ../../modules/run-sync-gateway/run-sync-gateway:/opt/couchbase-sync-gateway/bin/run-sync-gateway
+      - ../../../modules/bash-commons:/opt/couchbase/bash-commons
+      - ../../../modules/run-couchbase-server/run-couchbase-server:/opt/couchbase/bin/run-couchbase-server
+      - ../../../modules/run-sync-gateway/run-sync-gateway:/opt/couchbase-sync-gateway/bin/run-sync-gateway
 
       # Override scripts in bash-commons with mocks so we can run locally, without talking to AWS APIs
-      - ./mock/bash-commons/aws-primitives.sh:/opt/couchbase/bash-commons/aws-primitives.sh
-      - ./mock/bash-commons/aws-primitives.sh:/opt/couchbase-sync-gateway/bash-commons/aws-primitives.sh
+      # TODO: install bash-commons into a single, common location so we don't have multiple copies
+      - ../../local-mocks/bash-commons/aws-primitives.sh:/opt/couchbase/bash-commons/aws-primitives.sh
+      - ../../local-mocks/bash-commons/mount-ebs-volume:/opt/couchbase/bash-commons/mount-ebs-volume
+      - ../../local-mocks/bash-commons/aws-primitives.sh:/opt/couchbase-sync-gateway/bash-commons/aws-primitives.sh
+      - ../../local-mocks/bash-commons/mount-ebs-volume:/opt/couchbase-sync-gateway/bash-commons/mount-ebs-volume
 
       # Mount the mock scripts we use to run Couchbase during Docker container boot
-      - ./mock/user-data:/user-data
-      - ./mock/entrypoint:/entrypoint
-      - ./mock/systemd/mock-run-couchbase-server.service:/lib/systemd/system/mock-run-couchbase-server.service
+      - ../user-data:/user-data
+      - ../../local-mocks/entrypoint:/entrypoint
+      - ../../local-mocks/systemd/mock-run-couchbase-server.service:/lib/systemd/system/mock-run-couchbase-server.service
+      - ../../local-mocks/systemd/mock-couchbase.env:/lib/systemd/system/mock-couchbase.env
 
     # Map each container to unique ports on the host. Note that you can talk to this container from your host OS via the
     # HTTP/REST APIs but NOT the Couchbase SDKs! The SDKs will try to connect to the internal node IPs, which can only

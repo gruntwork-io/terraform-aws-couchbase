@@ -46,8 +46,22 @@ function assert_not_empty_aws_response {
   local readonly response="$1"
   local readonly description="$2"
 
-  if [[ -z "$response" || "$response" == "null" ]]; then
+  if is_empty_aws_response "$response"; then
     log_error "Got empty response for $description"
+    exit 1
+  fi
+}
+
+# Return true if the given response is empty or null (the latter is from jq parsing).
+function is_empty_aws_response {
+  local readonly response="$1"
+  [[ -z "$response" || "$response" == "null" ]]
+}
+
+# Check that this script is running as root or sudo and exit with an error if it's not
+function assert_uid_is_root_or_sudo {
+  if [[ $EUID != 0 ]]; then
+    log_error "This script should be run using sudo or as the root user"
     exit 1
   fi
 }

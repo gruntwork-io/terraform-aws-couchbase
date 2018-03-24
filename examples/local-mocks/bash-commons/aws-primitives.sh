@@ -1,4 +1,7 @@
 #!/bin/bash
+# This is a mock version of a script with the same name that replaces all the real methods, which rely on external
+# dependencies, such EC2 Metadata and AWS API calls, with mock versions that can run entirely locally. This allows us
+# to test all the scripts completely locally using Docker.
 
 set -e
 
@@ -19,7 +22,13 @@ function get_instance_public_hostname {
 }
 
 function get_instance_region {
-  echo "us-east-1"
+  # This variable is set in local-mocks/systemd/mock-couchbase.env
+  echo "$mock_aws_region"
+}
+
+function get_ec2_instance_availability_zone {
+  # This variable is set in local-mocks/systemd/mock-couchbase.env
+  echo "$mock_availability_zone"
 }
 
 # Return the container ID of the current Docker container. Per https://stackoverflow.com/a/25729598/2308858
@@ -32,7 +41,7 @@ function get_instance_tags {
   local readonly instance_id="$1"
   local readonly instance_region="$2"
 
-  # The cluster_asg_name below is an env var from mock/user-data/mock-couchbase.env
+  # The cluster_asg_name below is an env var from local-mocks/systemd/mock-couchbase.env
   cat << EOF
 {
   "Tags": [

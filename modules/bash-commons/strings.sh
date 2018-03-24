@@ -26,7 +26,7 @@ function replace_text_in_file {
   local readonly replacement_text="$2"
   local readonly file="$3"
 
-  sudo sed -i -e "s|$original_text_regex|$replacement_text|" "$file" > /dev/null
+  sudo sed -i "s|$original_text_regex|$replacement_text|" "$file" > /dev/null
 }
 
 function replace_or_append_in_file {
@@ -76,4 +76,11 @@ function multiline_string_contains {
 function to_uppercase {
   local readonly str="$1"
   echo "$str" | awk '{print toupper($0)}'
+}
+
+# http://stackoverflow.com/a/16623897/483528
+function strip_prefix {
+  local readonly str="$1"
+  local readonly prefix="$2"
+  echo "${str#$prefix}"
 }
