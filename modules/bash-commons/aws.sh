@@ -42,6 +42,7 @@ function get_instance_tag {
     else
       log_info "Found value '$tag_value' for tag $tag_key for Instance $instance_id in $instance_region"
       echo -n "$tag_value"
+      return
     fi
   done
 
@@ -66,7 +67,7 @@ function wait_for_instance_tags {
     log_info "Found $count_tags tags for $instance_id."
 
     if [[ "$count_tags" -gt 0 ]]; then
-      echo "$tags"
+      echo -n "$tags"
       return
     else
       log_warn "Tags for Instance $instance_id must not have propagated yet. Will sleep for $AWS_SLEEP_BETWEEN_RETRIES_SEC seconds and check again."
