@@ -95,6 +95,20 @@ function get_hostname {
   fi
 }
 
+# Get the IP to use for this EC2 Instance. Use the public IP if the first argument is true and the private IP
+# otherwise.
+function get_ip {
+  local readonly use_public_ip="$1"
+
+  if [[ "$use_public_ip" == "true" ]]; then
+    log_info "Using public IP for instance"
+    get_instance_public_ip
+  else
+    log_info "Using private IP for instance"
+    get_instance_private_ip
+  fi
+}
+
 # Identify the server to use as a "rally point." This is the "leader" of the cluster that can be used to initialize
 # the cluster and kick off replication. We use a simple technique to identify a unique rally point in each ASG: look
 # up all the Instances in the ASG and select the one with the oldest launch time. If there is a tie, pick the one with
@@ -633,15 +647,19 @@ function configure_couchbase_ports {
   replace_or_append_in_file "^port.*=.*$" "port = $capi_port" "$COUCHBASE_CAPI_CONFIG_PATH"
 }
 
-function configure_couchbase_dirs {
-  local readonly node_hostname="$1"
-  local readonly node_port="$2"
-  local readonly username="$3"
-  local readonly password="$4"
-  local readonly data_dir="$5"
-  local readonly index_dir="$6"
+function configure_couchbase_server {
+  local readonly node_port="$1"
+  local readonly username="$2"
+  local readonly password="$3"
+  local readonly data_dir="$4"
+  local readonly index_dir="$5"
+  local readonly use_public_ip="$6"
 
-  log_info "Initializing Couchbase node on localhost with $node_hostname, data dir $data_dir, and index dir $index_dir"
+  local node_ip
+  node_ip=$(get_ip "$use_public_ip")
+  assert_not_empty_aws_response "$node_ip" "IP address for current node"
+
+  log_info "Initializing Couchbase node on localhost with IP $node_ip, data dir $data_dir, and index dir $index_dir"
 
   local node_init_args=()
   node_init_args+=("node-init")
@@ -650,7 +668,7 @@ function configure_couchbase_dirs {
   node_init_args+=("--password=$password")
   node_init_args+=("--node-init-data-path=$data_dir")
   node_init_args+=("--node-init-index-path=$index_dir")
-  node_init_args+=("--node-init-hostname=$node_hostname")
+  node_init_args+=("--node-init-hostname=$node_ip")
 
   set +e
   local out
@@ -658,9 +676,9 @@ function configure_couchbase_dirs {
   set -e
 
   if string_contains "$out" "SUCCESS: Node initialized"; then
-    log_info "Successfully initialized Couchbase node $node_hostname."
+    log_info "Successfully initialized local Couchbase node."
   else
-    log_error "Failed to initialize Couchbase node $node_hostname. Log output:\n$out."
+    log_error "Failed to initialize local Couchbase node. Log output:\n$out."
     exit 1
   fi
 }
@@ -905,7 +923,7 @@ function run {
 
   wait_for_couchbase_to_boot "$node_hostname" "$rest_port" "$cluster_username" "$cluster_password"
 
-  configure_couchbase_dirs "$node_hostname" "$rest_port" "$cluster_username" "$cluster_password" "$data_dir" "$index_dir"
+  configure_couchbase_server "$rest_port" "$cluster_username" "$cluster_password" "$data_dir" "$index_dir" "$use_public_hostname"
 
   if [[ "$node_hostname" == "$rally_point_hostname" ]]; then
     log_info "This server is the rally point for cluster $cluster_name, $rally_point_hostname!"
