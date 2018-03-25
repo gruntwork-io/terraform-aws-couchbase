@@ -46,7 +46,7 @@ func testCouchbaseInDocker(t *testing.T, testName string, osName string) {
 		dataNodesUrl := fmt.Sprintf("http://%s:%s@localhost:%d", usernameForTest, passwordForTest, testWebConsolePorts[osName])
 		checkCouchbaseDataNodesWorking(t, dataNodesUrl, logger)
 
-		syncGatewayUrl := fmt.Sprintf("http://localhost:%d/mock-couchbase-asg", testSyncGatewayPorts[osName])
+		syncGatewayUrl := fmt.Sprintf("http://%s:%s@localhost:%d/mock-couchbase-asg", usernameForTest, passwordForTest, testSyncGatewayPorts[osName])
 		checkSyncGatewayWorking(t, syncGatewayUrl, logger)
 	})
 }

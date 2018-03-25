@@ -63,11 +63,13 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		couchbaseServerUrl = fmt.Sprintf("http://%s:%s@%s", usernameForTest, passwordForTest, couchbaseServerUrl)
 
 		syncGatewayUrl, err := terratest.OutputRequired(terratestOptions, "sync_gateway_url")
 		if err != nil {
 			t.Fatal(err)
 		}
+		syncGatewayUrl = fmt.Sprintf("http://%s:%s@%s/%s", usernameForTest, passwordForTest, couchbaseServerUrl, terratestOptions.Vars["cluster_name"])
 
 		checkCouchbaseConsoleIsRunning(t, couchbaseServerUrl, logger)
 		checkCouchbaseDataNodesWorking(t, couchbaseServerUrl, logger)

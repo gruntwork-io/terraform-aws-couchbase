@@ -191,7 +191,7 @@ func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key stri
 }
 
 func HttpPostForm(t *testing.T, postUrl string, postParams url.Values, logger *log.Logger) (int, string, error) {
-	logger.Println("Making an HTTP POST call to URL %s with body %v", postUrl, postParams)
+	logger.Printf("Making an HTTP POST call to URL %s with body %v", postUrl, postParams)
 
 	client := http.Client{
 		// By default, Go does not impose a timeout, so an HTTP connection attempt can hang for a LONG time.
