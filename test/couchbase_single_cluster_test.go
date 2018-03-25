@@ -41,7 +41,7 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 		terratestOptions.Vars = map[string]interface{} {
 			"aws_region": resourceCollection.AwsRegion,
 			"ami_id": amiId,
-			"cluster_name": fmt.Sprintf("single-cluster-test-%s", resourceCollection.UniqueId),
+			"cluster_name": fmt.Sprintf("single-cluster-%s", resourceCollection.UniqueId),
 		}
 
 		deploy(t, terratestOptions)
