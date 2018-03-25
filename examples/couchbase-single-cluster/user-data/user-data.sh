@@ -41,10 +41,9 @@ readonly CLUSTER_PASSWORD="password"
   --create-bucket-for-testing "$TEST_BUCKET_NAME" \
   --use-public-hostname
 
-# Since we create a bucket for testing in the previous step, and buckets can take a while to propagate, wait a few
-# seconds here so that Sync Gateway doesn't try to read a bucket that doesn't exist
-echo "Sleeping for a few seconds to allow bucket info to propagate before starting Sync Gateway..."
-sleep 15
+# If the Couchbase cluster and the test bucket aren't both ready when you boot Sync Gateway, it can fail to start
+echo "Sleeping for 1 minute to allow all Couchbase servers to boot before starting Sync Gateway..."
+sleep 60
 
 # Start Sync Gateway
 /opt/couchbase-sync-gateway/bin/run-sync-gateway \
