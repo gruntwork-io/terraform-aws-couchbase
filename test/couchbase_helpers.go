@@ -214,7 +214,7 @@ func HttpPostForm(t *testing.T, postUrl string, postParams url.Values, logger *l
 }
 
 func checkSyncGatewayWorking(t *testing.T, syncGatewayUrl string, logger *log.Logger) {
-	maxRetries := 20
+	maxRetries := 60
 	sleepBetweenRetries := 5 * time.Second
 
 	err := http_helper.HttpGetWithRetryWithCustomValidation(syncGatewayUrl, maxRetries, sleepBetweenRetries, logger, func(status int, body string) bool {
