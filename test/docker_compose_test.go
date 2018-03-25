@@ -63,6 +63,7 @@ func testCouchbaseInDocker(t *testing.T, testName string, osName string) {
 	})
 
 	defer test_structure.RunTestStage("teardown", logger, func() {
+		getDockerComposeLogs(t, couchbaseSingleClusterDockerDir, logger)
 		stopCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, logger)
 	})
 }
@@ -95,6 +96,18 @@ func startCouchbaseWithDockerCompose(t *testing.T, os string, exampleDir string,
 
 	if err := shell.RunCommand(cmd, logger); err != nil {
 		t.Fatalf("Failed to start Couchbase using Docker Compose: %v", err)
+	}
+}
+
+func getDockerComposeLogs(t *testing.T, exampleDir string, logger *log.Logger) {
+	cmd := shell.Command{
+		Command:    "docker-compose",
+		Args:       []string{"logs"},
+		WorkingDir: exampleDir,
+	}
+
+	if err := shell.RunCommand(cmd, logger); err != nil {
+		t.Fatalf("Failed to get Docker Compose logs: %v", err)
 	}
 }
 
