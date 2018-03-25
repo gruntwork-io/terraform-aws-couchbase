@@ -165,19 +165,31 @@ func writeToBucket(t *testing.T, clusterUrl string, bucketName string, key strin
 // accessible from inside a Docker container. Therefore, we just use the HTTP API directly. For more info, search for
 // "Connect via SDK" on this page: https://developer.couchbase.com/documentation/server/current/install/docker-deploy-multi-node-cluster.html
 func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key string, logger *log.Logger) TestData {
-	logger.Printf("Reading key %s from bucket %s", key, bucketName)
+	description := fmt.Sprintf("Reading key %s from bucket %s", key, bucketName)
+	maxRetries := 10
+	timeBetweenRetries := 5 * time.Second
 
 	// This is an undocumented API. I found it here: https://stackoverflow.com/a/37425574/483528. You can also find it
 	// by using the Couchbase web console and inspecting the requests that it is sending.
 	bucketUrl := fmt.Sprintf("%s/pools/default/buckets/%s/docs/%s", clusterUrl, bucketName, key)
-	statusCode, body, err := http_helper.HttpGet(bucketUrl, logger)
+
+	logger.Printf(description)
+	body, err := util.DoWithRetry(description, maxRetries, timeBetweenRetries, logger, func() (string, error) {
+		statusCode, body, err := http_helper.HttpGet(bucketUrl, logger)
+
+		if err != nil {
+			return "", err
+		}
+
+		if statusCode != 200 {
+			return "", fmt.Errorf("Expected status code 200 when reading key %s from bucket %s, but got %d", key, bucketName, statusCode)
+		}
+
+		return body, nil
+	})
 
 	if err != nil {
-		t.Fatalf("Failed to read key %s from bucket %s: %v", key, bucketName, err)
-	}
-
-	if statusCode != 200 {
-		t.Fatalf("Expected status code 200 when reading key %s from bucket %s, but got %d", key, bucketName, statusCode)
+		t.Fatal(err)
 	}
 
 	var value CouchbaseTestDataResponse
