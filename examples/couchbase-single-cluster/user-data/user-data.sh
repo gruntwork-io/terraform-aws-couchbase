@@ -36,7 +36,6 @@ readonly CLUSTER_PASSWORD="password"
   --cluster-name "${cluster_asg_name}" \
   --cluster-username "$CLUSTER_USERNAME" \
   --cluster-password "$CLUSTER_PASSWORD" \
-  --rally-point-port "${cluster_port}" \
   --rest-port "${cluster_port}" \
   --create-bucket-for-testing "$TEST_BUCKET_NAME" \
   --use-public-hostname

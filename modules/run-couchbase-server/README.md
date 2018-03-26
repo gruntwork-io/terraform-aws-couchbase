@@ -66,7 +66,6 @@ Important optional arguments:
   --hostname			The hostname to use for this node. Default: look up the node's private hostname in EC2 metadata.
   --use-public-hostname		If this flag is set, use the node's public hostname from EC2 metadata.
   --rally-point-hostname	The hostname of the rally point server that initialized the cluster. If not set, automatically pick a rally point server in the ASG.
-  --rally-point-port		The port the rally point (the leader of the cluster) uses. Default: 8091.
   --data-dir			The path to store data files create by the Couchbase data service. Default: /opt/couchbase/var/lib/couchbase/data.
   --index-dir			The path to store files create by the Couchbase index service. Default: /opt/couchbase/var/lib/couchbase/data.
 
