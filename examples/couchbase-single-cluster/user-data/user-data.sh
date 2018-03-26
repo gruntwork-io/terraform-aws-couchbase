@@ -38,11 +38,8 @@ readonly CLUSTER_PASSWORD="password"
   --cluster-password "$CLUSTER_PASSWORD" \
   --rest-port "${cluster_port}" \
   --create-bucket-for-testing "$TEST_BUCKET_NAME" \
-  --use-public-hostname
-
-# If the Couchbase cluster and the test bucket aren't both ready when you boot Sync Gateway, it can fail to start
-echo "Sleeping for 1 minute to allow all Couchbase servers to boot before starting Sync Gateway..."
-sleep 60
+  --use-public-hostname \
+  --wait-for-all-nodes
 
 # Start Sync Gateway
 /opt/couchbase-sync-gateway/bin/run-sync-gateway \

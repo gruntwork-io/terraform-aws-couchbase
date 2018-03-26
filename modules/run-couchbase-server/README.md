@@ -50,6 +50,7 @@ fully-working sample code.
 Run `run-couchbase-server --help` to see all available arguments.
 
 ```
+
 Usage: run-couchbase-server [options]
 
 This script can be used to configure and initialize a Couchbase Server. This script has been tested with Ubuntu 16.04 and Amazon Linux.
@@ -86,6 +87,7 @@ Other optional arguments:
   --index-ramsize		The index service memory quota in MB. Only used if --manage-memory-manually is set.
   --fts-ramsize			The full-text service memory quota in MB. Only used if --manage-memory-manually is set.
   --create-bucket-for-testing	Create a bucket in the Couchbase cluster. Should ONLY be used for testing!
+  --wait-for-all-nodes		If this flag is set, this script will wait until all servers in the Couchbase Cluster are added and running.
   --help			Show this help text and exit.
 
 Example:

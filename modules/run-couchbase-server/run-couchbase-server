@@ -73,6 +73,7 @@ function print_usage {
   echo -e "  --index-ramsize\t\tThe index service memory quota in MB. Only used if --manage-memory-manually is set."
   echo -e "  --fts-ramsize\t\t\tThe full-text service memory quota in MB. Only used if --manage-memory-manually is set."
   echo -e "  --create-bucket-for-testing\tCreate a bucket in the Couchbase cluster. Should ONLY be used for testing!"
+  echo -e "  --wait-for-all-nodes\t\tIf this flag is set, this script will wait until all servers in the Couchbase Cluster are added and running."
   echo -e "  --help\t\t\tShow this help text and exit."
   echo
   echo "Example:"
@@ -696,6 +697,57 @@ function create_bucket_for_testing {
   fi
 }
 
+function wait_for_all_nodes_to_be_active_in_cluster {
+  local readonly rally_point_hostname="$1"
+  local readonly rest_port="$2"
+  local readonly cluster_username="$3"
+  local readonly cluster_password="$4"
+  local readonly asg_name="$5"
+  local readonly aws_region="$6"
+  local readonly use_public_ips="$7"
+
+  local ips_in_asg
+  ips_in_asg=($(get_ips_in_asg "$asg_name" "$aws_region" "$use_public_ips"))
+  assert_not_empty_aws_response "$ips_in_asg" "IPs in $asg_name in $aws_region"
+
+  log_info "Waiting for all nodes in the cluster to be in active state..."
+
+  local node_ip
+  for node_ip in "${ips_in_asg[@]}"; do
+    wait_for_node_to_be_active_in_cluster "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password" "$node_ip"
+  done
+
+  log_info "${#ips_in_asg[@]} / ${#ips_in_asg[@]} nodes are now active!"
+}
+
+# Wait until the node with the given hostname has already been added (via the server-add command) to the Couchbase
+# cluster and is active (via the rebalance command).
+function wait_for_node_to_be_active_in_cluster {
+  local readonly rally_point_hostname="$1"
+  local readonly rest_port="$2"
+  local readonly cluster_username="$3"
+  local readonly cluster_password="$4"
+  local readonly node_hostname="$5"
+
+  log_info "Waiting for node $node_hostname:$rest_port to be active in cluster $rally_point_hostname:$rest_port"
+
+  local readonly node_active_retries=60
+  local readonly sleep_between_retries=5
+
+  for (( i=0; i<"$node_active_retries"; i++ )); do
+    if node_is_active_in_cluster "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password" "$node_hostname"; then
+      log_info "Node $node_hostname:$rest_port is active in cluster $rally_point_hostname:$rest_port!"
+      return
+    else
+      log_warn "Node $node_hostname:$rest_port is not yet active in cluster $rally_point_hostname:$rest_port. Will sleep for $sleep_between_retries seconds and check again."
+      sleep "$sleep_between_retries"
+    fi
+  done
+
+  log_error "Node $node_hostname:$rest_port still not active in cluster $rally_point_hostname:$rest_port after $node_active_retries retries."
+  exit 1
+}
+
 # The main entrypoint for this code
 function run {
   local cluster_name
@@ -725,6 +777,7 @@ function run {
   local index_dir="$DEFAULT_DATA_DIR"
 
   local bucket_for_testing
+  local wait_for_all_nodes="false"
 
   while [[ $# > 0 ]]; do
     local key="$1"
@@ -829,6 +882,9 @@ function run {
         bucket_for_testing="$2"
         shift
         ;;
+      --wait-for-all-nodes)
+        wait_for_all_nodes="true"
+        ;;
       --help)
         print_usage
         exit
@@ -922,6 +978,10 @@ function run {
       "$cluster_password" \
       "$node_hostname" \
       "$services"
+  fi
+
+  if [[ "$wait_for_all_nodes" == "true" ]]; then
+    wait_for_all_nodes_to_be_active_in_cluster "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password" "$asg_name" "$aws_region" "$use_public_hostname"
   fi
 
   log_info "Couchbase server configured successfully!"
