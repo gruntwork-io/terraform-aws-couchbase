@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"github.com/gruntwork-io/terratest"
 	terralog "github.com/gruntwork-io/terratest/log"
-	"github.com/gruntwork-io/terratest/files"
 	"fmt"
 	"github.com/gruntwork-io/terratest/test-structure"
 )
@@ -18,12 +17,9 @@ func TestCouchbaseSingleClusterUbuntu(t *testing.T) {
 func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 	logger := terralog.NewLogger(testName)
 
-	tmpRootDir, err := files.CopyTerraformFolderToTemp("../", testName)
-	if err != nil {
-		t.Fatal(err)
-	}
-	couchbaseAmiDir := filepath.Join(tmpRootDir, "examples", "couchbase-ami")
-	couchbaseSingleClusterDir := filepath.Join(tmpRootDir, "examples", "couchbase-single-cluster")
+	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName, logger)
+	couchbaseAmiDir := filepath.Join(examplesFolder, "couchbase-ami")
+	couchbaseSingleClusterDir := filepath.Join(examplesFolder, "couchbase-single-cluster")
 
 	test_structure.RunTestStage("setup_ami", logger, func() {
 		resourceCollection := createBaseRandomResourceCollection(t)
