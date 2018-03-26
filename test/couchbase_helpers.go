@@ -10,13 +10,10 @@ import (
 	"strings"
 	"github.com/gruntwork-io/terratest/util"
 	"encoding/json"
-	"net/url"
-	"net/http"
-	"io/ioutil"
 )
 
 func checkCouchbaseConsoleIsRunning(t *testing.T, clusterUrl string, logger *log.Logger) {
-	maxRetries := 20
+	maxRetries := 60
 	sleepBetweenRetries := 5 * time.Second
 
 	err := http_helper.HttpGetWithRetryWithCustomValidation(clusterUrl, maxRetries, sleepBetweenRetries, logger, func(status int, body string) bool {
@@ -148,7 +145,7 @@ func writeToBucket(t *testing.T, clusterUrl string, bucketName string, key strin
 		}
 
 		if statusCode != 200 {
-			return "", fmt.Errorf("Expected status code 200 when writing (%s, %s) to bucket %s, but got %d. Repsonse body: %s", key, value, bucketName, body)
+			return "", fmt.Errorf("Expected status code 200 when writing (%s, %s) to bucket %s, but got %d. Repsonse body: %s", key, value, bucketName, statusCode, body)
 		}
 
 		return fmt.Sprintf("Successfully wrote (%s, %s) to bucket %s", key, value, bucketName), nil
@@ -200,29 +197,6 @@ func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key stri
 	logger.Printf("Got back %v for key %s from bucket %s", value, key, bucketName)
 
 	return value.Json
-}
-
-func HttpPostForm(t *testing.T, postUrl string, postParams url.Values, logger *log.Logger) (int, string, error) {
-	logger.Printf("Making an HTTP POST call to URL %s with body %v", postUrl, postParams)
-
-	client := http.Client{
-		// By default, Go does not impose a timeout, so an HTTP connection attempt can hang for a LONG time.
-		Timeout: 10 * time.Second,
-	}
-
-	resp, err := client.PostForm(postUrl, postParams)
-	if err != nil {
-		return -1, "", err
-	}
-
-	defer resp.Body.Close()
-	respBody, err := ioutil.ReadAll(resp.Body)
-
-	if err != nil {
-		return -1, "", err
-	}
-
-	return resp.StatusCode, strings.TrimSpace(string(respBody)), nil
 }
 
 func checkSyncGatewayWorking(t *testing.T, syncGatewayUrl string, logger *log.Logger) {
