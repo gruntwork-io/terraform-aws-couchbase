@@ -37,6 +37,8 @@ readonly CLUSTER_PASSWORD="password"
   --cluster-username "$CLUSTER_USERNAME" \
   --cluster-password "$CLUSTER_PASSWORD" \
   --rest-port "${cluster_port}" \
+  --data-dir "${data_volume_mount_point}" \
+  --index-dir "${index_volume_mount_point}" \
   --create-bucket-for-testing "$TEST_BUCKET_NAME" \
   --use-public-hostname \
   --wait-for-all-nodes
