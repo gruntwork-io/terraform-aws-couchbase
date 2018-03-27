@@ -125,3 +125,29 @@ function wait_for_instances_in_asg {
   log_error "Could not find all $asg_size Instances in ASG $asg_name in $aws_region after $AWS_MAX_RETRIES retries."
   exit 1
 }
+
+function get_ips_in_asg {
+  local readonly asg_name="$1"
+  local readonly aws_region="$2"
+  local readonly use_public_ips="$3"
+
+  local instances
+  instances=$(describe_instances_in_asg "$asg_name" "$aws_region")
+  assert_not_empty_aws_response "$instances" "Get info about Instances in ASG $asg_name in $aws_region"
+
+  local readonly ip_param=$([[ "$use_public_ips" == "true" ]] && echo "PublicIpAddress" || echo "PrivateIpAddress")
+  echo "$instances" | jq -r ".Reservations[].Instances[].$ip_param"
+}
+
+function get_hostnames_in_asg {
+  local readonly asg_name="$1"
+  local readonly aws_region="$2"
+  local readonly use_public_hostnames="$3"
+
+  local instances
+  instances=$(wait_for_instances_in_asg "$asg_name" "$aws_region")
+  assert_not_empty_aws_response "$instances" "Get info about Instances in ASG $asg_name in $aws_region"
+
+  local readonly hostname_param=$([[ "$use_public_hostnames" == "true" ]] && echo "PublicDnsName" || echo "PrivateDnsName")
+  echo "$instances" | jq -r ".Reservations[].Instances[].$hostname_param"
+}

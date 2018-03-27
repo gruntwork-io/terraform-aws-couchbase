@@ -78,9 +78,30 @@ function to_uppercase {
   echo "$str" | awk '{print toupper($0)}'
 }
 
+# Strip the prefix from the given string. Supports wildcards.
+#
+# Example:
+#
+# strip_prefix "foo=bar" "foo="  ===> "bar"
+# strip_prefix "foo=bar" "*="    ===> "bar"
+#
 # http://stackoverflow.com/a/16623897/483528
 function strip_prefix {
   local readonly str="$1"
   local readonly prefix="$2"
   echo "${str#$prefix}"
+}
+
+# Strip the suffix from the given string. Supports wildcards.
+#
+# Example:
+#
+# strip_prefix "foo=bar" "=bar"  ===> "foo"
+# strip_prefix "foo=bar" "=*"    ===> "foo"
+#
+# http://stackoverflow.com/a/16623897/483528
+function strip_suffix {
+  local readonly str="$1"
+  local readonly suffix="$2"
+  echo "${str%$suffix}"
 }

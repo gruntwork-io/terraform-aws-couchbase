@@ -92,7 +92,6 @@ data "template_file" "user_data_server" {
   template = "${file("${path.module}/user-data/user-data.sh")}"
 
   vars {
-    aws_region       = "${var.aws_region}"
     cluster_asg_name = "${var.cluster_name}"
     cluster_port     = "${module.couchbase_security_group_rules.rest_port}"
 

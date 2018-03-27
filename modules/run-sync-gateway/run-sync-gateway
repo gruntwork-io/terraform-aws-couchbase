@@ -116,10 +116,9 @@ function auto_fill_param {
   local readonly config="$1"
   local readonly param="$2"
 
-  # The param is of the format KEY=VALUE. Use bash to break up a string around a delimeter:
-  # https://stackoverflow.com/a/16623897/483528.
-  local readonly placeholder_name=${param%=*}
-  local readonly placeholder_value=${param#*=}
+  # The param is of the format KEY=VALUE.
+  local readonly placeholder_name="$(strip_suffix "$param" "=*")"
+  local readonly placeholder_value="$(strip_prefix "$param" "*=")"
 
   log_info "Replacing the '$placeholder_name' placeholder in $config with $placeholder_value"
   replace_text_in_file "$placeholder_name" "$placeholder_value" "$config"
@@ -131,15 +130,14 @@ function auto_fill_asg_param {
   local readonly param="$3"
   local readonly aws_region="$4"
 
-  # The param is of the format KEY=ASG_NAME:PORT (note that :PORT is optional). Use bash to break up a string around a
-  # delimeter: https://stackoverflow.com/a/16623897/483528.
-  local readonly placeholder_name=${param%=*}
-  local asg_name=${param#*=}
+  # The param is of the format KEY=ASG_NAME:PORT (note that :PORT is optional).
+  local readonly placeholder_name="$(strip_suffix "$param" "=*")"
+  local asg_name="$(strip_prefix "$param" "*=")"
   local port=""
 
   if string_contains "$asg_name" ":"; then
-    port=${asg_name#*:}
-    asg_name=${asg_name%:*}
+    port="$(strip_prefix "$asg_name" "*:")"
+    asg_name="$(strip_suffix "$asg_name" ":*")"
   fi
 
   local instances
