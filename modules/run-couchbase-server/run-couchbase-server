@@ -655,6 +655,9 @@ function configure_couchbase_server {
     if string_contains "$out" "SUCCESS: Node initialized"; then
       log_info "Successfully initialized local Couchbase node."
       return
+    elif string_contains "$out" "ERROR: Renaming is disallowed for nodes that are already part of a cluster"; then
+      log_warn "This node is already part of the Couchbase cluster, so assuming it has already been initialized, and will not try to initialize it again."
+      return
     elif string_contains "$out" "Could not listen: eaddrnotavail."; then
       log_warn "Unable to bind to $node_hostname. This is often a temporary issue, so will sleep for $SLEEP_BETWEEN_RETRIES_SEC and try again."
       sleep "$SLEEP_BETWEEN_RETRIES_SEC"
@@ -683,18 +686,18 @@ function wait_for_all_nodes_to_be_active_in_cluster {
   local readonly aws_region="$6"
   local readonly use_public_ips="$7"
 
-  local ips_in_asg
-  ips_in_asg=($(get_ips_in_asg "$asg_name" "$aws_region" "$use_public_ips"))
-  assert_not_empty_aws_response "$ips_in_asg" "IPs in $asg_name in $aws_region"
+  local hostnames
+  hostnames=($(get_hostnames_in_asg "$asg_name" "$aws_region" "$use_public_ips"))
+  assert_not_empty_aws_response "$hostnames" "Hostnames in ASG $asg_name in $aws_region"
 
   log_info "Waiting for all nodes in the cluster to be in active state..."
 
-  local node_ip
-  for node_ip in "${ips_in_asg[@]}"; do
-    wait_for_node_to_be_active_in_cluster "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password" "$node_ip"
+  local hostname
+  for hostname in "${hostnames[@]}"; do
+    wait_for_node_to_be_active_in_cluster "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password" "$hostname"
   done
 
-  log_info "${#ips_in_asg[@]} / ${#ips_in_asg[@]} nodes are now active!"
+  log_info "${#hostnames[@]} / ${#hostnames[@]} nodes are now active!"
 }
 
 # Wait until the node with the given hostname has already been added (via the server-add command) to the Couchbase
