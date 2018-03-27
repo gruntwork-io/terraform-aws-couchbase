@@ -3,7 +3,7 @@ output "couchbase_web_console_url" {
 }
 
 output "sync_gateway_url" {
-  value = "${module.sync_gateway_load_balancer.alb_dns_name}/${var.cluster_name}"
+  value = "${module.sync_gateway_load_balancer.alb_dns_name}"
 }
 
 output "couchbase_cluster_asg_name" {
