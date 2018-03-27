@@ -42,24 +42,31 @@ readonly CLUSTER_PASSWORD="password"
 # Vault, Keywhiz, or KMS to fetch the credentials at runtime and only ever have the plaintext version in memory.
 readonly TEST_USER_NAME="test-user"
 readonly TEST_USER_PASSWORD="password"
-source "/opt/couchbase/bash-commons/couchbase-helpers.sh"
-create_rbac_user \
-  "127.0.0.1" \
-  "${cluster_port}" \
-  "${CLUSTER_USERNAME}" \
-  "${CLUSTER_PASSWORD}" \
-  "${TEST_USER_NAME}" \
-  "${TEST_USER_PASSWORD}" \
-  "cluster_admin"
+echo "Creating user $TEST_USER_NAME"
+/opt/couchbase/bin/couchbase-cli user-manage \
+  --cluster="127.0.0.1:${cluster_port}" \
+  --username="$CLUSTER_USERNAME" \
+  --password="$CLUSTER_PASSWORD" \
+  --set \
+  --rbac-username="$TEST_USER_NAME" \
+  --rbac-password="$TEST_USER_PASSWORD" \
+  --rbac-name="$TEST_USER_NAME" \
+  --roles="cluster_admin" \
+  --auth-domain="local"
 
 # We create a bucket here for testing. If there are no buckets at all, Sync Gateway fails to start.
 readonly TEST_BUCKET_NAME="test-bucket"
-create_bucket \
-  "127.0.0.1" \
-  "${cluster_port}" \
-  "${TEST_USER_NAME}" \
-  "${TEST_USER_PASSWORD}" \
-  "$TEST_BUCKET_NAME"
+# If the bucket already exists, just ignore the error, as it means one of the other nodes already created it
+echo "Creating bucket $TEST_BUCKET_NAME"
+set +e
+/opt/couchbase/bin/couchbase-cli  bucket-create \
+  --cluster="127.0.0.1:${cluster_port}" \
+  --username="$TEST_USER_NAME" \
+  --password="$TEST_USER_PASSWORD" \
+  --bucket="$TEST_BUCKET_NAME" \
+  --bucket-type="couchbase" \
+  --bucket-ramsize="100"
+set -e
 
 # Start Sync Gateway
 /opt/couchbase-sync-gateway/bin/run-sync-gateway \
