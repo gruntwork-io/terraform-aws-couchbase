@@ -72,7 +72,6 @@ function print_usage {
   echo -e "  --data-ramsize\t\tThe data service memory quota in MB. Only used if --manage-memory-manually is set."
   echo -e "  --index-ramsize\t\tThe index service memory quota in MB. Only used if --manage-memory-manually is set."
   echo -e "  --fts-ramsize\t\t\tThe full-text service memory quota in MB. Only used if --manage-memory-manually is set."
-  echo -e "  --create-bucket-for-testing\tCreate a bucket in the Couchbase cluster. Should ONLY be used for testing!"
   echo -e "  --wait-for-all-nodes\t\tIf this flag is set, this script will wait until all servers in the Couchbase Cluster are added and running."
   echo -e "  --help\t\t\tShow this help text and exit."
   echo
@@ -666,37 +665,6 @@ function start_couchbase {
   sudo systemctl start couchbase-server
 }
 
-function create_bucket_for_testing {
-  local readonly bucket_name="$1"
-  local readonly node_hostname="$2"
-  local readonly rest_port="$3"
-  local readonly username="$4"
-  local readonly password="$5"
-
-  log_info "Creating bucket $bucket_name for testing"
-
-  local create_bucket_args=()
-  create_bucket_args+=("bucket-create")
-  create_bucket_args+=("--cluster=$node_hostname:$rest_port")
-  create_bucket_args+=("--username=$username")
-  create_bucket_args+=("--password=$password")
-  create_bucket_args+=("--bucket=$bucket_name")
-  create_bucket_args+=("--bucket-type=couchbase")
-  create_bucket_args+=("--bucket-ramsize=100")
-
-  set +e
-  local out
-  out=$("$COUCHBASE_CLI" "${create_bucket_args[@]}")
-  set -e
-
-  if string_contains "$out" "SUCCESS: Bucket created"; then
-    log_info "Successfully created bucket $bucket_name."
-  else
-    log_error "Failed to create bucket $bucket_name. Log output:\n$out."
-    exit 1
-  fi
-}
-
 function wait_for_all_nodes_to_be_active_in_cluster {
   local readonly rally_point_hostname="$1"
   local readonly rest_port="$2"
@@ -776,7 +744,6 @@ function run {
   local data_dir="$DEFAULT_DATA_DIR"
   local index_dir="$DEFAULT_DATA_DIR"
 
-  local bucket_for_testing
   local wait_for_all_nodes="false"
 
   while [[ $# > 0 ]]; do
@@ -877,11 +844,6 @@ function run {
         xdcr_port="$2"
         shift
         ;;
-      --create-bucket-for-testing)
-        assert_not_empty "$key" "$2"
-        bucket_for_testing="$2"
-        shift
-        ;;
       --wait-for-all-nodes)
         wait_for_all_nodes="true"
         ;;
@@ -964,10 +926,6 @@ function run {
       "$fts_ramsize" \
       "$index_ramsize" \
       "$services"
-
-    if [[ ! -z "$bucket_for_testing" ]]; then
-      create_bucket_for_testing "$bucket_for_testing" "$node_hostname" "$rest_port" "$cluster_username" "$cluster_password"
-    fi
   else
     log_info "The rally point for cluster $cluster_name is $rally_point_hostname."
     join_existing_cluster \

@@ -20,11 +20,6 @@ exec > >(tee /opt/couchbase/var/lib/couchbase/logs/mock-user-data.log|logger -t 
   --mount-point "${index_volume_mount_point}" \
   --owner "${volume_owner}"
 
-# We create a bucket here solely for testing. If there are no buckets at all, Sync Gateway fails to start. In
-# production usage, you'd probably create the Couchbase cluster first, create buckets manually, and then start Sync
-# Gateway, so you probably don't need this.
-readonly TEST_BUCKET_NAME="test-bucket"
-
 # To keep this example simple, we are hard-coding the credentials for our cluster in this file in plain text. You
 # should NOT do this in production usage!!! Instead, you should use tools such as Vault, Keywhiz, or KMS to fetch
 # the credentials at runtime and only ever have the plaintext version in memory.
@@ -39,17 +34,40 @@ readonly CLUSTER_PASSWORD="password"
   --rest-port "${cluster_port}" \
   --data-dir "${data_volume_mount_point}" \
   --index-dir "${index_volume_mount_point}" \
-  --create-bucket-for-testing "$TEST_BUCKET_NAME" \
   --use-public-hostname \
   --wait-for-all-nodes
+
+# We create an RBAC user here for testing. To keep this example simple, we are hard-coding the credentials for this
+# user in this file in plain text. You should NOT do this in production usage!!! Instead, you should use tools such as
+# Vault, Keywhiz, or KMS to fetch the credentials at runtime and only ever have the plaintext version in memory.
+readonly TEST_USER_NAME="test-user"
+readonly TEST_USER_PASSWORD="password"
+source "/opt/couchbase/bash-commons/couchbase-helpers.sh"
+create_rbac_user \
+  "127.0.0.1" \
+  "${cluster_port}" \
+  "${CLUSTER_USERNAME}" \
+  "${CLUSTER_PASSWORD}" \
+  "${TEST_USER_NAME}" \
+  "${TEST_USER_PASSWORD}" \
+  "cluster_admin"
+
+# We create a bucket here for testing. If there are no buckets at all, Sync Gateway fails to start.
+readonly TEST_BUCKET_NAME="test-bucket"
+create_bucket \
+  "127.0.0.1" \
+  "${cluster_port}" \
+  "${CLUSTER_USERNAME}" \
+  "${CLUSTER_PASSWORD}" \
+  "$TEST_BUCKET_NAME"
 
 # Start Sync Gateway
 /opt/couchbase-sync-gateway/bin/run-sync-gateway \
   --auto-fill-asg "<SERVERS>=${cluster_asg_name}:${cluster_port}" \
-  --auto-fill "<BUCKET_NAME>=$TEST_BUCKET_NAME" \
   --auto-fill "<INTERFACE>=${sync_gateway_interface}" \
   --auto-fill "<ADMIN_INTERFACE>=${sync_gateway_admin_interface}" \
   --auto-fill "<DB_NAME>=${cluster_asg_name}" \
-  --auto-fill "<DB_USERNAME>=$CLUSTER_USERNAME" \
-  --auto-fill "<DB_PASSWORD>=$CLUSTER_PASSWORD" \
+  --auto-fill "<BUCKET_NAME>=$TEST_BUCKET_NAME" \
+  --auto-fill "<DB_USERNAME>=$TEST_USER_NAME" \
+  --auto-fill "<DB_PASSWORD>=$TEST_USER_PASSWORD" \
   --use-public-hostname

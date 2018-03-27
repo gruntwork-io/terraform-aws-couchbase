@@ -86,7 +86,6 @@ Other optional arguments:
   --data-ramsize		The data service memory quota in MB. Only used if --manage-memory-manually is set.
   --index-ramsize		The index service memory quota in MB. Only used if --manage-memory-manually is set.
   --fts-ramsize			The full-text service memory quota in MB. Only used if --manage-memory-manually is set.
-  --create-bucket-for-testing	Create a bucket in the Couchbase cluster. Should ONLY be used for testing!
   --wait-for-all-nodes		If this flag is set, this script will wait until all servers in the Couchbase Cluster are added and running.
   --help			Show this help text and exit.
 
