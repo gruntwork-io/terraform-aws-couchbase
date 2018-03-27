@@ -646,17 +646,26 @@ function configure_couchbase_server {
   node_init_args+=("--node-init-index-path=$index_dir")
   node_init_args+=("--node-init-hostname=$node_hostname")
 
-  set +e
-  local out
-  out=$("$COUCHBASE_CLI" "${node_init_args[@]}")
-  set -e
+  for (( i=0; i<"$MAX_RETRIES"; i++ )); do
+    set +e
+    local out
+    out=$("$COUCHBASE_CLI" "${node_init_args[@]}")
+    set -e
 
-  if string_contains "$out" "SUCCESS: Node initialized"; then
-    log_info "Successfully initialized local Couchbase node."
-  else
-    log_error "Failed to initialize local Couchbase node. Log output:\n$out."
-    exit 1
-  fi
+    if string_contains "$out" "SUCCESS: Node initialized"; then
+      log_info "Successfully initialized local Couchbase node."
+      return
+    elif string_contains "$out" "Could not listen: eaddrnotavail."; then
+      log_warn "Unable to bind to $node_hostname. This is often a temporary issue, so will sleep for $SLEEP_BETWEEN_RETRIES_SEC and try again."
+      sleep "$SLEEP_BETWEEN_RETRIES_SEC"
+    else
+      log_error "Failed to initialize local Couchbase node. Log output:\n$out."
+      exit 1
+    fi
+  done
+
+  log_error "Unable to initiazlie Couchbase node with hostname $node_hostname, data dir $data_dir, and index dir $index_dir after $MAX_RETRIES retries."
+  exit 1
 }
 
 function start_couchbase {
