@@ -658,7 +658,7 @@ function configure_couchbase_server {
     elif string_contains "$out" "ERROR: Renaming is disallowed for nodes that are already part of a cluster"; then
       log_warn "This node is already part of the Couchbase cluster, so assuming it has already been initialized, and will not try to initialize it again."
       return
-    elif string_contains "$out" "Could not listen: eaddrnotavail."; then
+    elif string_contains "$out" "ERROR: Could not listen: eaddrnotavail"; then
       log_warn "Unable to bind to $node_hostname. This is often a temporary issue, so will sleep for $SLEEP_BETWEEN_RETRIES_SEC and try again."
       sleep "$SLEEP_BETWEEN_RETRIES_SEC"
     else
