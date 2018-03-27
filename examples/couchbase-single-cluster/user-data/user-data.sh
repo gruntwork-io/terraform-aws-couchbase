@@ -57,8 +57,8 @@ readonly TEST_BUCKET_NAME="test-bucket"
 create_bucket \
   "127.0.0.1" \
   "${cluster_port}" \
-  "${CLUSTER_USERNAME}" \
-  "${CLUSTER_PASSWORD}" \
+  "${TEST_USER_NAME}" \
+  "${TEST_USER_PASSWORD}" \
   "$TEST_BUCKET_NAME"
 
 # Start Sync Gateway
