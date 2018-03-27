@@ -10,6 +10,7 @@ import (
 	"strings"
 	"github.com/gruntwork-io/terratest/util"
 	"encoding/json"
+	"github.com/gruntwork-io/terratest"
 )
 
 func checkCouchbaseConsoleIsRunning(t *testing.T, clusterUrl string, logger *log.Logger) {
@@ -210,4 +211,9 @@ func checkSyncGatewayWorking(t *testing.T, syncGatewayUrl string, logger *log.Lo
 	if err != nil {
 		t.Fatalf("Unable to connect to Sync Gateway at %s: %v", syncGatewayUrl, err)
 	}
+}
+
+// Format a name for a Couchbase cluser. Note that Couchbase DB names must be lowercase.
+func formatClusterName(resourceCollection *terratest.RandomResourceCollection) string {
+	return strings.ToLower(fmt.Sprintf("single-cluster-%s", resourceCollection.UniqueId))
 }

@@ -7,7 +7,7 @@ import (
 	terralog "github.com/gruntwork-io/terratest/log"
 	"fmt"
 	"github.com/gruntwork-io/terratest/test-structure"
-	"strings"
+	"github.com/gruntwork-io/terratest/aws"
 )
 
 func TestCouchbaseSingleClusterUbuntu(t *testing.T) {
@@ -34,14 +34,11 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 		resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseSingleClusterDir, logger)
 		amiId := test_structure.LoadAmiId(t, couchbaseSingleClusterDir, logger)
 
-		// Couchbase DB names must be lowercase
-		clusterName := strings.ToLower(fmt.Sprintf("single-cluster-%s", resourceCollection.UniqueId))
-
 		terratestOptions := createBaseTerratestOptions(t, testName, couchbaseSingleClusterDir, resourceCollection)
 		terratestOptions.Vars = map[string]interface{} {
 			"aws_region": resourceCollection.AwsRegion,
 			"ami_id": amiId,
-			"cluster_name": clusterName,
+			"cluster_name": formatClusterName(resourceCollection),
 		}
 
 		deploy(t, terratestOptions)
@@ -60,6 +57,19 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 		test_structure.CleanupAmiId(t, couchbaseSingleClusterDir, logger)
 		test_structure.CleanupTerratestOptions(t, couchbaseSingleClusterDir, logger)
 		test_structure.CleanupRandomResourceCollection(t, couchbaseSingleClusterDir, logger)
+	})
+
+	defer test_structure.RunTestStage("logs", logger, func() {
+		resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseSingleClusterDir, logger)
+
+		logs, err := aws.GetSyslogForInstancesInAsg(formatClusterName(resourceCollection), resourceCollection.AwsRegion, logger)
+		if err != nil {
+			t.Fatalf("Failed to fetch syslog: %v", err)
+		}
+
+		for instanceId, syslog := range logs {
+			logger.Printf("Logs for instance %s in %s:\n\n%s\n\n", instanceId, resourceCollection.AwsRegion, syslog)
+		}
 	})
 
 	test_structure.RunTestStage("validation", logger, func() {
