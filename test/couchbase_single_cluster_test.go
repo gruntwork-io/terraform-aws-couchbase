@@ -88,6 +88,7 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 		syncGatewayUrl = fmt.Sprintf("http://%s/%s", syncGatewayUrl, terratestOptions.Vars["cluster_name"])
 
 		checkCouchbaseConsoleIsRunning(t, couchbaseServerUrl, logger)
+		checkCouchbaseClusterIsInitialized(t, couchbaseServerUrl, logger)
 		checkCouchbaseDataNodesWorking(t, couchbaseServerUrl, logger)
 		checkSyncGatewayWorking(t, syncGatewayUrl, logger)
 	})

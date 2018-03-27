@@ -26,6 +26,62 @@ func checkCouchbaseConsoleIsRunning(t *testing.T, clusterUrl string, logger *log
 	}
 }
 
+// A partial representation of the JSON structure returned by the server node API:
+// https://developer.couchbase.com/documentation/server/3.x/admin/REST/rest-node-get-info.html
+type ServerNodeResponse struct {
+	Nodes []ServerNode `json:"nodes"`
+}
+
+type ServerNode struct {
+	Status string `json:"status"`
+	Hostname string `json:"hostname"`
+	ClusterMembership string `json:"clusterMembership"`
+}
+
+func checkCouchbaseClusterIsInitialized(t *testing.T, clusterUrl string, logger *log.Logger) {
+	maxRetries := 60
+	sleepBetweenRetries := 5 * time.Second
+	serverNodeUrl := fmt.Sprintf("%s/pools/nodes", clusterUrl)
+
+	err := http_helper.HttpGetWithRetryWithCustomValidation(serverNodeUrl, maxRetries, sleepBetweenRetries, logger, func(status int, body string) bool {
+		if status != 200 {
+			logger.Printf("Expected a 200 OK from %s but got %d", serverNodeUrl, status)
+			return false
+		}
+
+		var serverNodesReponse ServerNodeResponse
+		if err := json.Unmarshal([]byte(body), &serverNodesReponse); err != nil {
+			logger.Printf("Failed to parse response from %s due to error %v. Response body:\n%s", serverNodeUrl, err, body)
+			return false
+		}
+
+		if len(serverNodesReponse.Nodes) != 3 {
+			logger.Printf("Expected to find 3 nodes in the cluster, but %s returned %d. Response body:\n%s", serverNodeUrl, len(serverNodesReponse.Nodes), body)
+			return false
+		}
+
+		for _, serverNode := range serverNodesReponse.Nodes {
+			logger.Printf("Checking state of node %s", serverNode.Hostname)
+
+			if serverNode.Status != "healthy" {
+				logger.Printf("Expected all nodes to be in 'healthy' state, but node %s is in state '%s'", serverNode.Hostname, serverNode.Status)
+				return false
+			}
+
+			if serverNode.ClusterMembership != "active" {
+				logger.Printf("Expected all nodes to be 'active' in the cluster, but node %s has cluster membership state '%s'", serverNode.Hostname, serverNode.ClusterMembership)
+				return false
+			}
+		}
+
+		return true
+	})
+
+	if err != nil {
+		t.Fatalf("Failed to connect to Couchbase at %s: %v", serverNodeUrl, err)
+	}
+}
+
 type TestData struct {
 	Foo string `json:"foo"`
 	Bar int `json:"bar"`
