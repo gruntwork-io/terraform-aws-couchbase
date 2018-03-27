@@ -49,7 +49,13 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 		resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseSingleClusterDir, logger)
 		terratestOptions := test_structure.LoadTerratestOptions(t, couchbaseSingleClusterDir, logger)
 
-		terratest.Destroy(terratestOptions, resourceCollection)
+		if _, err := terratest.Destroy(terratestOptions, resourceCollection); err != nil {
+			t.Fatalf("Failed to run destory: %v", err)
+		}
+
+		test_structure.CleanupAmiId(t, couchbaseSingleClusterDir, logger)
+		test_structure.CleanupTerratestOptions(t, couchbaseSingleClusterDir, logger)
+		test_structure.CleanupRandomResourceCollection(t, couchbaseSingleClusterDir, logger)
 	})
 
 	test_structure.RunTestStage("validation", logger, func() {
