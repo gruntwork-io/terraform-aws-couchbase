@@ -412,7 +412,7 @@ function add_server_to_cluster {
     if string_contains "$out" "SUCCESS: Server added"; then
       log_info "Successfully added node $node_hostname:$rest_port to cluster $cluster_name."
       return
-    elif string_contains "$out" "ERROR: Prepare join failed. Failed to reach erlang port mapper."; then
+    elif string_contains "$out" "Failed to reach erlang port mapper."; then
       log_warn "Got an error about failing to reach the erlang port mapper. Sometimes this means the Security Group settings are incorrect, but occasionally, this is an intermittent error that goes away on its own. Will sleep for $sleep_between_server_add_retries_sec seconds and try again."
       sleep "$sleep_between_server_add_retries_sec"
     else
