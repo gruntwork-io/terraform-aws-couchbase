@@ -6,75 +6,137 @@ set -e
 # From: https://alestic.com/2010/12/ec2-user-data-output/
 exec > >(tee /opt/couchbase/var/lib/couchbase/logs/mock-user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
-# Mount an EBS Volume for the data dir
-/opt/couchbase/bash-commons/mount-ebs-volume \
-  --aws-region "${aws_region}" \
-  --device-name "${data_volume_device_name}" \
-  --mount-point "${data_volume_mount_point}" \
-  --owner "${volume_owner}"
+function mount_volumes {
+  local readonly data_volume_device_name="$1"
+  local readonly data_volume_mount_point="$2"
+  local readonly index_volume_device_name="$3"
+  local readonly index_volume_mount_point="$4"
+  local readonly volume_owner="$5"
 
-# Mount an EBS Volume for the index dir
-/opt/couchbase/bash-commons/mount-ebs-volume \
-  --aws-region "${aws_region}" \
-  --device-name "${index_volume_device_name}" \
-  --mount-point "${index_volume_mount_point}" \
-  --owner "${volume_owner}"
+  echo "Mounting EBS Volumes for data and index directories"
 
-# To keep this example simple, we are hard-coding the credentials for our cluster in this file in plain text. You
-# should NOT do this in production usage!!! Instead, you should use tools such as Vault, Keywhiz, or KMS to fetch
-# the credentials at runtime and only ever have the plaintext version in memory.
-readonly CLUSTER_USERNAME="admin"
-readonly CLUSTER_PASSWORD="password"
+  /opt/couchbase/bash-commons/mount-ebs-volume \
+    --device-name "$data_volume_device_name" \
+    --mount-point "$data_volume_mount_point" \
+    --owner "$volume_owner"
 
-# Start Couchbase.
-/opt/couchbase/bin/run-couchbase-server \
-  --cluster-name "${cluster_asg_name}" \
-  --cluster-username "$CLUSTER_USERNAME" \
-  --cluster-password "$CLUSTER_PASSWORD" \
-  --rest-port "${cluster_port}" \
-  --data-dir "${data_volume_mount_point}" \
-  --index-dir "${index_volume_mount_point}" \
-  --use-public-hostname \
-  --wait-for-all-nodes
+  /opt/couchbase/bash-commons/mount-ebs-volume \
+    --device-name "$index_volume_device_name" \
+    --mount-point "$index_volume_mount_point" \
+    --owner "$volume_owner"
+}
 
-# We create an RBAC user here for testing. To keep this example simple, we are hard-coding the credentials for this
-# user in this file in plain text. You should NOT do this in production usage!!! Instead, you should use tools such as
-# Vault, Keywhiz, or KMS to fetch the credentials at runtime and only ever have the plaintext version in memory.
-readonly TEST_USER_NAME="test-user"
-readonly TEST_USER_PASSWORD="password"
-echo "Creating user $TEST_USER_NAME"
-/opt/couchbase/bin/couchbase-cli user-manage \
-  --cluster="127.0.0.1:${cluster_port}" \
-  --username="$CLUSTER_USERNAME" \
-  --password="$CLUSTER_PASSWORD" \
-  --set \
-  --rbac-username="$TEST_USER_NAME" \
-  --rbac-password="$TEST_USER_PASSWORD" \
-  --rbac-name="$TEST_USER_NAME" \
-  --roles="cluster_admin" \
-  --auth-domain="local"
+function run_couchbase {
+  local readonly cluster_asg_name="$1"
+  local readonly cluster_username="$2"
+  local readonly cluster_password="$3"
+  local readonly cluster_port="$4"
+  local readonly data_dir="$5"
+  local readonly index_dir="$6"
 
-# We create a bucket here for testing. If there are no buckets at all, Sync Gateway fails to start.
-readonly TEST_BUCKET_NAME="test-bucket"
-# If the bucket already exists, just ignore the error, as it means one of the other nodes already created it
-echo "Creating bucket $TEST_BUCKET_NAME"
-set +e
-/opt/couchbase/bin/couchbase-cli  bucket-create \
-  --cluster="127.0.0.1:${cluster_port}" \
-  --username="$TEST_USER_NAME" \
-  --password="$TEST_USER_PASSWORD" \
-  --bucket="$TEST_BUCKET_NAME" \
-  --bucket-type="couchbase" \
-  --bucket-ramsize="100"
-set -e
+  echo "Starting Couchbase"
 
-# Start Sync Gateway
-/opt/couchbase-sync-gateway/bin/run-sync-gateway \
-  --auto-fill-asg "<SERVERS>=${cluster_asg_name}:${cluster_port}" \
-  --auto-fill "<INTERFACE>=${sync_gateway_interface}" \
-  --auto-fill "<ADMIN_INTERFACE>=${sync_gateway_admin_interface}" \
-  --auto-fill "<DB_NAME>=${cluster_asg_name}" \
-  --auto-fill "<BUCKET_NAME>=$TEST_BUCKET_NAME" \
-  --auto-fill "<DB_USERNAME>=$TEST_USER_NAME" \
-  --auto-fill "<DB_PASSWORD>=$TEST_USER_PASSWORD" \
-  --use-public-hostname
+  /opt/couchbase/bin/run-couchbase-server \
+    --cluster-name "$cluster_asg_name" \
+    --cluster-username "$cluster_username" \
+    --cluster-password "$cluster_password" \
+    --rest-port "$cluster_port" \
+    --data-dir "$data_dir" \
+    --index-dir "$index_dir" \
+    --use-public-hostname \
+    --wait-for-all-nodes
+}
+
+function create_test_resources {
+  local readonly cluster_username="$1"
+  local readonly cluster_password="$2"
+  local readonly cluster_port="$3"
+  local readonly user_name="$4"
+  local readonly user_password="$5"
+  local readonly bucket_name="$6"
+
+  echo "Creating user $user_name"
+
+  /opt/couchbase/bin/couchbase-cli user-manage \
+    --cluster="127.0.0.1:$cluster_port" \
+    --username="$cluster_username" \
+    --password="$cluster_password" \
+    --set \
+    --rbac-username="$user_name" \
+    --rbac-password="$user_password" \
+    --rbac-name="$user_name" \
+    --roles="cluster_admin" \
+    --auth-domain="local"
+
+  echo "Creating bucket $bucket_name"
+
+  # If the bucket already exists, just ignore the error, as it means one of the other nodes already created it
+  set +e
+  /opt/couchbase/bin/couchbase-cli  bucket-create \
+    --cluster="127.0.0.1:$cluster_port" \
+    --username="$user_name" \
+    --password="$user_password" \
+    --bucket="$bucket_name" \
+    --bucket-type="couchbase" \
+    --bucket-ramsize="100"
+  set -e
+}
+
+function run_sync_gateway {
+  local readonly cluster_asg_name="$1"
+  local readonly cluster_port="$2"
+  local readonly sync_gateway_interface="$3"
+  local readonly sync_gateway_admin_interface="$4"
+  local readonly bucket="$5"
+  local readonly username="$6"
+  local readonly password="$7"
+
+  /opt/couchbase-sync-gateway/bin/run-sync-gateway \
+    --auto-fill-asg "<SERVERS>=$cluster_asg_name:$cluster_port" \
+    --auto-fill "<INTERFACE>=$sync_gateway_interface" \
+    --auto-fill "<ADMIN_INTERFACE>=$sync_gateway_admin_interface" \
+    --auto-fill "<DB_NAME>=$cluster_asg_name" \
+    --auto-fill "<BUCKET_NAME>=$bucket" \
+    --auto-fill "<DB_USERNAME>=$username" \
+    --auto-fill "<DB_PASSWORD>=$password" \
+    --use-public-hostname
+}
+
+function run {
+  local readonly cluster_asg_name="$1"
+  local readonly cluster_port="$2"
+  local readonly sync_gateway_interface="$3"
+  local readonly sync_gateway_admin_interface="$4"
+  local readonly data_volume_device_name="$5"
+  local readonly data_volume_mount_point="$6"
+  local readonly index_volume_device_name="$7"
+  local readonly index_volume_mount_point="$8"
+  local readonly volume_owner="$9"
+
+  # To keep this example simple, we are hard-coding all credentials in this file in plain text. You should NOT do this
+  # in production usage!!! Instead, you should use tools such as Vault, Keywhiz, or KMS to fetch the credentials at
+  # runtime and only ever have the plaintext version in memory.
+  local readonly cluster_username="admin"
+  local readonly cluster_password="password"
+  local readonly test_user_name="test-user"
+  local readonly test_user_password="password"
+  local readonly test_bucket_name="test-bucket"
+
+  mount_volumes "$data_volume_device_name" "$data_volume_mount_point" "$index_volume_device_name" "$index_volume_mount_point" "$volume_owner"
+  run_couchbase "$cluster_asg_name" "$cluster_username" "$cluster_password" "$cluster_port" "$data_volume_mount_point" "$index_volume_mount_point"
+  create_test_resources "$cluster_username" "$cluster_password" "$cluster_port" "$test_user_name" "$test_user_password" "$test_bucket_name"
+  run_sync_gateway "$cluster_asg_name" "$cluster_port" "$sync_gateway_interface" "$sync_gateway_admin_interface" "$test_bucket_name" "$test_user_name" "$test_user_password"
+}
+
+# The variables below are filled in via Terraform interpolation
+run \
+  "${cluster_asg_name}" \
+  "${cluster_port}" \
+  "${sync_gateway_interface}" \
+  "${sync_gateway_admin_interface}" \
+  "${data_volume_device_name}" \
+  "${data_volume_mount_point}" \
+  "${index_volume_device_name}" \
+  "${index_volume_mount_point}" \
+  "${volume_owner}"
+
