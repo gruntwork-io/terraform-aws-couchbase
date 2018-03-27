@@ -366,8 +366,8 @@ function mount_volume {
   local readonly mount_options="$5"
 
   if [[ -d "$mount_point" ]]; then
-    log_error "$mount_point already exists. Cannot mount $device_name there."
-    exit 1
+    log_info "$mount_point already exists. Will not mount $device_name there to avoid overriding existing data."
+    return
   else
     log_info "Creating mount point $mount_point..."
     mkdir "$mount_point"
