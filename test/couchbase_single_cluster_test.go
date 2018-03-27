@@ -7,6 +7,7 @@ import (
 	terralog "github.com/gruntwork-io/terratest/log"
 	"fmt"
 	"github.com/gruntwork-io/terratest/test-structure"
+	"strings"
 )
 
 func TestCouchbaseSingleClusterUbuntu(t *testing.T) {
@@ -33,11 +34,14 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 		resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseSingleClusterDir, logger)
 		amiId := test_structure.LoadAmiId(t, couchbaseSingleClusterDir, logger)
 
+		// Couchbase DB names must be lowercase
+		clusterName := strings.ToLower(fmt.Sprintf("single-cluster-%s", resourceCollection.UniqueId))
+
 		terratestOptions := createBaseTerratestOptions(t, testName, couchbaseSingleClusterDir, resourceCollection)
 		terratestOptions.Vars = map[string]interface{} {
 			"aws_region": resourceCollection.AwsRegion,
 			"ami_id": amiId,
-			"cluster_name": fmt.Sprintf("single-cluster-%s", resourceCollection.UniqueId),
+			"cluster_name": clusterName,
 		}
 
 		deploy(t, terratestOptions)
