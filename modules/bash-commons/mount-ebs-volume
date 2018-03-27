@@ -33,7 +33,6 @@ function print_usage {
   echo
   echo "Required Arguments:"
   echo
-  echo -e "  --aws-region\t\tThe AWS region the instance is running in (e.g. us-east-1)."
   echo -e "  --device-name\t\tThe device name to use for the volume (e.g. /dev/xvdf)."
   echo -e "  --mount-point\t\tThe path at which the volume should be mounted (e.g. /foo/bar)."
   echo -e "  --owner\t\tThe user who should own the mount-point (e.g. ubuntu)."
@@ -86,16 +85,17 @@ function describe_volumes {
 # already attached and are in the same availability zone as this instance. If there is more than one such volume
 # in the list, one will be picked at random.
 function attach_volume_from_list {
-  local readonly aws_region="$1"
-  local readonly device_name="$2"
-  shift 2
+  local readonly device_name="$1"
+  shift 1
   local readonly volume_ids="$@"
 
+  local aws_region=""
   local availability_zone=""
   local instance_id=""
   local ebs_volumes=""
   local ebs_volumes_unattached_in_az=""
 
+  aws_region=$(get_instance_region)
   availability_zone=$(get_ec2_instance_availability_zone)
   instance_id=$(get_ec2_instance_id)
 
@@ -115,11 +115,13 @@ function attach_volume_from_list {
 
 # Find the value this EC2 Instance has for the given tag and then find an attach an EBS Volume with the same tag.
 function attach_volume_with_same_tag {
-  local readonly aws_region="$1"
-  local readonly device_name="$2"
-  local readonly tag_key="$3"
+  local readonly device_name="$1"
+  local readonly tag_key="$2"
 
   log_info "Looking for EBS volume with same value for tag $tag_key as this Instance"
+
+  local aws_region
+  aws_region=$(get_instance_region)
 
   local ebs_volume_id
   ebs_volume_id=$(find_ebs_volume_with_same_tag "$aws_region" "$tag_key")
@@ -393,7 +395,6 @@ function check_prerequisites {
 }
 
 function configure_ebs_volume {
-  local aws_region=""
   local volume_ids=()
   local volume_with_same_tag=""
   local device_name=""
@@ -406,10 +407,6 @@ function configure_ebs_volume {
     local key="$1"
 
     case "$key" in
-      --aws-region)
-        aws_region="$2"
-        shift
-        ;;
       --volume-id)
         volume_ids+=("$2")
         shift
@@ -454,7 +451,6 @@ function configure_ebs_volume {
 
   check_prerequisites
 
-  assert_not_empty "--aws-region" "$aws_region"
   assert_not_empty "--device-name" "$device_name"
   assert_not_empty "--mount-point" "$mount_point"
   assert_not_empty "--owner" "$owner"
@@ -466,9 +462,9 @@ function configure_ebs_volume {
   if $(is_volume_attached "$lsblk_name"); then
     log_warn "A volume is already attached with device name $device_name. Will not try to attach a different volume."
   elif [[ ! -z "${volume_ids[@]}" ]]; then
-    attach_volume_from_list "$aws_region" "$device_name" "${volume_ids[@]}"
+    attach_volume_from_list "$device_name" "${volume_ids[@]}"
   elif [[ ! -z "$volume_with_same_tag" ]]; then
-    attach_volume_with_same_tag "$aws_region" "$device_name" "$volume_with_same_tag"
+    attach_volume_with_same_tag "$device_name" "$volume_with_same_tag"
   else
     log_error "No volume is attached at $device_name and none was specified via the --volume-ids or --volume-with-same-tag parameter."
     exit 1
