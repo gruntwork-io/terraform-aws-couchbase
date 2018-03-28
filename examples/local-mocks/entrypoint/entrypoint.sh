@@ -15,9 +15,9 @@ tail -f --retry \
 
 # We need systemd to run to fire up Couchbase itself. To run systemd, we have to run /sbin/init at the end of this
 # script. So how can we run the code we need on boot that normally lives in User Data? Well, our solution is to run
-# it using systemd as well! The Docker Compose file mounts the mock-run-couchbase-server systemd unit and this
+# it using systemd as well! The Docker Compose file mounts the run-user-data systemd unit and this
 # command tells systemd to run that unit once we fire up systemd below.
-systemctl enable mock-run-couchbase-server
+systemctl enable run-user-data
 
 # Run systemd. Note that systemd must run as PID 1, so we use exec to let it take over the process ID of this
 # entrypoint script.

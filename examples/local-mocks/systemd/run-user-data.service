@@ -1,5 +1,5 @@
 [Unit]
-Description=Run Couchbase Script
+Description=Mock Run Couchbase Script
 Documentation=https://github.com/gruntwork-io/terraform-aws-couchbase
 After=couchbase-server.service
 

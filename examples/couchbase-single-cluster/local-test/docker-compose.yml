@@ -28,7 +28,6 @@ services:
       - ../../../modules/run-sync-gateway/run-sync-gateway:/opt/couchbase-sync-gateway/bin/run-sync-gateway
 
       # Override scripts in bash-commons with mocks so we can run locally, without talking to AWS APIs
-      # TODO: install bash-commons into a single, common location so we don't have multiple copies
       - ../../local-mocks/bash-commons/aws-primitives.sh:/opt/couchbase/bash-commons/aws-primitives.sh
       - ../../local-mocks/bash-commons/mount-ebs-volume:/opt/couchbase/bash-commons/mount-ebs-volume
       - ../../local-mocks/bash-commons/aws-primitives.sh:/opt/couchbase-sync-gateway/bash-commons/aws-primitives.sh
@@ -37,13 +36,14 @@ services:
       # Mount the mock scripts we use to run Couchbase during Docker container boot
       - ../user-data:/user-data
       - ../../local-mocks/entrypoint:/entrypoint
-      - ../../local-mocks/systemd/mock-run-couchbase-server.service:/lib/systemd/system/mock-run-couchbase-server.service
+      - ../../local-mocks/systemd/run-user-data.service:/lib/systemd/system/run-user-data.service
       - ../../local-mocks/systemd/mock-couchbase.env:/lib/systemd/system/mock-couchbase.env
 
     # Map each container to unique ports on the host. Note that you can talk to this container from your host OS via the
     # HTTP/REST APIs but NOT the Couchbase SDKs! The SDKs will try to connect to the internal node IPs, which can only
     # be accessed from within a container. Host networking would work around this, but it doesn't work, because
     # Couchbase doesn't allow all port numbers to be overridden, so the Erlang Port Mapper service clashes.
+    # https://developer.couchbase.com/documentation/server/current/install/install-ports.html
     ports:
       - "8091:8091"
       - "8092:8092"
