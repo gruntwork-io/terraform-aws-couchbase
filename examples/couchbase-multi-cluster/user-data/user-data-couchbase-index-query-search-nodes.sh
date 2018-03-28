@@ -26,7 +26,7 @@ function run_couchbase {
   local readonly cluster_port="$4"
   local readonly index_dir="$5"
 
-  echo "Starting Couchbase index nodes"
+  echo "Starting Couchbase index, query, and search nodes"
 
   /opt/couchbase/bin/run-couchbase-server \
     --cluster-name "$cluster_asg_name" \
