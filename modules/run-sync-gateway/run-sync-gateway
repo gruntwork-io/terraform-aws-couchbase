@@ -203,7 +203,7 @@ function wait_for_couchbase_cluster {
   local readonly bucket="$4"
 
   for (( i=0; i<"$MAX_RETRIES"; i++ )); do
-    if cluster_is_ready "$cluster_url" "$cluster_username" "$cluster_password"; then
+    if cluster_is_ready "$cluster_url" "$cluster_username" "$cluster_password" "$bucket"; then
       log_info "Cluster $cluster_url is ready!"
       return
     else
