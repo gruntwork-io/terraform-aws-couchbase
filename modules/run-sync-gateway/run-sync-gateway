@@ -55,7 +55,7 @@ function get_hostnames {
 
   local hostnames
   hostnames=($(echo "$instances_response" | jq -r ".Reservations[].Instances[].$hostname_param"))
-  assert_not_empty_aws_response "$hostnames" "Could not find hostnames in describe-instances value:\n$instances_response"
+  assert_not_empty_aws_response "$hostnames" "hostnames in describe-instances value:\n$instances_response"
 
   local hostnames_with_ports=()
   local hostname
