@@ -48,7 +48,8 @@ function print_usage {
   echo
   echo "Important optional arguments:"
   echo
-  echo -e "  --services\t\t\tComma-separated list of Couchbase service to run. Default: $DEFAULT_SERVICES."
+  echo -e "  --node-services\t\tComma-separated list of Couchbase service to run on this node. Default: $DEFAULT_SERVICES."
+  echo -e "  --cluster-services\t\tComma-separated list of Couchbase service to run in the cluster. Only used when initializing a brand new cluster. Default: $DEFAULT_SERVICES."
   echo -e "  --cluster-name\t\tThe name of the Couchbase cluster. Default: use the name of the Auto Scaling Group."
   echo -e "  --hostname\t\t\tThe hostname to use for this node. Default: look up the node's private hostname in EC2 metadata."
   echo -e "  --use-public-hostname\t\tIf this flag is set, use the node's public hostname from EC2 metadata."
@@ -232,7 +233,8 @@ function add_rallypoint_to_cluster {
   local readonly data_ramsize="$7"
   local readonly fts_ramsize="$8"
   local readonly index_ramsize="$9"
-  local readonly services="${10}"
+  local readonly node_services="${10}"
+  local readonly cluster_services="${11}"
 
   if cluster_is_initialized "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password"; then
     log_info "Cluster $cluster_name is already initialized."
@@ -243,7 +245,7 @@ function add_rallypoint_to_cluster {
       "$cluster_username" \
       "$cluster_password" \
       "$rally_point_hostname" \
-      "$services"
+      "$node_services"
   else
     log_info "Cluster $cluster_name is not yet initialized."
     init_new_cluster \
@@ -256,7 +258,7 @@ function add_rallypoint_to_cluster {
       "$data_ramsize" \
       "$fts_ramsize" \
       "$index_ramsize" \
-      "$services"
+      "$cluster_services"
   fi
 }
 
@@ -326,9 +328,9 @@ function init_new_cluster {
   local readonly data_ramsize="$7"
   local readonly fts_ramsize="$8"
   local readonly index_ramsize="$9"
-  local readonly services="${10}"
+  local readonly cluster_services="${10}"
 
-  log_info "Initializing cluster $cluster_name with rally point $rally_point_hostname and port $rest_port"
+  log_info "Initializing cluster $cluster_name with rally point $rally_point_hostname, port $rest_port, and services $cluster_services"
 
   local cluster_init_args=()
 
@@ -339,17 +341,17 @@ function init_new_cluster {
   cluster_init_args+=("--cluster-username=$cluster_username")
   cluster_init_args+=("--cluster-password=$cluster_password")
   cluster_init_args+=("--index-storage-setting=$index_storage_setting")
-  cluster_init_args+=("--services=$services")
+  cluster_init_args+=("--services=cluster_services")
 
-  if string_contains "$services" "data"; then
+  if string_contains "$cluster_services" "data"; then
     cluster_init_args+=("--cluster-ramsize=$data_ramsize")
   fi
 
-  if string_contains "$services" "index"; then
+  if string_contains "$cluster_services" "index"; then
     cluster_init_args+=("--cluster-index-ramsize=$index_ramsize")
   fi
 
-  if string_contains "$services" "fts"; then
+  if string_contains "$cluster_services" "fts"; then
     cluster_init_args+=("--cluster-fts-ramsize=$fts_ramsize")
   fi
 
@@ -377,7 +379,7 @@ function add_server_to_cluster {
   local readonly cluster_username="$4"
   local readonly cluster_password="$5"
   local readonly node_hostname="$6"
-  local readonly services="$7"
+  local readonly node_services="$7"
 
   wait_for_cluster_to_be_initialized "$rally_point_hostname" "$rest_port" "$cluster_name" "$cluster_username" "$cluster_password"
 
@@ -390,7 +392,7 @@ function add_server_to_cluster {
   server_add_args+=("--server-add=$node_hostname:$rest_port")
   server_add_args+=("--server-add-username=$cluster_username")
   server_add_args+=("--server-add-password=$cluster_password")
-  server_add_args+=("--services=$services")
+  server_add_args+=("--services=$node_services")
 
   local readonly server_add_max_retries=5
   local readonly sleep_between_server_add_retries_sec=15
@@ -401,7 +403,7 @@ function add_server_to_cluster {
       return
     fi
 
-    log_info "Adding node $node_hostname:$rest_port to cluster $cluster_name with rally point $rally_point_hostname"
+    log_info "Adding node $node_hostname:$rest_port to cluster $cluster_name at $rally_point_hostname:$rest_port with services $node_services"
 
     # The couchbase-cli may exit with an error, so make sure that doesn't cause this whole script to exit with an error
     set +e
@@ -481,7 +483,7 @@ function join_existing_cluster {
   local readonly cluster_username="$4"
   local readonly cluster_password="$5"
   local readonly node_hostname="$6"
-  local readonly services="$7"
+  local readonly node_services="$7"
 
   log_info "Joining cluster $cluster_name"
 
@@ -492,7 +494,7 @@ function join_existing_cluster {
     "$cluster_username" \
     "$cluster_password" \
     "$node_hostname" \
-    "$services"
+    "$node_services"
 
   rebalance_cluster \
     "$rally_point_hostname" \
@@ -731,7 +733,8 @@ function wait_for_node_to_be_active_in_cluster {
 # The main entrypoint for this code
 function run {
   local cluster_name
-  local services="$DEFAULT_SERVICES"
+  local node_services="$DEFAULT_SERVICES"
+  local cluster_services="$DEFAULT_SERVICES"
 
   local node_hostname
   local rally_point_hostname
@@ -762,9 +765,14 @@ function run {
     local key="$1"
 
     case "$key" in
-      --services)
+      --node-services)
         assert_not_empty "$key" "$2"
-        services="$2"
+        node_services="$2"
+        shift
+        ;;
+      --cluster-services)
+        assert_not_empty "$key" "$2"
+        cluster_services="$2"
         shift
         ;;
       --cluster-name)
@@ -895,10 +903,10 @@ function run {
   fi
 
   if [[ "$manage_memory_manually" == "true" ]]; then
-    assert_memory_settings_specified_manually "$services" "$data_ramsize" "$index_ramsize" "$fts_ramsize"
+    assert_memory_settings_specified_manually "$cluster_services" "$data_ramsize" "$index_ramsize" "$fts_ramsize"
   else
     assert_memory_settings_specified_automatically "$data_ramsize" "$index_ramsize" "$fts_ramsize"
-    read data_ramsize index_ramsize fts_ramsize < <(calculate_memory_settings_automatically "$services")
+    read data_ramsize index_ramsize fts_ramsize < <(calculate_memory_settings_automatically "$cluster_services")
   fi
 
   if [[ -z "$node_hostname" ]]; then
@@ -937,7 +945,8 @@ function run {
       "$data_ramsize" \
       "$fts_ramsize" \
       "$index_ramsize" \
-      "$services"
+      "$node_services" \
+      "$cluster_services"
   else
     log_info "The rally point for cluster $cluster_name is $rally_point_hostname."
     join_existing_cluster \
@@ -947,7 +956,7 @@ function run {
       "$cluster_username" \
       "$cluster_password" \
       "$node_hostname" \
-      "$services"
+      "$node_services"
   fi
 
   if [[ "$wait_for_all_nodes" == "true" ]]; then

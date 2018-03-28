@@ -50,7 +50,6 @@ fully-working sample code.
 Run `run-couchbase-server --help` to see all available arguments.
 
 ```
-
 Usage: run-couchbase-server [options]
 
 This script can be used to configure and initialize a Couchbase Server. This script has been tested with Ubuntu 16.04 and Amazon Linux.
@@ -62,7 +61,8 @@ Required arguments:
 
 Important optional arguments:
 
-  --services			Comma-separated list of Couchbase service to run. Default: data,index,query,fts.
+  --node-services		Comma-separated list of Couchbase service to run on this node. Default: data,index,query,fts.
+  --cluster-services		Comma-separated list of Couchbase service to run in the cluster. Only used when initializing a brand new cluster. Default: data,index,query,fts.
   --cluster-name		The name of the Couchbase cluster. Default: use the name of the Auto Scaling Group.
   --hostname			The hostname to use for this node. Default: look up the node's private hostname in EC2 metadata.
   --use-public-hostname		If this flag is set, use the node's public hostname from EC2 metadata.
