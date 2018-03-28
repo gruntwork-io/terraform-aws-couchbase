@@ -50,7 +50,7 @@ function print_usage {
   echo
   echo -e "  --node-services\t\tComma-separated list of Couchbase service to run on this node. Default: $DEFAULT_SERVICES."
   echo -e "  --cluster-services\t\tComma-separated list of Couchbase service to run in the cluster. Only used when initializing a brand new cluster. Default: $DEFAULT_SERVICES."
-  echo -e "  --cluster-name\t\tThe name of the Couchbase cluster. Default: use the name of the Auto Scaling Group."
+  echo -e "  --cluster-name\t\tThe name of the Couchbase cluster. Must be the name of an Auto Scaling Group (ASG). Default: use the name of the ASG this node is in."
   echo -e "  --hostname\t\t\tThe hostname to use for this node. Default: look up the node's private hostname in EC2 metadata."
   echo -e "  --use-public-hostname\t\tIf this flag is set, use the node's public hostname from EC2 metadata."
   echo -e "  --rally-point-hostname\tThe hostname of the rally point server that initialized the cluster. If not set, automatically pick a rally point server in the ASG."
@@ -893,13 +893,10 @@ function run {
   aws_region=$(get_instance_region)
   assert_not_empty_aws_response "$aws_region" "AWS region"
 
-  local asg_name
-  asg_name=$(get_asg_name)
-  assert_not_empty_aws_response "$asg_name" "ASG name"
-
   if [[ -z "$cluster_name" ]]; then
-    log_info "Setting cluster name to ASG name, $asg_name"
-    cluster_name="$asg_name"
+    cluster_name=$(get_asg_name)
+    assert_not_empty_aws_response "$cluster_name" "ASG name"
+    log_info "Set cluster name to the name of the current ASG, $cluster_name"
   fi
 
   if [[ "$manage_memory_manually" == "true" ]]; then
@@ -915,7 +912,7 @@ function run {
   fi
 
   if [[ -z "$rally_point_hostname" ]]; then
-    rally_point_hostname=$(get_rally_point_hostname "$aws_region" "$asg_name" "$use_public_hostname")
+    rally_point_hostname=$(get_rally_point_hostname "$aws_region" "$cluster_name" "$use_public_hostname")
     assert_not_empty_aws_response "$rally_point_hostname" "Rally point hostname"
   fi
 
@@ -960,7 +957,7 @@ function run {
   fi
 
   if [[ "$wait_for_all_nodes" == "true" ]]; then
-    wait_for_all_nodes_to_be_active_in_cluster "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password" "$asg_name" "$aws_region" "$use_public_hostname"
+    wait_for_all_nodes_to_be_active_in_cluster "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password" "$cluster_name" "$aws_region" "$use_public_hostname"
   fi
 
   log_info "Couchbase server configured successfully!"

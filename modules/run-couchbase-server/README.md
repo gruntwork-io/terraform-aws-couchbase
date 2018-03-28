@@ -24,7 +24,7 @@ The default install path is `/opt/couchbase/bin`, so to configure and start Couc
 This will:
 
 1. Figure out a rally point for your Couchbase cluster. This is a "leader" node that will be responsible for 
-   initializing the cluster and/or replication.
+   initializing the cluster and/or replication. See [Picking a rally point](#picking-a-rally-point) for more info.
 
 1. Configure ports.
 
@@ -63,7 +63,7 @@ Important optional arguments:
 
   --node-services		Comma-separated list of Couchbase service to run on this node. Default: data,index,query,fts.
   --cluster-services		Comma-separated list of Couchbase service to run in the cluster. Only used when initializing a brand new cluster. Default: data,index,query,fts.
-  --cluster-name		The name of the Couchbase cluster. Default: use the name of the Auto Scaling Group.
+  --cluster-name		The name of the Couchbase cluster. Must be the name of an Auto Scaling Group (ASG). Default: use the name of the ASG this node is in.
   --hostname			The hostname to use for this node. Default: look up the node's private hostname in EC2 metadata.
   --use-public-hostname		If this flag is set, use the node's public hostname from EC2 metadata.
   --rally-point-hostname	The hostname of the rally point server that initialized the cluster. If not set, automatically pick a rally point server in the ASG.
@@ -94,6 +94,50 @@ Example:
   run-couchbase-server --cluster-username admin --cluser-password password
 ```
 
+
+
+
+## Picking a rally point
+
+The Couchbase cluster needs a "rally point", which is a single server that is responsible for:
+
+1. Initializing the cluster.
+1. Kicking off cross-data-center replication (if you're using it).
+
+We need a way to unambiguously and reliably select exactly one rally point. If there's more than one node, you may end
+up with multiple separate clusters instead of just one!
+
+The `run-couchbase-server` script can automatically pick a rally point automatically by:
+
+1. Looking up all the servers in the Auto Scaling Group specified via the `--cluster-name` parameter. If the parameter
+   is not specified, the name of the Auto Scaling Group in which `run-couchbase-server` is running is used.
+
+1. Pick the node with the oldest Launch Time as the rally point. If multiple nodes have identical launch times, use the
+   one with the earliest Instance ID, alphabetically.
+   
+If you wish to specify a rally point manually instead of relying on this automatic process, use the 
+`--rally-point-hostname` parameter.
+
+
+
+
+## Running multiple Auto Scaling Groups
+
+The recommended deployment pattern for production is to run each Couchbase service (data, index, fts, query) and Sync
+Gateway in separate Auto Scaling Groups (ASGs). To ensure that all of these ASGs form a single Couchbase cluster, you 
+should:
+
+1. Pick one ASG as the one that will contain the rally point (see [Picking a rally point](#picking-a-rally-point)). 
+   Typically, this will be the ASG with the data nodes.  
+
+1. When executing the `run-couchbase-server` script, set the `--cluster-name` parameter on all nodes to the name of 
+   the ASG you picked in step (1).    
+
+1. When executing `run-sync-gateway` script, set `ASG_NAME` in the `--auto-fill-asg KEY=ASG_NAME` parameter to the name
+   of the ASG you picked in step (1).
+   
+   
+   
 
 
 ## Passing credentials securely
