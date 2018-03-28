@@ -39,23 +39,23 @@ services:
 
     environment:
       # The User Data script that will be executed on boot by entrypoint.sh
-      - USER_DATA_SCRIPT=/user-data/user-data.sh
+      USER_DATA_SCRIPT: /user-data/user-data.sh
 
       # Any environment variable starting with USER_DATA_ENV_ will be read in by entrypoint.sh and made available in
       # the User Data script, with the USER_DATA_ENV_ portion stripped off.
-      - USER_DATA_ENV_cluster_asg_name=mock-couchbase-asg
-      - USER_DATA_ENV_cluster_port=8091
-      - USER_DATA_ENV_cluster_size=3
-      - USER_DATA_ENV_sync_gateway_interface=:4984
-      - USER_DATA_ENV_sync_gateway_admin_interface=127.0.0.1:4985
-      - USER_DATA_ENV_mock_aws_region=us-east-1
-      - USER_DATA_ENV_mock_availability_zone=us-east-1a
-      - USER_DATA_ENV_data_volume_device_name=/dev/xvdf
-      - USER_DATA_ENV_data_volume_mount_point=/couchbase-data
-      - USER_DATA_ENV_index_volume_device_name=/dev/xvdg
-      - USER_DATA_ENV_index_volume_mount_point=/couchbase-index
-      - USER_DATA_ENV_volume_owner=couchbase
-      - USER_DATA_ENV_data_node_container_base_name=couchbase-ubuntu
+      USER_DATA_ENV_cluster_asg_name: mock-couchbase-asg
+      USER_DATA_ENV_cluster_port: 8091
+      USER_DATA_ENV_cluster_size: 3
+      USER_DATA_ENV_sync_gateway_interface: :4984
+      USER_DATA_ENV_sync_gateway_admin_interface: 127.0.0.1:4985
+      USER_DATA_ENV_mock_aws_region: us-east-1
+      USER_DATA_ENV_mock_availability_zone: us-east-1a
+      USER_DATA_ENV_data_volume_device_name: /dev/xvdf
+      USER_DATA_ENV_data_volume_mount_point: /couchbase-data
+      USER_DATA_ENV_index_volume_device_name: /dev/xvdg
+      USER_DATA_ENV_index_volume_mount_point: /couchbase-index
+      USER_DATA_ENV_volume_owner: couchbase
+      USER_DATA_ENV_data_node_container_base_name: couchbase-ubuntu
 
     # Map each container to unique ports on the host. Note that you can talk to this container from your host OS via the
     # HTTP/REST APIs but NOT the Couchbase SDKs! The SDKs will try to connect to the internal node IPs, which can only
