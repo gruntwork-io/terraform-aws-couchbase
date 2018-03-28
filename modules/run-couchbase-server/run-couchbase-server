@@ -341,7 +341,7 @@ function init_new_cluster {
   cluster_init_args+=("--cluster-username=$cluster_username")
   cluster_init_args+=("--cluster-password=$cluster_password")
   cluster_init_args+=("--index-storage-setting=$index_storage_setting")
-  cluster_init_args+=("--services=cluster_services")
+  cluster_init_args+=("--services=$cluster_services")
 
   if string_contains "$cluster_services" "data"; then
     cluster_init_args+=("--cluster-ramsize=$data_ramsize")

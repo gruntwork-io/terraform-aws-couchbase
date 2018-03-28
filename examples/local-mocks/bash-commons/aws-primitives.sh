@@ -22,12 +22,12 @@ function get_instance_public_hostname {
 }
 
 function get_instance_region {
-  # This variable is set in local-mocks/systemd/mock-couchbase.env
+  # This variable is set in local-mocks/entrypoint/entrypoint.sh
   echo "$mock_aws_region"
 }
 
 function get_ec2_instance_availability_zone {
-  # This variable is set in local-mocks/systemd/mock-couchbase.env
+  # This variable is set in local-mocks/entrypoint/entrypoint.sh
   echo "$mock_availability_zone"
 }
 
@@ -41,7 +41,7 @@ function get_instance_tags {
   local readonly instance_id="$1"
   local readonly instance_region="$2"
 
-  # The cluster_asg_name below is an env var from local-mocks/systemd/mock-couchbase.env
+  # The cluster_asg_name below is an env var from local-mocks/entrypoint/entrypoint.sh
   cat << EOF
 {
   "Tags": [

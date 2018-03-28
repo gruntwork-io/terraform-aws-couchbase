@@ -36,8 +36,10 @@ services:
       # Mount the mock scripts we use to run Couchbase during Docker container boot
       - ../user-data:/user-data
       - ../../local-mocks/entrypoint:/entrypoint
-      - ../../local-mocks/systemd/run-user-data.service:/lib/systemd/system/run-user-data.service
-      - ../../local-mocks/systemd/mock-couchbase.env:/lib/systemd/system/mock-couchbase.env
+
+    environment:
+      # The User Data script that will be executed on boot by entrypoint.sh
+      - USER_DATA_SCRIPT=/user-data/user-data.sh
 
     # Map each container to unique ports on the host. Note that you can talk to this container from your host OS via the
     # HTTP/REST APIs but NOT the Couchbase SDKs! The SDKs will try to connect to the internal node IPs, which can only

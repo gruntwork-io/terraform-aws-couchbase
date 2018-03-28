@@ -26,7 +26,7 @@ docker-compose up
 ```
 
 Wait 10-15 seconds and then open your browser to http://localhost:8091/ and you will see the Couchbase Web Console!
-You can use the credentials in `local-mocks/systemd/mock-couchbase.env` to login (default: `admin/password`).
+You can use the credentials `admin/password` to login.
 
 You can also open your browser to http://localhost:4984 to access Sync Gateway.
 

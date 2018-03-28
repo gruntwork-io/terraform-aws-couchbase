@@ -91,6 +91,8 @@ function run_sync_gateway {
   local readonly username="$6"
   local readonly password="$7"
 
+  echo "Starting Sync Gateway"
+
   /opt/couchbase-sync-gateway/bin/run-sync-gateway \
     --auto-fill-asg "<SERVERS>=$cluster_asg_name:$cluster_port" \
     --auto-fill "<INTERFACE>=$sync_gateway_interface" \
