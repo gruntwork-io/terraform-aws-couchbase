@@ -3,8 +3,8 @@
 This folder shows an example of Terraform code that uses the 
 [couchbase-cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster) 
 module to deploy a [Couchbase](https://www.couchbase.com/) cluster in [AWS](https://aws.amazon.com/). The cluster 
-consists of four Auto Scaling Groups (ASGs): one for data nodes, one for index, query, and search nodes, one for 
-manager nodes, and one for SyncGateway nodes. 
+consists of three Auto Scaling Groups (ASGs): one for data nodes, one for index, query, and search nodes, and one for 
+SyncGateway nodes. 
 
 ![Couchbase multi-cluster architecture](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/_docs/couchbase-multi-cluster-architecture.png?raw=true)
 
