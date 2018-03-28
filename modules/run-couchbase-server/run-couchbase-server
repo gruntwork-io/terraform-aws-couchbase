@@ -105,11 +105,11 @@ function get_rally_point_hostname {
 
   local instances
   instances=$(wait_for_instances_in_asg "$asg_name" "$aws_region")
-  assert_not_empty_aws_response "$instances" "Fetch list of Instances in ASG $asg_name"
+  assert_not_empty_or_null "$instances" "Fetch list of Instances in ASG $asg_name"
 
   local rally_point
   rally_point=$(echo "$instances" | jq -r '[.Reservations[].Instances[]] | sort_by(.LaunchTime, .InstanceId) | .[0]')
-  assert_not_empty_aws_response "$rally_point" "Select rally point server in ASG $asg_name"
+  assert_not_empty_or_null "$rally_point" "Select rally point server in ASG $asg_name"
 
   local hostname_field=".PrivateDnsName"
   if [[ "$use_public_hostname" == "true" ]]; then
@@ -118,7 +118,7 @@ function get_rally_point_hostname {
 
   local hostname
   hostname=$(echo "$rally_point" | jq -r "$hostname_field")
-  assert_not_empty_aws_response "$rally_point" "Get hostname from field $hostname_field for rally point in $asg_name: $rally_point"
+  assert_not_empty_or_null "$rally_point" "Get hostname from field $hostname_field for rally point in $asg_name: $rally_point"
 
   echo -n "$hostname"
 }
@@ -732,11 +732,11 @@ function run {
 
   local aws_region
   aws_region=$(get_instance_region)
-  assert_not_empty_aws_response "$aws_region" "AWS region"
+  assert_not_empty_or_null "$aws_region" "AWS region"
 
   if [[ -z "$cluster_name" ]]; then
     cluster_name=$(get_asg_name)
-    assert_not_empty_aws_response "$cluster_name" "ASG name"
+    assert_not_empty_or_null "$cluster_name" "ASG name"
     log_info "Set cluster name to the name of the current ASG, $cluster_name"
   fi
 
@@ -749,12 +749,12 @@ function run {
 
   if [[ -z "$node_hostname" ]]; then
     node_hostname=$(get_hostname "$use_public_hostname")
-    assert_not_empty_aws_response "$node_hostname" "Hostname"
+    assert_not_empty_or_null "$node_hostname" "Hostname"
   fi
 
   if [[ -z "$rally_point_hostname" ]]; then
     rally_point_hostname=$(get_rally_point_hostname "$aws_region" "$cluster_name" "$use_public_hostname")
-    assert_not_empty_aws_response "$rally_point_hostname" "Rally point hostname"
+    assert_not_empty_or_null "$rally_point_hostname" "Rally point hostname"
   fi
 
   local readonly cluster_url="$rally_point_hostname:$rest_port"

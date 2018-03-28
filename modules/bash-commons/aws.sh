@@ -31,7 +31,7 @@ function get_instance_tag {
   for (( i=0; i<"$AWS_MAX_RETRIES"; i++ )); do
     local tags
     tags=$(wait_for_instance_tags "$instance_id" "$instance_region")
-    assert_not_empty_aws_response "$tags" "tags for Instance $instance_id in $instance_region"
+    assert_not_empty_or_null "$tags" "tags for Instance $instance_id in $instance_region"
 
     local tag_value
     tag_value=$(echo "$tags" | jq -r ".Tags[] | select(.Key == \"$tag_key\") | .Value")
@@ -88,7 +88,7 @@ function get_asg_size {
 
   local asg_json
   asg_json=$(describe_asg "$asg_name" "$aws_region")
-  assert_not_empty_aws_response "$asg_json" "Description of ASG $asg_name"
+  assert_not_empty_or_null "$asg_json" "Description of ASG $asg_name"
 
   echo "$asg_json" | jq -r '.AutoScalingGroups[0].DesiredCapacity'
 }
@@ -133,7 +133,7 @@ function get_ips_in_asg {
 
   local instances
   instances=$(describe_instances_in_asg "$asg_name" "$aws_region")
-  assert_not_empty_aws_response "$instances" "Get info about Instances in ASG $asg_name in $aws_region"
+  assert_not_empty_or_null "$instances" "Get info about Instances in ASG $asg_name in $aws_region"
 
   local readonly ip_param=$([[ "$use_public_ips" == "true" ]] && echo "PublicIpAddress" || echo "PrivateIpAddress")
   echo "$instances" | jq -r ".Reservations[].Instances[].$ip_param"
@@ -146,7 +146,7 @@ function get_hostnames_in_asg {
 
   local instances
   instances=$(wait_for_instances_in_asg "$asg_name" "$aws_region")
-  assert_not_empty_aws_response "$instances" "Get info about Instances in ASG $asg_name in $aws_region"
+  assert_not_empty_or_null "$instances" "Get info about Instances in ASG $asg_name in $aws_region"
 
   local readonly hostname_param=$([[ "$use_public_hostnames" == "true" ]] && echo "PublicDnsName" || echo "PrivateDnsName")
   echo "$instances" | jq -r ".Reservations[].Instances[].$hostname_param"

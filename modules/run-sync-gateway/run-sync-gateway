@@ -57,12 +57,12 @@ function get_hostnames {
 
   local hostnames
   hostnames=($(echo "$instances_response" | jq -r ".Reservations[].Instances[].$hostname_param"))
-  assert_not_empty_aws_response "$hostnames" "hostnames in describe-instances value:\n$instances_response"
+  assert_not_empty_or_null "$hostnames" "hostnames in describe-instances value:\n$instances_response"
 
   local hostnames_with_ports=()
   local hostname
   for hostname in "${hostnames[@]}"; do
-    assert_not_empty_aws_response "$hostname" "Get empty $hostname_param value! Full describe-instances response:\n$instances_response"
+    assert_not_empty_or_null "$hostname" "Get empty $hostname_param value! Full describe-instances response:\n$instances_response"
     hostnames_with_ports+=("$hostname$port_param")
   done
 
@@ -106,7 +106,7 @@ function auto_fill_config_asg {
 
   local aws_region
   aws_region=$(get_instance_region)
-  assert_not_empty_aws_response "$aws_region" "AWS region"
+  assert_not_empty_or_null "$aws_region" "AWS region"
 
   local param
   for param in "${auto_fill_asg[@]}"; do
@@ -144,11 +144,11 @@ function auto_fill_asg_param {
 
   local instances
   instances=$(wait_for_instances_in_asg "$asg_name" "$aws_region")
-  assert_not_empty_aws_response "$instances" "Get info about Instances in ASG $asg_name in $aws_region"
+  assert_not_empty_or_null "$instances" "Get info about Instances in ASG $asg_name in $aws_region"
 
   local hostnames
   hostnames=$(get_hostnames "$instances" "$use_public_hostname" "$port")
-  assert_not_empty_aws_response "$hostnames" "Unable to parse host names for ASG $asg_name in $aws_region"
+  assert_not_empty_or_null "$hostnames" "Unable to parse host names for ASG $asg_name in $aws_region"
 
   # https://developer.couchbase.com/documentation/mobile/1.5/guides/sync-gateway/config-properties/index.html#1.5/databases-foo_db-server
   local readonly placeholder_value="http://$hostnames"
