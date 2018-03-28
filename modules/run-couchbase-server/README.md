@@ -61,8 +61,8 @@ Required arguments:
 
 Important optional arguments:
 
-  --node-services		Comma-separated list of Couchbase service to run on this node. Default: data,index,query,fts.
-  --cluster-services		Comma-separated list of Couchbase service to run in the cluster. Only used when initializing a brand new cluster. Default: data,index,query,fts.
+  --node-services		Comma-separated list of Couchbase services to run on this node. Default: data,index,query,fts.
+  --cluster-services		Comma-separated list of Couchbase services you plan to run in this cluster. Only used when initializing a new cluster. Default: data,index,query,fts.
   --cluster-name		The name of the Couchbase cluster. Must be the name of an Auto Scaling Group (ASG). Default: use the name of the ASG this node is in.
   --hostname			The hostname to use for this node. Default: look up the node's private hostname in EC2 metadata.
   --use-public-hostname		If this flag is set, use the node's public hostname from EC2 metadata.
@@ -83,9 +83,9 @@ Other optional arguments:
 
   --index-storage-setting	The index storage mode for the index service. Must be one of: default, memopt. Default: default.
   --manage-memory-manually	If this flag is set, you can set memory settings manually via the --data-ramsize, --fts-ramsize, and --index-ramsize arguments.
-  --data-ramsize		The data service memory quota in MB. Only used if --manage-memory-manually is set.
-  --index-ramsize		The index service memory quota in MB. Only used if --manage-memory-manually is set.
-  --fts-ramsize			The full-text service memory quota in MB. Only used if --manage-memory-manually is set.
+  --data-ramsize		The data service memory quota in MB. Only used when initializing a new cluster and if --manage-memory-manually is set.
+  --index-ramsize		The index service memory quota in MB. Only used when initializing a new cluster and if --manage-memory-manually is set.
+  --fts-ramsize			The full-text service memory quota in MB. Only used when initializing a new cluster and if --manage-memory-manually is set.
   --wait-for-all-nodes		If this flag is set, this script will wait until all servers in the Couchbase Cluster are added and running.
   --help			Show this help text and exit.
 
@@ -171,6 +171,38 @@ Role](http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) that has th
 
 These permissions are automatically added by the [couchbase-cluster 
 module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster).
+
+
+
+
+## Memory settings
+
+By default, the `run-couchbase-server` script uses a simple formula to automatically determine memory quotas for the
+data, index, and search services:
+
+* The total memory available to couchbase is 65% of the RAM on the current node.
+* If you are only running a single service on this node, give that service 100% of the available memory.
+* If you are running all three services, give data 50%, index 25%, and search 25%.
+* If you are running data and one other service, give data 65% and the other service 35%.
+* If you are running index and search, give each 50%.
+* Ensure no service is allocated less than 256MB.
+
+You can override this simple calculation by setting the `--manage-memory-manually` flag and specifying the amount of 
+memory, in MB, for each service you plan on running using the `--data-ramsize`, `--index-ramsize`, and `--fts-ramsize`
+parameters. Example:
+
+```bash
+run-couchbase-server \ 
+  --cluster-username admin \
+  --cluster-password password \
+  --manage-memory-manually \
+  --data-ramsize 2048 \
+  --index-ramsize 1024 \
+  --fts-ramsize 1024
+```
+
+For more info, see [Sizing Couchbase Server
+Resources](https://developer.couchbase.com/documentation/server/current/install/sizing-general.html).
 
 
 
