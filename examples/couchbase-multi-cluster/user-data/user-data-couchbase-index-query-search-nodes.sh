@@ -34,7 +34,7 @@ function run_couchbase {
     --cluster-password "$cluster_password" \
     --rest-port "$cluster_port" \
     --index-dir "$index_dir" \
-    --node-services "index" \
+    --node-services "index,query,fts" \
     --use-public-hostname
 }
 

@@ -37,7 +37,7 @@ function get_instance_tag {
     tag_value=$(echo "$tags" | jq -r ".Tags[] | select(.Key == \"$tag_key\") | .Value")
 
     if is_empty_aws_response "$tag_value"; then
-      log_warn "Instance $instance_id in $instance_region does not yet seem to have tag $tag_key. Will sleep for $AWS_SLEEP_BETWEEN_RETRIES_SEC and check again."
+      log_warn "Instance $instance_id in $instance_region does not yet seem to have tag $tag_key. Will sleep for $AWS_SLEEP_BETWEEN_RETRIES_SEC seconds and check again."
       sleep "$AWS_SLEEP_BETWEEN_RETRIES_SEC"
     else
       log_info "Found value '$tag_value' for tag $tag_key for Instance $instance_id in $instance_region"

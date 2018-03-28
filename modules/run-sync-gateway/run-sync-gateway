@@ -186,11 +186,11 @@ function wait_for_couchbase_clusters {
   for database in "${databases[@]}"; do
     local readonly cluster_url=$(echo "$database" | jq -r '.server')
     local readonly cluster_url_single=$(echo "$cluster_url" | cut -f1 -d ",")
-
     local readonly cluster_username=$(echo "$database" | jq -r '.username')
     local readonly cluster_password=$(echo "$database" | jq -r '.password')
+    local readonly bucket=$(echo "$database" | jq -r '.bucket')
 
-    wait_for_couchbase_cluster "$cluster_url_single" "$cluster_username" "$cluster_password"
+    wait_for_couchbase_cluster "$cluster_url_single" "$cluster_username" "$cluster_password" "$bucket"
   done
 
   log_info "${#databases[@]} / ${#databases[@]} Couchbase clusters are active and healthy!"
@@ -200,19 +200,44 @@ function wait_for_couchbase_cluster {
   local readonly cluster_url="$1"
   local readonly cluster_username="$2"
   local readonly cluster_password="$3"
+  local readonly bucket="$4"
 
   for (( i=0; i<"$MAX_RETRIES"; i++ )); do
-    if cluster_is_initialized "$cluster_url" "$cluster_username" "$cluster_password"; then
-      log_info "Cluster $cluster_url is initialized!"
+    if cluster_is_ready "$cluster_url" "$cluster_username" "$cluster_password"; then
+      log_info "Cluster $cluster_url is ready!"
       return
     else
-      log_warn "Cluster $cluster_url is not yet initialized. Will sleep for $SLEEP_BETWEEN_RETRIES_SEC and check again."
+      log_warn "Cluster $cluster_url is not yet ready. Will sleep for $SLEEP_BETWEEN_RETRIES_SEC seconds and check again."
       sleep "$SLEEP_BETWEEN_RETRIES_SEC"
     fi
   done
 
   log_error "Cluster $cluster_url still not initialized after $MAX_RETRIES retries."
   exit 1
+}
+
+function cluster_is_ready {
+  local readonly cluster_url="$1"
+  local readonly cluster_username="$2"
+  local readonly cluster_password="$3"
+  local readonly bucket="$4"
+
+  if ! cluster_is_initialized "$cluster_url" "$cluster_username" "$cluster_password"; then
+    log_warn "Cluster $cluster_url is not yet initialized."
+    return 1
+  fi
+
+  if [[ -z "$bucket" ]]; then
+    log_info "No bucket specified for cluster $cluster_url, so assuming cluster is ready."
+    return
+  fi
+
+  if ! has_bucket "$cluster_url" "$cluster_username" "$cluster_password" "$bucket"; then
+    log_warn "Bucket $bucket does not yet exist in cluster $cluster_url."
+    return 1
+  fi
+
+  return 0
 }
 
 # The main entrypoint for this code

@@ -96,3 +96,40 @@ function node_is_active_in_cluster {
 
   multiline_string_contains "$cluster_status" "$node_url healthy active"
 }
+
+# Return true (0) if the given bucket exists in the given cluster and false (0) otherwise
+function has_bucket {
+  local readonly cluster_url="$1"
+  local readonly cluster_username="$2"
+  local readonly cluster_password="$3"
+  local readonly bucket_name="$4"
+
+  log_info "Checking if bucket $bucket_name exists in $cluster_url"
+
+  local server_list_args=()
+  server_list_args+=("bucket-list")
+  server_list_args+=("--cluster=$cluster_url")
+  server_list_args+=("--username=$cluster_username")
+  server_list_args+=("--password=$cluster_password")
+
+  set +e
+  local out
+  out=$("$COUCHBASE_CLI" "${server_list_args[@]}")
+  set -e
+
+  # The bucket-list output is of the format:
+  #
+  # <BUCKET_NAME_1>
+  #  bucketType: membase
+  #  numReplicas: 1
+  #  ramQuota: 314572800
+  #  ramUsed: 27230952
+  # <BUCKET_NAME_2>
+  #  bucketType: membase
+  #  numReplicas: 1
+  #  ramQuota: 314572800
+  #  ramUsed: 27230952
+  #
+  # So all we do is grep for a line that exactly matches the name of the bucket we're looking for
+  multiline_string_contains "$out" "^$bucket_name$"
+}
