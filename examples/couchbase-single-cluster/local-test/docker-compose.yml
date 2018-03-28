@@ -24,6 +24,7 @@ services:
 
       # Mount these scripts so we get hot reload
       - ../../../modules/bash-commons:/opt/couchbase/bash-commons
+      - ../../../modules/bash-commons:/opt/couchbase-sync-gateway/bash-commons
       - ../../../modules/run-couchbase-server/run-couchbase-server:/opt/couchbase/bin/run-couchbase-server
       - ../../../modules/run-sync-gateway/run-sync-gateway:/opt/couchbase-sync-gateway/bin/run-sync-gateway
 

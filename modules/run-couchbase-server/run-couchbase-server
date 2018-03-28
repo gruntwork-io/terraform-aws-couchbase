@@ -11,10 +11,7 @@ source "$BASH_COMMONS_INSTALL_DIR/aws.sh"
 source "$BASH_COMMONS_INSTALL_DIR/os.sh"
 source "$BASH_COMMONS_INSTALL_DIR/collections.sh"
 source "$BASH_COMMONS_INSTALL_DIR/strings.sh"
-
-readonly COUCHBASE_BASE_DIR="/opt/couchbase"
-readonly COUCHBASE_BIN_DIR="$COUCHBASE_BASE_DIR/bin"
-readonly COUCHBASE_CLI="$COUCHBASE_BIN_DIR/couchbase-cli"
+source "$BASH_COMMONS_INSTALL_DIR/couchbase-common.sh"
 
 readonly DEFAULT_DATA_DIR="$COUCHBASE_BASE_DIR/var/lib/couchbase/data"
 
@@ -73,7 +70,6 @@ function print_usage {
   echo -e "  --data-ramsize\t\tThe data service memory quota in MB. Only used when initializing a new cluster and if --manage-memory-manually is set."
   echo -e "  --index-ramsize\t\tThe index service memory quota in MB. Only used when initializing a new cluster and if --manage-memory-manually is set."
   echo -e "  --fts-ramsize\t\t\tThe full-text service memory quota in MB. Only used when initializing a new cluster and if --manage-memory-manually is set."
-  echo -e "  --wait-for-all-nodes\t\tIf this flag is set, this script will wait until all servers in the Couchbase Cluster are added and running."
   echo -e "  --help\t\t\tShow this help text and exit."
   echo
   echo "Example:"
@@ -127,124 +123,31 @@ function get_rally_point_hostname {
   echo -n "$hostname"
 }
 
-# Returns true (0) if the Couchbase cluster has already been initialized and false otherwise.
-function cluster_is_initialized {
-  local readonly rally_point_hostname="$1"
-  local readonly rest_port="$2"
-  local readonly cluster_username="$3"
-  local readonly cluster_password="$4"
-
-  local cluster_status
-  cluster_status=$(get_cluster_status "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password")
-
-  string_contains "$cluster_status" "healthy active"
-}
-
-# Returns true if the Couchbase server at the given hostname has booted. Note that this ONLY checks if the Couchbase
-# process is running and responding to queries; it does NOT check if the Couchbase server has joined the cluster and is
-# active.
-function couchbase_is_running {
-  local readonly node_hostname="$1"
-  local readonly rest_port="$2"
-  local readonly username="$3"
-  local readonly password="$4"
-
-  set +e
-  local cluster_status
-  cluster_status=$(get_cluster_status "$node_hostname" "$rest_port" "$username" "$password")
-  set -e
-
-  string_contains "$cluster_status" "healthy active" || string_contains "$cluster_status" "unknown pool"
-}
-
-# Get the status of the Couchbase cluster using the server-list command. If the cluster is initialized, returns output
-# of the format:
-#
-# ns_1@172.19.0.2 172.19.0.2:8091 healthy inactiveAdded
-# ns_1@172.19.0.3 172.19.0.3:8091 healthy active
-# ns_1@172.19.0.4 172.19.0.4:8091 healthy active
-#
-# Otherwise, returns error text (e.g., "unknown pool") from the server-list command.
-function get_cluster_status {
-  local readonly node_hostname="$1"
-  local readonly rest_port="$2"
-  local readonly username="$3"
-  local readonly password="$4"
-
-  log_info "Looking up server status in $node_hostname:$rest_port"
-
-  local server_list_args=()
-  server_list_args+=("server-list")
-  server_list_args+=("--cluster=$node_hostname:$rest_port")
-  server_list_args+=("--username=$username")
-  server_list_args+=("--password=$password")
-
-  # If the cluster is not yet initialized, the server-list command will exit with an error, so make sure that doesn't
-  # cause this entire script to exit as a result
-  set +e
-  local out
-  out=$("$COUCHBASE_CLI" "${server_list_args[@]}")
-  set -e
-
-  echo -n "$out"
-}
-
-# Returns true if the node with the given hostname has already been added (via the server-add command) to the Couchbase
-# cluster. Note that this does NOT necessarily mean the new node is active; in order for the node to be active, you
-# not only need to add it, but also rebalance the cluster. See also node_is_active_in_cluster.
-function node_is_added_to_cluster {
-  local readonly rally_point_hostname="$1"
-  local readonly rest_port="$2"
-  local readonly cluster_username="$3"
-  local readonly cluster_password="$4"
-  local readonly node_hostname="$5"
-
-  local cluster_status
-  cluster_status=$(get_cluster_status "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password")
-
-  multiline_string_contains "$cluster_status" "$node_hostname:$rest_port healthy"
-}
-
-# Returns true if the node with the given hostname has already been added (via the server-add command) to the Couchbase
-# cluster and is active (via the rebalance command).
-function node_is_active_in_cluster {
-  local readonly rally_point_hostname="$1"
-  local readonly rest_port="$2"
-  local readonly cluster_username="$3"
-  local readonly cluster_password="$4"
-  local readonly node_hostname="$5"
-
-  local cluster_status
-  cluster_status=$(get_cluster_status "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password")
-
-  multiline_string_contains "$cluster_status" "$node_hostname:$rest_port healthy active"
-}
-
 # Add the given rally point server to the Couchbase cluster. If the cluster has not yet been initialized, this will
 # result in the cluster being initialized with this rally point. If the cluster has already been initialized, then
 # this server will be added as another node to that existing cluster.
 function add_rallypoint_to_cluster {
-  local readonly rally_point_hostname="$1"
-  local readonly rest_port="$2"
-  local readonly cluster_name="$3"
-  local readonly cluster_username="$4"
-  local readonly cluster_password="$5"
-  local readonly index_storage_setting="$6"
-  local readonly data_ramsize="$7"
-  local readonly fts_ramsize="$8"
-  local readonly index_ramsize="$9"
-  local readonly cluster_services="${10}"
-  local readonly node_services="${11}"
+  local readonly cluster_url="$1"
+  local readonly cluster_name="$2"
+  local readonly cluster_username="$3"
+  local readonly cluster_password="$4"
+  local readonly index_storage_setting="$5"
+  local readonly data_ramsize="$6"
+  local readonly fts_ramsize="$7"
+  local readonly index_ramsize="$8"
+  local readonly cluster_services="$9"
+  local readonly node_services="${10}"
+  local readonly rally_point_hostname="${11}"
+  local readonly rest_port="${12}"
 
-  if cluster_is_initialized "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password"; then
+  if cluster_is_initialized "$cluster_url" "$cluster_username" "$cluster_password"; then
     log_info "Cluster $cluster_name is already initialized."
     join_existing_cluster \
-      "$rally_point_hostname" \
-      "$rest_port" \
+      "$cluster_url" \
       "$cluster_name" \
       "$cluster_username" \
       "$cluster_password" \
-      "$rally_point_hostname" \
+      "$cluster_url" \
       "$node_services"
   else
     log_info "Cluster $cluster_name is not yet initialized."
@@ -267,53 +170,51 @@ function add_rallypoint_to_cluster {
 # of a new Couchbase cluster, where non rally point nodes want to join the cluster, but must wait for the rally point
 # to first initialize the cluster.
 function wait_for_cluster_to_be_initialized {
-  local readonly rally_point_hostname="$1"
-  local readonly rest_port="$2"
-  local readonly cluster_name="$3"
-  local readonly cluster_username="$4"
-  local readonly cluster_password="$5"
+  local readonly cluster_url="$1"
+  local readonly cluster_name="$2"
+  local readonly cluster_username="$3"
+  local readonly cluster_password="$4"
 
-  log_info "Checking if cluster $cluster_name is initialized"
+  log_info "Checking if cluster $cluster_name at $cluster_url is initialized"
 
   # It can take a WHILE to initialize the cluster on first boot, especially with the slow t2.micro instances we use
   # for testing, so we use more retries here than elsewhere.
   local readonly cluster_init_retires=120
 
   for (( i=0; i<"$cluster_init_retires"; i++ )); do
-    if cluster_is_initialized "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password"; then
-      log_info "Cluster $cluster_name is initialized."
+    if cluster_is_initialized "$cluster_url" "$cluster_username" "$cluster_password"; then
+      log_info "Cluster $cluster_name at $cluster_url is initialized."
       return
     else
-      log_warn "Cluster $cluster_name is not yet initialized. Will sleep for $SLEEP_BETWEEN_RETRIES_SEC seconds and check again."
+      log_warn "Cluster $cluster_name at $cluster_url is not yet initialized. Will sleep for $SLEEP_BETWEEN_RETRIES_SEC seconds and check again."
       sleep "$SLEEP_BETWEEN_RETRIES_SEC"
     fi
   done
 
-  log_error "Cluster $cluster_name still not initialized after $cluster_init_retires retries."
+  log_error "Cluster $cluster_name at $cluster_url still not initialized after $cluster_init_retires retries."
   exit 1
 }
 
 # Wait for Couchbase to boot on the node at the given hostname. Note that this ONLY waits for the Couchbase process to
 # boot and start responding to queries; it does NOT check that the Couchbase server has joined a cluster or is active.
 function wait_for_couchbase_to_boot {
-  local readonly node_hostname="$1"
-  local readonly rest_port="$2"
-  local readonly username="$3"
-  local readonly password="$4"
+  local readonly node_url="$1"
+  local readonly username="$2"
+  local readonly password="$3"
 
-  log_info "Checking if Couchbase server $node_hostname:$rest_port is booted"
+  log_info "Checking if Couchbase server $node_url is booted"
 
   for (( i=0; i<"$MAX_RETRIES"; i++ )); do
-    if couchbase_is_running "$node_hostname" "$rest_port" "$username" "$password"; then
-      log_info "Couchbase server $node_hostname has booted."
+    if couchbase_is_running "$node_url" "$username" "$password"; then
+      log_info "Couchbase server $node_url has booted."
       return
     else
-      log_warn "Couchbase server $node_hostname:$rest_port has not yet booted. Will sleep for $SLEEP_BETWEEN_RETRIES_SEC seconds and check again."
+      log_warn "Couchbase server $node_url has not yet booted. Will sleep for $SLEEP_BETWEEN_RETRIES_SEC seconds and check again."
       sleep "$SLEEP_BETWEEN_RETRIES_SEC"
     fi
   done
 
-  log_error "Couchbase server $node_hostname still not booted after $MAX_RETRIES retries."
+  log_error "Couchbase server $node_url still not booted after $MAX_RETRIES retries."
   exit 1
 }
 
@@ -375,23 +276,22 @@ function init_new_cluster {
 # this will NOT result in the node being active; to do that, you must not only add the node, but also rebalance the
 # cluster using the rebalance_cluster function.
 function add_server_to_cluster {
-  local readonly rally_point_hostname="$1"
-  local readonly rest_port="$2"
-  local readonly cluster_name="$3"
-  local readonly cluster_username="$4"
-  local readonly cluster_password="$5"
-  local readonly node_hostname="$6"
-  local readonly node_services="$7"
+  local readonly cluster_url="$1"
+  local readonly cluster_name="$2"
+  local readonly cluster_username="$3"
+  local readonly cluster_password="$4"
+  local readonly node_url="$5"
+  local readonly node_services="$6"
 
-  wait_for_cluster_to_be_initialized "$rally_point_hostname" "$rest_port" "$cluster_name" "$cluster_username" "$cluster_password"
+  wait_for_cluster_to_be_initialized "$cluster_url" "$cluster_name" "$cluster_username" "$cluster_password"
 
   local server_add_args=()
 
   server_add_args+=("server-add")
-  server_add_args+=("--cluster=$rally_point_hostname:$rest_port")
+  server_add_args+=("--cluster=$cluster_url")
   server_add_args+=("--user=$cluster_username")
   server_add_args+=("--pass=$cluster_password")
-  server_add_args+=("--server-add=$node_hostname:$rest_port")
+  server_add_args+=("--server-add=$node_url")
   server_add_args+=("--server-add-username=$cluster_username")
   server_add_args+=("--server-add-password=$cluster_password")
   server_add_args+=("--services=$node_services")
@@ -400,12 +300,12 @@ function add_server_to_cluster {
   local readonly sleep_between_server_add_retries_sec=15
 
   for (( i=0; i<"$server_add_max_retries"; i++ )); do
-    if node_is_added_to_cluster "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password" "$node_hostname"; then
-      log_info "Node $node_hostname has already been added to cluster $cluster_name. Will not add again."
+    if node_is_added_to_cluster "$cluster_url" "$cluster_username" "$cluster_password" "$node_url"; then
+      log_info "Node $node_url has already been added to cluster $cluster_name. Will not add again."
       return
     fi
 
-    log_info "Adding node $node_hostname:$rest_port to cluster $cluster_name at $rally_point_hostname:$rest_port with services $node_services"
+    log_info "Adding node $node_url to cluster $cluster_name at $cluster_url with services $node_services"
 
     # The couchbase-cli may exit with an error, so make sure that doesn't cause this whole script to exit with an error
     set +e
@@ -414,34 +314,33 @@ function add_server_to_cluster {
     set -e
 
     if string_contains "$out" "SUCCESS: Server added"; then
-      log_info "Successfully added node $node_hostname:$rest_port to cluster $cluster_name."
+      log_info "Successfully added node $node_url to cluster $cluster_name."
       return
     else
-      log_warn "Failed to add node $node_hostname:$rest_port to cluster $cluster_name. Will sleep for $sleep_between_server_add_retries_sec seconds and try again. Log output:\n$out"
+      log_warn "Failed to add node $node_url to cluster $cluster_name. Will sleep for $sleep_between_server_add_retries_sec seconds and try again. Log output:\n$out"
       sleep "$sleep_between_server_add_retries_sec"
     fi
   done
 
-  log_error "Failed to add node $node_hostname:$rest_port to cluster $cluster_name after $server_add_max_retries retries."
+  log_error "Failed to add node $node_url to cluster $cluster_name after $server_add_max_retries retries."
   exit 1
 }
 
 # Rebalance the cluster. This command must be called each time you add a new node; until it's called, the node will not
 # be in active state and won't actually serve any traffic.
 function rebalance_cluster {
-  local readonly rally_point_hostname="$1"
-  local readonly rest_port="$2"
-  local readonly cluster_name="$3"
-  local readonly cluster_username="$4"
-  local readonly cluster_password="$5"
-  local readonly node_hostname="$6"
+  local readonly cluster_url="$1"
+  local readonly cluster_name="$2"
+  local readonly cluster_username="$3"
+  local readonly cluster_password="$4"
+  local readonly node_url="$5"
 
-  wait_for_cluster_to_be_initialized "$rally_point_hostname" "$rest_port" "$cluster_name" "$cluster_username" "$cluster_password"
+  wait_for_cluster_to_be_initialized "$cluster_url" "$cluster_name" "$cluster_username" "$cluster_password"
 
   local rebalance_args=()
 
   rebalance_args+=("rebalance")
-  rebalance_args+=("--cluster=$rally_point_hostname:$rest_port")
+  rebalance_args+=("--cluster=$cluster_url")
   rebalance_args+=("--username=$cluster_username")
   rebalance_args+=("--password=$cluster_password")
   rebalance_args+=("--no-progress-bar")
@@ -450,12 +349,12 @@ function rebalance_cluster {
   local readonly sleep_between_rebalance_retries_sec=15
 
   for (( i=0; i<"$rebalance_max_retries"; i++ )); do
-    if node_is_active_in_cluster "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password" "$node_hostname"; then
-      log_info "Node $node_hostname is already active in cluster $cluster_name. Will not rebalance."
+    if node_is_active_in_cluster "$cluster_url" "$cluster_username" "$cluster_password" "$node_url"; then
+      log_info "Node $node_url is already active in cluster $cluster_name. Will not rebalance."
       return
     fi
 
-    log_info "Rebalancing cluster $cluster_name with rally point $rally_point_hostname"
+    log_info "Rebalancing cluster $cluster_name with rally point $cluster_url"
 
     # The couchbase-cli may exit with an error, so make sure that doesn't cause this whole script to exit with an error
     set +e
@@ -467,44 +366,41 @@ function rebalance_cluster {
       log_info "Successfully rebalanced cluster $cluster_name."
       return
     else
-      log_warn "Rebalance failed. Will sleep for $sleep_between_rebalance_retries_sec seconds and try again. Log output:\n$out"
+      log_warn "Rebalance of cluster $cluster_name failed. Will sleep for $sleep_between_rebalance_retries_sec seconds and try again. Log output:\n$out"
       sleep "$sleep_between_rebalance_retries_sec"
     fi
   done
 
-  log_error "Failed to rebalance cluster after $rebalance_max_retries retries."
+  log_error "Failed to rebalance cluster $cluster_name after $rebalance_max_retries retries."
   exit 1
 }
 
 # Join a node to an existing Couchbase cluster. This method is idempotent: it will add the node to the cluster if it
 # hasn't been added already and rebalance the cluster if the node isn't active already.
 function join_existing_cluster {
-  local readonly rally_point_hostname="$1"
-  local readonly rest_port="$2"
-  local readonly cluster_name="$3"
-  local readonly cluster_username="$4"
-  local readonly cluster_password="$5"
-  local readonly node_hostname="$6"
-  local readonly node_services="$7"
+  local readonly cluster_url="$1"
+  local readonly cluster_name="$2"
+  local readonly cluster_username="$3"
+  local readonly cluster_password="$4"
+  local readonly node_url="$5"
+  local readonly node_services="$6"
 
-  log_info "Joining cluster $cluster_name"
+  log_info "Joining cluster $cluster_name at $cluster_url"
 
   add_server_to_cluster \
-    "$rally_point_hostname" \
-    "$rest_port" \
+    "$cluster_url" \
     "$cluster_name" \
     "$cluster_username" \
     "$cluster_password" \
-    "$node_hostname" \
+    "$node_url" \
     "$node_services"
 
   rebalance_cluster \
-    "$rally_point_hostname" \
-    "$rest_port" \
+    "$cluster_url" \
     "$cluster_name" \
     "$cluster_username" \
     "$cluster_password" \
-    "$node_hostname"
+    "$node_url"
 }
 
 # Check that the user has not manually specified any of the memory settings and exit with an error if they have. To
@@ -670,7 +566,7 @@ function configure_couchbase_server {
     fi
   done
 
-  log_error "Unable to initiazlie Couchbase node with hostname $node_hostname, data dir $data_dir, and index dir $index_dir after $MAX_RETRIES retries."
+  log_error "Unable to initialize Couchbase node with hostname $node_hostname, data dir $data_dir, and index dir $index_dir after $MAX_RETRIES retries."
   exit 1
 }
 
@@ -678,57 +574,6 @@ function start_couchbase {
   log_info "Starting Couchbase"
   sudo systemctl enable couchbase-server
   sudo systemctl start couchbase-server
-}
-
-function wait_for_all_nodes_to_be_active_in_cluster {
-  local readonly rally_point_hostname="$1"
-  local readonly rest_port="$2"
-  local readonly cluster_username="$3"
-  local readonly cluster_password="$4"
-  local readonly asg_name="$5"
-  local readonly aws_region="$6"
-  local readonly use_public_ips="$7"
-
-  local hostnames
-  hostnames=($(get_hostnames_in_asg "$asg_name" "$aws_region" "$use_public_ips"))
-  assert_not_empty_aws_response "$hostnames" "Hostnames in ASG $asg_name in $aws_region"
-
-  log_info "Waiting for all nodes in the cluster to be in active state..."
-
-  local hostname
-  for hostname in "${hostnames[@]}"; do
-    wait_for_node_to_be_active_in_cluster "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password" "$hostname"
-  done
-
-  log_info "${#hostnames[@]} / ${#hostnames[@]} nodes are now active!"
-}
-
-# Wait until the node with the given hostname has already been added (via the server-add command) to the Couchbase
-# cluster and is active (via the rebalance command).
-function wait_for_node_to_be_active_in_cluster {
-  local readonly rally_point_hostname="$1"
-  local readonly rest_port="$2"
-  local readonly cluster_username="$3"
-  local readonly cluster_password="$4"
-  local readonly node_hostname="$5"
-
-  log_info "Waiting for node $node_hostname:$rest_port to be active in cluster $rally_point_hostname:$rest_port"
-
-  local readonly node_active_retries=60
-  local readonly sleep_between_retries=5
-
-  for (( i=0; i<"$node_active_retries"; i++ )); do
-    if node_is_active_in_cluster "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password" "$node_hostname"; then
-      log_info "Node $node_hostname:$rest_port is active in cluster $rally_point_hostname:$rest_port!"
-      return
-    else
-      log_warn "Node $node_hostname:$rest_port is not yet active in cluster $rally_point_hostname:$rest_port. Will sleep for $sleep_between_retries seconds and check again."
-      sleep "$sleep_between_retries"
-    fi
-  done
-
-  log_error "Node $node_hostname:$rest_port still not active in cluster $rally_point_hostname:$rest_port after $node_active_retries retries."
-  exit 1
 }
 
 # The main entrypoint for this code
@@ -759,8 +604,6 @@ function run {
 
   local data_dir="$DEFAULT_DATA_DIR"
   local index_dir="$DEFAULT_DATA_DIR"
-
-  local wait_for_all_nodes="false"
 
   while [[ $# > 0 ]]; do
     local key="$1"
@@ -865,9 +708,6 @@ function run {
         xdcr_port="$2"
         shift
         ;;
-      --wait-for-all-nodes)
-        wait_for_all_nodes="true"
-        ;;
       --help)
         print_usage
         exit
@@ -917,6 +757,9 @@ function run {
     assert_not_empty_aws_response "$rally_point_hostname" "Rally point hostname"
   fi
 
+  local readonly cluster_url="$rally_point_hostname:$rest_port"
+  local readonly node_url="$node_hostname:$rest_port"
+
   configure_couchbase_ports \
     "$rest_port" \
     "$capi_port" \
@@ -927,15 +770,14 @@ function run {
 
   start_couchbase
 
-  wait_for_couchbase_to_boot "$node_hostname" "$rest_port" "$cluster_username" "$cluster_password"
+  wait_for_couchbase_to_boot "$node_url" "$cluster_username" "$cluster_password"
 
   configure_couchbase_server "$node_hostname" "$rest_port" "$cluster_username" "$cluster_password" "$data_dir" "$index_dir"
 
   if [[ "$node_hostname" == "$rally_point_hostname" ]]; then
-    log_info "This server is the rally point for cluster $cluster_name, $rally_point_hostname!"
+    log_info "This server is the rally point for cluster $cluster_name, $cluster_url!"
     add_rallypoint_to_cluster \
-      "$rally_point_hostname" \
-      "$rest_port" \
+      "$cluster_url" \
       "$cluster_name" \
       "$cluster_username" \
       "$cluster_password" \
@@ -944,21 +786,18 @@ function run {
       "$fts_ramsize" \
       "$index_ramsize" \
       "$cluster_services" \
-      "$node_services"
-  else
-    log_info "The rally point for cluster $cluster_name is $rally_point_hostname."
-    join_existing_cluster \
+      "$node_services" \
       "$rally_point_hostname" \
-      "$rest_port" \
+      "$rest_port"
+  else
+    log_info "The rally point for cluster $cluster_name is $cluster_url."
+    join_existing_cluster \
+      "$cluster_url" \
       "$cluster_name" \
       "$cluster_username" \
       "$cluster_password" \
-      "$node_hostname" \
+      "$node_url" \
       "$node_services"
-  fi
-
-  if [[ "$wait_for_all_nodes" == "true" ]]; then
-    wait_for_all_nodes_to_be_active_in_cluster "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password" "$cluster_name" "$aws_region" "$use_public_hostname"
   fi
 
   log_info "Couchbase server configured successfully!"

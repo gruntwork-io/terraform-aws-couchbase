@@ -11,6 +11,7 @@ source "$BASH_COMMONS_INSTALL_DIR/aws.sh"
 source "$BASH_COMMONS_INSTALL_DIR/os.sh"
 source "$BASH_COMMONS_INSTALL_DIR/collections.sh"
 source "$BASH_COMMONS_INSTALL_DIR/strings.sh"
+source "$BASH_COMMONS_INSTALL_DIR/couchbase-common.sh"
 
 readonly SYNC_GATEWAY_BASE_DIR="/opt/couchbase-sync-gateway"
 readonly SYNC_GATEWAY_BIN_DIR="$SYNC_GATEWAY_BASE_DIR/bin"
@@ -35,6 +36,7 @@ function print_usage {
   echo -e "  --auto-fill KEY=VALUE\t\t\tSearch the Sync Gateway config file for KEY and replace it with VALUE. May be repeated."
   echo -e "  --use-public-hostname\t\t\tIf this flag is set, use the public hostname for each server in --auto-fill. Without this flag, the private hostname will be used."
   echo -e "  --config\t\t\t\tThe path to a JSON config file for Sync Gateway. Default: $DEFAULT_SYNC_GATEWAY_CONFIG_PATH."
+  echo -e "  --skip-wait\t\t\t\tDon't wait for each Couchbase server defined in the config file to be healthy and active and just boot Sync Gateway immediately."
   echo -e "  --help\t\t\t\tShow this help text and exit."
   echo
   echo "Example:"
@@ -161,12 +163,65 @@ function start_sync_gateway {
   sudo systemctl start sync_gateway
 }
 
+function wait_for_couchbase_clusters {
+  local readonly config="$1"
+  local readonly skip_wait="$2"
+
+  if [[ "$skip_wait" == "true" ]]; then
+    log_info "The --skip-wait flag is set, so will start Sync Gateway without waiting for all Couchbase servers to be healthy."
+    return
+  fi
+
+  local databases
+  databases=($(cat "$config" | jq -c '.databases | .[]?'))
+
+  if [[ -z "${databases[@]}" ]]; then
+    log_warn "No databases found in $config. Nothing to wait for."
+    return
+  fi
+
+  log_info "Waiting for ${#databases[@]} Couchbase clusters to be active and healthy..."
+
+  local database
+  for database in "${databases[@]}"; do
+    local readonly cluster_url=$(echo "$database" | jq -r '.server')
+    local readonly cluster_url_single=$(echo "$cluster_url" | cut -f1 -d ",")
+
+    local readonly cluster_username=$(echo "$database" | jq -r '.username')
+    local readonly cluster_password=$(echo "$database" | jq -r '.password')
+
+    wait_for_couchbase_cluster "$cluster_url_single" "$cluster_username" "$cluster_password"
+  done
+
+  log_info "${#databases[@]} / ${#databases[@]} Couchbase clusters are active and healthy!"
+}
+
+function wait_for_couchbase_cluster {
+  local readonly cluster_url="$1"
+  local readonly cluster_username="$2"
+  local readonly cluster_password="$3"
+
+  for (( i=0; i<"$MAX_RETRIES"; i++ )); do
+    if cluster_is_initialized "$cluster_url" "$cluster_username" "$cluster_password"; then
+      log_info "Cluster $cluster_url is initialized!"
+      return
+    else
+      log_warn "Cluster $cluster_url is not yet initialized. Will sleep for $SLEEP_BETWEEN_RETRIES_SEC and check again."
+      sleep "$SLEEP_BETWEEN_RETRIES_SEC"
+    fi
+  done
+
+  log_error "Cluster $cluster_url still not initialized after $MAX_RETRIES retries."
+  exit 1
+}
+
 # The main entrypoint for this code
 function run {
   local auto_fill_asg=()
   local auto_fill=()
   local use_public_hostname="false"
   local config="$DEFAULT_SYNC_GATEWAY_CONFIG_PATH"
+  local skip_wait="false"
 
   while [[ $# > 0 ]]; do
     local key="$1"
@@ -190,6 +245,9 @@ function run {
         config="$2"
         shift
         ;;
+      --skip-wait)
+        skip_wait="true"
+        ;;
       --help)
         print_usage
         exit
@@ -206,12 +264,14 @@ function run {
 
   assert_is_installed "aws"
   assert_is_installed "jq"
+  assert_is_installed "curl"
 
   log_info "Starting configuration of Sync Gateway..."
 
   update_config_path "$config" "$DEFAULT_SYNC_GATEWAY_SYSTEMD_UNIT_PATH"
   auto_fill_config_asg "$config" "$use_public_hostname" "${auto_fill_asg[@]}"
   auto_fill_config "$config" "${auto_fill[@]}"
+  wait_for_couchbase_clusters "$config" "$skip_wait"
   start_sync_gateway
 
   log_info "Sync Gateway configured successfully!"
