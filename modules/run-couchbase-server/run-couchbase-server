@@ -381,13 +381,6 @@ function add_server_to_cluster {
 
   wait_for_cluster_to_be_initialized "$rally_point_hostname" "$rest_port" "$cluster_name" "$cluster_username" "$cluster_password"
 
-  if node_is_added_to_cluster "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password" "$node_hostname"; then
-    log_info "Node $node_hostname has already been added to cluster $cluster_name. Will not add again."
-    return
-  fi
-
-  log_info "Adding node $node_hostname:$rest_port to cluster $cluster_name with rally point $rally_point_hostname"
-
   local server_add_args=()
 
   server_add_args+=("server-add")
@@ -399,18 +392,34 @@ function add_server_to_cluster {
   server_add_args+=("--server-add-password=$cluster_password")
   server_add_args+=("--services=$services")
 
-  # The couchbase-cli may exit with an error, so make sure that doesn't cause this whole script to exit with an error
-  set +e
-  local out
-  out=$("$COUCHBASE_CLI" "${server_add_args[@]}")
-  set -e
+  local readonly server_add_max_retries=5
+  local readonly sleep_between_server_add_retries_sec=15
 
-  if string_contains "$out" "SUCCESS: Server added"; then
-    log_info "Successfully added node $node_hostname:$rest_port to cluster $cluster_name."
-  else
-    log_error "Failed to add node $node_hostname:$rest_port to cluster $cluster_name. Log output:\n$out."
-    exit 1
-  fi
+  for (( i=0; i<"$server_add_max_retries"; i++ )); do
+    if node_is_added_to_cluster "$rally_point_hostname" "$rest_port" "$cluster_username" "$cluster_password" "$node_hostname"; then
+      log_info "Node $node_hostname has already been added to cluster $cluster_name. Will not add again."
+      return
+    fi
+
+    log_info "Adding node $node_hostname:$rest_port to cluster $cluster_name with rally point $rally_point_hostname"
+
+    # The couchbase-cli may exit with an error, so make sure that doesn't cause this whole script to exit with an error
+    set +e
+    local out
+    out=$("$COUCHBASE_CLI" "${server_add_args[@]}")
+    set -e
+
+    if string_contains "$out" "SUCCESS: Server added"; then
+      log_info "Successfully added node $node_hostname:$rest_port to cluster $cluster_name."
+      return
+    else
+      log_warn "Failed to add node $node_hostname:$rest_port to cluster $cluster_name. Will sleep for $sleep_between_server_add_retries_sec seconds and try again. Log output:\n$out"
+      sleep "$sleep_between_server_add_retries_sec"
+    fi
+  done
+
+  log_error "Failed to add node $node_hostname:$rest_port to cluster $cluster_name after $server_add_max_retries retries."
+  exit 1
 }
 
 # Rebalance the cluster. This command must be called each time you add a new node; until it's called, the node will not
@@ -453,12 +462,9 @@ function rebalance_cluster {
     if string_contains "$out" "SUCCESS: Rebalance complete"; then
       log_info "Successfully rebalanced cluster $cluster_name."
       return
-    elif string_contains "$out" "ERROR: Rebalance failed. See logs for detailed reason. You can try again."; then
-      log_warn "Rebalance failed. This may be because another node requested a rebalance at the same time. Will sleep for $sleep_between_rebalance_retries_sec seconds and try again."
-      sleep "$sleep_between_rebalance_retries_sec"
     else
-      log_error "Got unexpected error when trying to rebalance cluster $cluster_name. Log output:\n$out."
-      exit 1
+      log_warn "Rebalance failed. Will sleep for $sleep_between_rebalance_retries_sec seconds and try again. Log output:\n$out"
+      sleep "$sleep_between_rebalance_retries_sec"
     fi
   done
 
@@ -655,15 +661,9 @@ function configure_couchbase_server {
     if string_contains "$out" "SUCCESS: Node initialized"; then
       log_info "Successfully initialized local Couchbase node."
       return
-    elif string_contains "$out" "ERROR: Renaming is disallowed for nodes that are already part of a cluster"; then
-      log_warn "This node is already part of the Couchbase cluster, so assuming it has already been initialized, and will not try to initialize it again."
-      return
-    elif string_contains "$out" "Could not listen: eaddrnotavail."; then
-      log_warn "Unable to bind to $node_hostname. This is often a temporary issue, so will sleep for $SLEEP_BETWEEN_RETRIES_SEC and try again."
-      sleep "$SLEEP_BETWEEN_RETRIES_SEC"
     else
-      log_error "Failed to initialize local Couchbase node. Log output:\n$out."
-      exit 1
+      log_warn "Failed to initialize local Couchbase node. Will sleep for $SLEEP_BETWEEN_RETRIES_SEC seconds and try again. Log output:\n$out."
+      sleep "$SLEEP_BETWEEN_RETRIES_SEC"
     fi
   done
 

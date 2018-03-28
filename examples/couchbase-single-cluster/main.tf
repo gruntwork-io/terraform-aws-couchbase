@@ -14,9 +14,9 @@ terraform {
 }
 
 locals {
-  data_volume_device_name  = "/dev/xvdf"
+  data_volume_device_name  = "/dev/xvdh"
   data_volume_mount_point  = "/couchbase-data"
-  index_volume_device_name = "/dev/xvdg"
+  index_volume_device_name = "/dev/xvdi"
   index_volume_mount_point = "/couchbase-index"
   volume_owner             = "couchbase"
 }
