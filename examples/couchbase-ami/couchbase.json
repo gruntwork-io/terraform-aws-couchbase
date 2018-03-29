@@ -1,11 +1,12 @@
 {
   "min_packer_version": "0.12.0",
   "variables": {
-    "aws_region": "us-east-1"
+    "aws_region": "us-east-1",
+    "base_ami_name": "couchbase"
   },
   "builders": [{
     "name": "ubuntu-ami",
-    "ami_name": "couchbase-ubuntu-{{isotime | clean_ami_name}}",
+    "ami_name": "{{user `base_ami_name`}}-ubuntu-{{isotime | clean_ami_name}}",
     "ami_description": "An Ubuntu 16.04 AMI that has Couchbase installed.",
     "instance_type": "t2.micro",
     "region": "{{user `aws_region`}}",
@@ -24,7 +25,7 @@
     "ssh_username": "ubuntu"
   },{
     "name": "amazon-linux-ami",
-    "ami_name": "couchbase-amazon-linux-{{isotime | clean_ami_name}}",
+    "ami_name": "{{user `base_ami_name`}}-amazon-linux-{{isotime | clean_ami_name}}",
     "ami_description": "An Amazon Linux AMI that has Couchbase installed.",
     "instance_type": "t2.micro",
     "region": "{{user `aws_region`}}",

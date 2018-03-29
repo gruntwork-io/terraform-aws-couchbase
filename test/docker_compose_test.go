@@ -12,12 +12,16 @@ import (
 )
 
 func TestUnitCouchbaseSingleClusterUbuntuInDocker(t *testing.T) {
-	t.Parallel()
+	// It seems that running multiple Couchbase clusters in Docker at the same time is more CPU/memory usage than
+	// CircleCI can handle, and they all fail to start, so we are disabling parallelism to see if that helps.
+	// t.Parallel()
 	testCouchbaseInDocker(t, "TestUnitCouchbaseSingleClusterUbuntuInDocker","couchbase-single-cluster", "ubuntu", 8091, 4984)
 }
 
 func TestUnitCouchbaseMultiClusterUbuntuInDocker(t *testing.T) {
-	t.Parallel()
+	// It seems that running multiple Couchbase clusters in Docker at the same time is more CPU/memory usage than
+	// CircleCI can handle, and they all fail to start, so we are disabling parallelism to see if that helps.
+	// t.Parallel()
 	testCouchbaseInDocker(t, "TestUnitCouchbaseMultiClusterUbuntuInDocker", "couchbase-multi-cluster","ubuntu", 7091, 3984)
 }
 
@@ -32,7 +36,7 @@ func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName str
 	couchbaseSingleClusterDockerDir := filepath.Join(tmpRootDir, "examples", examplesFolderName, "local-test")
 
 	test_structure.RunTestStage("setup_image", logger, func() {
-		buildCouchbaseWithPacker(t, logger, fmt.Sprintf("%s-docker", osName), "us-east-1", couchbaseAmiDir)
+		buildCouchbaseWithPacker(t, logger, fmt.Sprintf("%s-docker", osName), "couchbase","us-east-1", couchbaseAmiDir)
 	})
 
 	test_structure.RunTestStage("setup_docker", logger, func() {
