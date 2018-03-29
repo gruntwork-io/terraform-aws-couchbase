@@ -9,6 +9,18 @@ readonly COUCHBASE_BASE_DIR="/opt/couchbase"
 readonly COUCHBASE_BIN_DIR="$COUCHBASE_BASE_DIR/bin"
 readonly COUCHBASE_CLI="$COUCHBASE_BIN_DIR/couchbase-cli"
 
+# Run the Couchbase CLI
+function run_couchbase_cli {
+  local readonly args=($@)
+
+  # The Couchbase CLI may exit with an error, but we almost always want to ignore that and make decision based on
+  # stdout instead, so we temporarily disable exit on error
+  set +e
+  local out
+  "$COUCHBASE_CLI" "${args[@]}"
+  set -e
+}
+
 # Returns true (0) if the Couchbase cluster has already been initialized and false otherwise.
 function cluster_is_initialized {
   local readonly cluster_url="$1"
@@ -58,12 +70,8 @@ function get_cluster_status {
   server_list_args+=("--username=$cluster_username")
   server_list_args+=("--password=$cluster_password")
 
-  # If the cluster is not yet initialized, the server-list command will exit with an error, so make sure that doesn't
-  # cause this entire script to exit as a result
-  set +e
   local out
-  out=$("$COUCHBASE_CLI" "${server_list_args[@]}")
-  set -e
+  out=$(run_couchbase_cli "${server_list_args[@]}")
 
   echo -n "$out"
 }
@@ -111,10 +119,8 @@ function cluster_is_rebalancing {
   server_list_args+=("--username=$cluster_username")
   server_list_args+=("--password=$cluster_password")
 
-  set +e
   local out
-  out=$("$COUCHBASE_CLI" "${server_list_args[@]}")
-  set -e
+  out=$(run_couchbase_cli "${server_list_args[@]}")
 
   local status
   status=$(echo "$out" | jq -r '.status')
@@ -137,10 +143,8 @@ function has_bucket {
   server_list_args+=("--username=$cluster_username")
   server_list_args+=("--password=$cluster_password")
 
-  set +e
   local out
-  out=$("$COUCHBASE_CLI" "${server_list_args[@]}")
-  set -e
+  out=$(run_couchbase_cli "${server_list_args[@]}")
 
   # The bucket-list output is of the format:
   #

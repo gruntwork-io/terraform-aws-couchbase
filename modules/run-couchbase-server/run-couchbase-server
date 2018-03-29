@@ -258,11 +258,8 @@ function init_new_cluster {
     cluster_init_args+=("--cluster-fts-ramsize=$fts_ramsize")
   fi
 
-  # The couchbase-cli may exit with an error, so make sure that doesn't cause this whole script to exit with an error
-  set +e
   local out
-  out=$("$COUCHBASE_CLI" "${cluster_init_args[@]}")
-  set -e
+  out=$(run_couchbase_cli "${cluster_init_args[@]}")
 
   if string_contains "$out" "SUCCESS: Cluster initialized"; then
     log_info "Successfully initialized cluster $cluster_name"
@@ -307,11 +304,8 @@ function add_server_to_cluster {
 
     log_info "Adding node $node_url to cluster $cluster_name at $cluster_url with services $node_services"
 
-    # The couchbase-cli may exit with an error, so make sure that doesn't cause this whole script to exit with an error
-    set +e
     local out
-    out=$("$COUCHBASE_CLI" "${server_add_args[@]}")
-    set -e
+    out=$(run_couchbase_cli "${server_add_args[@]}")
 
     if string_contains "$out" "SUCCESS: Server added"; then
       log_info "Successfully added node $node_url to cluster $cluster_name."
@@ -356,11 +350,8 @@ function rebalance_cluster {
 
     log_info "Rebalancing cluster $cluster_name with rally point $cluster_url"
 
-    # The couchbase-cli may exit with an error, so make sure that doesn't cause this whole script to exit with an error
-    set +e
     local out
-    out=$("$COUCHBASE_CLI" "${rebalance_args[@]}")
-    set -e
+    out=$(run_couchbase_cli "${rebalance_args[@]}")
 
     if string_contains "$out" "SUCCESS: Rebalance complete"; then
       log_info "Successfully rebalanced cluster $cluster_name."
@@ -552,10 +543,8 @@ function configure_couchbase_server {
   node_init_args+=("--node-init-hostname=$node_hostname")
 
   for (( i=0; i<"$MAX_RETRIES"; i++ )); do
-    set +e
     local out
-    out=$("$COUCHBASE_CLI" "${node_init_args[@]}")
-    set -e
+    out=$(run_couchbase_cli "${node_init_args[@]}")
 
     if string_contains "$out" "SUCCESS: Node initialized"; then
       log_info "Successfully initialized local Couchbase node."
