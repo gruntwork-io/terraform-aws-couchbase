@@ -148,7 +148,10 @@ module "couchbase_target_group" {
   port              = "${module.couchbase_security_group_rules.rest_port}"
   health_check_path = "/ui/index.html"
   vpc_id            = "${data.aws_vpc.default.id}"
-  http_listener_arn = "${lookup(module.load_balancer.http_listener_arns, var.couchbase_load_balancer_port)}"
+
+  listener_arns                   = ["${lookup(module.load_balancer.http_listener_arns, var.couchbase_load_balancer_port)}"]
+  num_listener_arns               = 1
+  listener_rule_starting_priority = 100
 
   # The Couchbase Web Console uses web sockets, so it's best to enable stickiness so each user is routed to the same
   # server
@@ -166,7 +169,10 @@ module "sync_gateway_target_group" {
   port              = "${module.sync_gateway_security_group_rules.interface_port}"
   health_check_path = "/"
   vpc_id            = "${data.aws_vpc.default.id}"
-  http_listener_arn = "${lookup(module.load_balancer.http_listener_arns, var.sync_gateway_load_balancer_port)}"
+
+  listener_arns                   = ["${lookup(module.load_balancer.http_listener_arns, var.sync_gateway_load_balancer_port)}"]
+  num_listener_arns               = 1
+  listener_rule_starting_priority = 100
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

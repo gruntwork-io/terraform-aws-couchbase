@@ -34,24 +34,10 @@ resource "aws_alb_target_group" "tg" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_alb_listener_rule" "http_path" {
-  count = "${var.create_http_listener_rule}"
+  count = "${var.num_listener_arns}"
 
-  listener_arn = "${var.http_listener_arn}"
-  priority     = "${var.http_listener_rule_priority}"
-
-  action {
-    target_group_arn = "${aws_alb_target_group.tg.arn}"
-    type             = "forward"
-  }
-
-  condition = "${var.routing_condition}"
-}
-
-resource "aws_alb_listener_rule" "https_path" {
-  count = "${var.create_https_listener_rule}"
-
-  listener_arn = "${var.https_listener_arn}"
-  priority     = "${var.https_listener_rule_priority}"
+  listener_arn = "${element(var.listener_arns, count.index)}"
+  priority     = "${var.listener_rule_starting_priority + count.index}"
 
   action {
     target_group_arn = "${aws_alb_target_group.tg.arn}"
