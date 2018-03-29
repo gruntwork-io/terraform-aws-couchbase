@@ -25,8 +25,9 @@ To run the Docker image, head into one of the `examples/couchbase-xxx/local-test
 docker-compose up
 ```
 
-Wait 10-15 seconds and then open your browser to http://localhost:8091/ and you will see the Couchbase Web Console!
-You can use the credentials `admin/password` to login.
+Wait 10-15 seconds and then open your browser to http://localhost:8091/ for the single-cluster example or
+http://localhost:7091/ for the multi-cluster example and you will see the Couchbase Web Console! You can use the
+credentials `admin/password` to login.
 
 You can also open your browser to http://localhost:4984 to access Sync Gateway.
 

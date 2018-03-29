@@ -13,14 +13,6 @@ import (
 	"strings"
 )
 
-// The port numbers used by docker-compose.yml in the couchbase-ami example
-var testWebConsolePorts = map[string]int{
-	"ubuntu": 8091,
-}
-var testSyncGatewayPorts = map[string]int{
-	"ubuntu": 4984,
-}
-
 // The username and password we use in all the examples, mocks, and tests
 const usernameForTest = "admin"
 const passwordForTest = "password"

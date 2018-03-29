@@ -60,9 +60,9 @@ services:
     # Couchbase doesn't allow all port numbers to be overridden, so the Erlang Port Mapper service clashes.
     # https://developer.couchbase.com/documentation/server/current/install/install-ports.html
     ports:
-      - "8091:8091"
-      - "8092:8092"
-      - "11210:11210"
+      - "7091:8091"
+      - "7092:8092"
+      - "10210:11210"
 
   couchbase-ubuntu-data-1:
     <<: *couchbase_config
@@ -72,9 +72,10 @@ services:
       # The User Data script that will be executed on boot by entrypoint.sh
       USER_DATA_SCRIPT: /user-data/user-data-couchbase-data-nodes.sh
     ports:
-      - "7091:8091"
-      - "7092:8092"
-      - "10210:11210"
+      # Map these ports to any available port number on the host
+      - "8091"
+      - "8092"
+      - "11210"
 
   couchbase-ubuntu-data-2:
     <<: *couchbase_config
@@ -84,9 +85,10 @@ services:
       # The User Data script that will be executed on boot by entrypoint.sh
       USER_DATA_SCRIPT: /user-data/user-data-couchbase-data-nodes.sh
     ports:
-      - "6091:8091"
-      - "6092:8092"
-      - "9210:11210"
+      # Map these ports to any available port number on the host
+      - "8091"
+      - "8092"
+      - "11210"
 
   couchbase-ubuntu-index-query-search-0:
     <<: *couchbase_config
@@ -100,10 +102,11 @@ services:
       USER_DATA_ENV_index_volume_device_name: /dev/xvdg
       USER_DATA_ENV_index_volume_mount_point: /couchbase-index
     ports:
-      - "5091:8091"
-      - "5092:8092"
-      - "5093:8093"
-      - "5094:8094"
+      # Map these ports to any available port number on the host
+      - "8091"
+      - "8092"
+      - "8093"
+      - "8094"
 
   couchbase-ubuntu-sync-gateway-0:
     <<: *couchbase_config
@@ -117,6 +120,7 @@ services:
       USER_DATA_ENV_sync_gateway_interface: :4984
       USER_DATA_ENV_sync_gateway_admin_interface: 127.0.0.1:4985
     ports:
-      - "4984:4984"
-      - "4985:4985"
+      # Map these ports to any available port number on the host
+      - "3984:4984"
+      - "4985"
 

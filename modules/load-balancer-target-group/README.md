@@ -40,7 +40,7 @@ module "load_balancer" {
   
   name = "${var.cluster_name}"
 
-  http_listener_ports = [8091, 4894]
+  http_listener_ports = [8091, 4984]
 
   # ... (other params omitted) ...
 }
@@ -52,7 +52,7 @@ Note the following:
   than the simpler EC2 health checks. This way, a server will be replaced as soon as it stops responding properly to
   requests, rather than only if the EC2 Instance dies completely. 
 
-* `http_listener_ports`: This tells the Load Balancer to listen for HTTP requests on port 8091 and 4894.
+* `http_listener_ports`: This tells the Load Balancer to listen for HTTP requests on port 8091 and 4984.
   
 To create Target Groups and Listener Rules for Couchbase and Sync Gateway, you need to use the
 `load-balancer-target-group` module as follows:
@@ -87,7 +87,7 @@ module "sync_gateway_target_group" {
   port              = 4985
   health_check_path = "/"
 
-  listener_arns                   = ["${lookup(module.load_balancer.http_listener_arns, 4894)}"]
+  listener_arns                   = ["${lookup(module.load_balancer.http_listener_arns, 4984)}"]
   num_listener_arns               = 1
   listener_rule_starting_priority = 100
 
@@ -102,6 +102,6 @@ Note the following:
   through health checks, and gets replaced if it is failing health checks. 
 
 * `listener_arns`: Specify the ARN of the HTTP listener from the Load Balancer module. The Couchbase Target Group uses
-  Couchbase's port (8091) and the Sync Gateway Target Group uses Sync Gateway's port (4894).
+  Couchbase's port (8091) and the Sync Gateway Target Group uses Sync Gateway's port (4984).
   
    

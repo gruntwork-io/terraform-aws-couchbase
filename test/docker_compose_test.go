@@ -13,15 +13,15 @@ import (
 
 func TestUnitCouchbaseSingleClusterUbuntuInDocker(t *testing.T) {
 	t.Parallel()
-	testCouchbaseInDocker(t, "TestUnitCouchbaseSingleClusterUbuntuInDocker","couchbase-single-cluster", "ubuntu")
+	testCouchbaseInDocker(t, "TestUnitCouchbaseSingleClusterUbuntuInDocker","couchbase-single-cluster", "ubuntu", 8091, 4984)
 }
 
 func TestUnitCouchbaseMultiClusterUbuntuInDocker(t *testing.T) {
 	t.Parallel()
-	testCouchbaseInDocker(t, "TestUnitCouchbaseMultiClusterUbuntuInDocker", "couchbase-multi-cluster","ubuntu")
+	testCouchbaseInDocker(t, "TestUnitCouchbaseMultiClusterUbuntuInDocker", "couchbase-multi-cluster","ubuntu", 7091, 3984)
 }
 
-func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName string, osName string) {
+func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName string, osName string, couchbaseWebConsolePort int, syncGatewayWebConsolePort int) {
 	logger := terralog.NewLogger(testName)
 
 	tmpRootDir, err := files.CopyTerraformFolderToTemp("../", testName)
@@ -45,14 +45,14 @@ func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName str
 	})
 
 	test_structure.RunTestStage("validation", logger, func() {
-		consoleUrl := fmt.Sprintf("http://localhost:%d", testWebConsolePorts[osName])
+		consoleUrl := fmt.Sprintf("http://localhost:%d", couchbaseWebConsolePort)
 		checkCouchbaseConsoleIsRunning(t, consoleUrl, logger)
 
-		dataNodesUrl := fmt.Sprintf("http://%s:%s@localhost:%d", usernameForTest, passwordForTest, testWebConsolePorts[osName])
+		dataNodesUrl := fmt.Sprintf("http://%s:%s@localhost:%d", usernameForTest, passwordForTest, couchbaseWebConsolePort)
 		checkCouchbaseClusterIsInitialized(t, dataNodesUrl, 3, logger)
 		checkCouchbaseDataNodesWorking(t, dataNodesUrl, logger)
 
-		syncGatewayUrl := fmt.Sprintf("http://localhost:%d/mock-couchbase-asg", testSyncGatewayPorts[osName])
+		syncGatewayUrl := fmt.Sprintf("http://localhost:%d/mock-couchbase-asg", syncGatewayWebConsolePort int)
 		checkSyncGatewayWorking(t, syncGatewayUrl, logger)
 	})
 }

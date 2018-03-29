@@ -77,25 +77,27 @@ services:
     <<: *couchbase_config
     container_name: couchbase-ubuntu-1
     ports:
-      - "7091:8091"
-      - "7092:8092"
-      - "7093:8093"
-      - "7094:8094"
-      - "10210:11210"
-      - "8998:9998"
-      - "3984:4984"
-      - "3985:4985"
+      # Map these ports to any available port number on the host
+      - "8091"
+      - "8092"
+      - "8093"
+      - "8094"
+      - "11210"
+      - "9998"
+      - "4984"
+      - "4985"
 
   couchbase-ubuntu-2:
     <<: *couchbase_config
     container_name: couchbase-ubuntu-2
     ports:
-      - "6091:8091"
-      - "6092:8092"
-      - "6093:8093"
-      - "6094:8094"
-      - "9210:11210"
-      - "7998:9998"
-      - "2984:4984"
-      - "2985:4985"
+      # Map these ports to any available port number on the host
+      - "8091"
+      - "8092"
+      - "8093"
+      - "8094"
+      - "11210"
+      - "9998"
+      - "4984"
+      - "4985"
 

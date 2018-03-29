@@ -259,7 +259,8 @@ func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key stri
 }
 
 func checkSyncGatewayWorking(t *testing.T, syncGatewayUrl string, logger *log.Logger) {
-	maxRetries := 60
+	// It can take a LONG time for the Couchbase cluster to rebalance itself, so we may have to wait a while
+	maxRetries := 200
 	sleepBetweenRetries := 5 * time.Second
 
 	err := http_helper.HttpGetWithRetryWithCustomValidation(syncGatewayUrl, maxRetries, sleepBetweenRetries, logger, func(status int, body string) bool {
