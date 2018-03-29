@@ -25,7 +25,7 @@ module "couchbase_data_nodes" {
   cluster_name  = "${var.couchbase_data_node_cluster_name}"
   min_size      = 3
   max_size      = 3
-  instance_type = "t2.medium"
+  instance_type = "t2.micro"
 
   ami_id    = "${var.ami_id}"
   user_data = "${data.template_file.user_data_couchbase_data_nodes.rendered}"
