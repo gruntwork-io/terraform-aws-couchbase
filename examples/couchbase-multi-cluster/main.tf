@@ -324,8 +324,6 @@ module "couchbase_data_nodes_security_group_rules" {
 
   # Make sure all the ports used for node-to-node communication are open to all the clusters
 
-  epmd_port_security_groups                    = ["${module.couchbase_index_query_search_nodes.security_group_id}", "${module.sync_gateway.security_group_id}"]
-  num_epmd_port_security_groups                = 2
   rest_port_security_groups                    = ["${module.couchbase_index_query_search_nodes.security_group_id}", "${module.sync_gateway.security_group_id}"]
   num_rest_port_security_groups                = 2
   capi_port_security_groups                    = ["${module.couchbase_index_query_search_nodes.security_group_id}", "${module.sync_gateway.security_group_id}"]
@@ -338,8 +336,8 @@ module "couchbase_data_nodes_security_group_rules" {
   num_memcached_port_security_groups           = 2
   memcached_dedicated_port_security_groups     = ["${module.couchbase_index_query_search_nodes.security_group_id}", "${module.sync_gateway.security_group_id}"]
   num_memcached_dedicated_port_security_groups = 2
-  internal_data_port_security_groups           = ["${module.couchbase_index_query_search_nodes.security_group_id}", "${module.sync_gateway.security_group_id}"]
-  num_internal_data_port_security_groups       = 2
+  internal_ports_security_groups               = ["${module.couchbase_index_query_search_nodes.security_group_id}", "${module.sync_gateway.security_group_id}"]
+  num_internal_ports_security_groups           = 2
 }
 
 module "couchbase_index_query_search_nodes_security_group_rules" {
@@ -362,8 +360,6 @@ module "couchbase_index_query_search_nodes_security_group_rules" {
 
   # Make sure all the ports used for node-to-node communication are open to all the clusters
 
-  epmd_port_security_groups                    = ["${module.couchbase_data_nodes.security_group_id}", "${module.sync_gateway.security_group_id}"]
-  num_epmd_port_security_groups                = 2
   rest_port_security_groups                    = ["${module.couchbase_data_nodes.security_group_id}", "${module.sync_gateway.security_group_id}"]
   num_rest_port_security_groups                = 2
   capi_port_security_groups                    = ["${module.couchbase_data_nodes.security_group_id}", "${module.sync_gateway.security_group_id}"]
@@ -376,8 +372,8 @@ module "couchbase_index_query_search_nodes_security_group_rules" {
   num_memcached_port_security_groups           = 2
   memcached_dedicated_port_security_groups     = ["${module.couchbase_data_nodes.security_group_id}", "${module.sync_gateway.security_group_id}"]
   num_memcached_dedicated_port_security_groups = 2
-  internal_data_port_security_groups           = ["${module.couchbase_data_nodes.security_group_id}", "${module.sync_gateway.security_group_id}"]
-  num_internal_data_port_security_groups       = 2
+  internal_ports_security_groups               = ["${module.couchbase_data_nodes.security_group_id}", "${module.sync_gateway.security_group_id}"]
+  num_internal_ports_security_groups           = 2
 }
 
 module "sync_gateway_security_group_rules" {
