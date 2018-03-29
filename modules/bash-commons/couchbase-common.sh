@@ -97,6 +97,31 @@ function node_is_active_in_cluster {
   multiline_string_contains "$cluster_status" "$node_url healthy active"
 }
 
+# Returns true (0) if the cluster is currently rebalancing and false (1) otherwise
+function cluster_is_rebalancing {
+  local readonly cluster_url="$1"
+  local readonly cluster_username="$2"
+  local readonly cluster_password="$3"
+
+  log_info "Checking if cluster $cluster_url is currently rebalancing..."
+
+  local server_list_args=()
+  server_list_args+=("rebalance-status")
+  server_list_args+=("--cluster=$cluster_url")
+  server_list_args+=("--username=$cluster_username")
+  server_list_args+=("--password=$cluster_password")
+
+  set +e
+  local out
+  out=$("$COUCHBASE_CLI" "${server_list_args[@]}")
+  set -e
+
+  local status
+  status=$(echo "$out" | jq -r '.status')
+
+  [[ "$status" == "running" ]]
+}
+
 # Return true (0) if the given bucket exists in the given cluster and false (0) otherwise
 function has_bucket {
   local readonly cluster_url="$1"

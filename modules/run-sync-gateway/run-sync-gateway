@@ -202,7 +202,10 @@ function wait_for_couchbase_cluster {
   local readonly cluster_password="$3"
   local readonly bucket="$4"
 
-  for (( i=0; i<"$MAX_RETRIES"; i++ )); do
+  # It can take a LONG time for a Couchbase cluster to rebalance and be available, so do lots of retries
+  local readonly wait_for_cluster_retries=200
+
+  for (( i=0; i<"$wait_for_cluster_retries"; i++ )); do
     if cluster_is_ready "$cluster_url" "$cluster_username" "$cluster_password" "$bucket"; then
       log_info "Cluster $cluster_url is ready!"
       return
@@ -212,7 +215,7 @@ function wait_for_couchbase_cluster {
     fi
   done
 
-  log_error "Cluster $cluster_url still not initialized after $MAX_RETRIES retries."
+  log_error "Cluster $cluster_url still not initialized after $wait_for_cluster_retries retries."
   exit 1
 }
 
@@ -224,6 +227,11 @@ function cluster_is_ready {
 
   if ! cluster_is_initialized "$cluster_url" "$cluster_username" "$cluster_password"; then
     log_warn "Cluster $cluster_url is not yet initialized."
+    return 1
+  fi
+
+  if cluster_is_rebalancing "$cluster_url" "$cluster_username" "$cluster_password"; then
+    log_warn "Cluster $cluster_url is currently rebalancing."
     return 1
   fi
 
