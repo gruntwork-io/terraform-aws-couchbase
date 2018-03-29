@@ -35,7 +35,8 @@ function run_couchbase {
     --rest-port "$cluster_port" \
     --data-dir "$data_dir" \
     --node-services "data" \
-    --use-public-hostname
+    --use-public-hostname \
+    --wait-for-all-nodes
 }
 
 function create_test_resources {

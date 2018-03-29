@@ -86,6 +86,7 @@ Other optional arguments:
   --data-ramsize		The data service memory quota in MB. Only used when initializing a new cluster and if --manage-memory-manually is set.
   --index-ramsize		The index service memory quota in MB. Only used when initializing a new cluster and if --manage-memory-manually is set.
   --fts-ramsize			The full-text service memory quota in MB. Only used when initializing a new cluster and if --manage-memory-manually is set.
+  --wait-for-all-nodes		If this flag is set, this script will wait until all servers in the Couchbase Cluster are added and running.
   --help			Show this help text and exit.
 
 Example:

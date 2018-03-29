@@ -70,6 +70,7 @@ function print_usage {
   echo -e "  --data-ramsize\t\tThe data service memory quota in MB. Only used when initializing a new cluster and if --manage-memory-manually is set."
   echo -e "  --index-ramsize\t\tThe index service memory quota in MB. Only used when initializing a new cluster and if --manage-memory-manually is set."
   echo -e "  --fts-ramsize\t\t\tThe full-text service memory quota in MB. Only used when initializing a new cluster and if --manage-memory-manually is set."
+  echo -e "  --wait-for-all-nodes\t\tIf this flag is set, this script will wait until all servers in the Couchbase Cluster are added and running."
   echo -e "  --help\t\t\tShow this help text and exit."
   echo
   echo "Example:"
@@ -559,6 +560,56 @@ function configure_couchbase_server {
   exit 1
 }
 
+function wait_for_all_nodes_to_be_active_in_cluster {
+  local readonly cluster_url="$1"
+  local readonly cluster_username="$2"
+  local readonly cluster_password="$3"
+  local readonly asg_name="$4"
+  local readonly aws_region="$5"
+  local readonly use_public_ips="$6"
+  local readonly rest_port="$7"
+
+  local hostnames
+  hostnames=($(get_hostnames_in_asg "$asg_name" "$aws_region" "$use_public_ips"))
+  assert_not_empty_or_null "$hostnames" "Hostnames in ASG $asg_name in $aws_region"
+
+  log_info "Waiting for all nodes in the cluster to be in active state..."
+
+  local hostname
+  for hostname in "${hostnames[@]}"; do
+    wait_for_node_to_be_active_in_cluster "$cluster_url" "$cluster_username" "$cluster_password" "$hostname:$rest_port"
+  done
+
+  log_info "${#hostnames[@]} / ${#hostnames[@]} nodes are now active!"
+}
+
+# Wait until the node with the given hostname has already been added (via the server-add command) to the Couchbase
+# cluster and is active (via the rebalance command).
+function wait_for_node_to_be_active_in_cluster {
+  local readonly cluster_url="$1"
+  local readonly cluster_username="$2"
+  local readonly cluster_password="$3"
+  local readonly node_url="$4"
+
+  log_info "Waiting for node $node_url to be active in cluster $cluster_url"
+
+  local readonly node_active_retries=200
+  local readonly sleep_between_retries=5
+
+  for (( i=0; i<"$node_active_retries"; i++ )); do
+    if node_is_active_in_cluster "$cluster_url" "$cluster_username" "$cluster_password" "$node_url"; then
+      log_info "Node $node_url is active in cluster $cluster_url!"
+      return
+    else
+      log_warn "Node $node_url is not yet active in cluster $cluster_url. Will sleep for $sleep_between_retries seconds and check again."
+      sleep "$sleep_between_retries"
+    fi
+  done
+
+  log_error "Node $node_url still not active in cluster $cluster_url after $node_active_retries retries."
+  exit 1
+}
+
 function start_couchbase {
   log_info "Starting Couchbase"
   sudo systemctl enable couchbase-server
@@ -593,6 +644,8 @@ function run {
 
   local data_dir="$DEFAULT_DATA_DIR"
   local index_dir="$DEFAULT_DATA_DIR"
+
+  local wait_for_all_nodes="false"
 
   while [[ $# > 0 ]]; do
     local key="$1"
@@ -697,6 +750,9 @@ function run {
         xdcr_port="$2"
         shift
         ;;
+      --wait-for-all-nodes)
+        wait_for_all_nodes="true"
+        ;;
       --help)
         print_usage
         exit
@@ -787,6 +843,10 @@ function run {
       "$cluster_password" \
       "$node_url" \
       "$node_services"
+  fi
+
+  if [[ "$wait_for_all_nodes" == "true" ]]; then
+    wait_for_all_nodes_to_be_active_in_cluster "$cluster_url" "$cluster_username" "$cluster_password" "$cluster_name" "$aws_region" "$use_public_hostname" "$rest_port"
   fi
 
   log_info "Couchbase server configured successfully!"
