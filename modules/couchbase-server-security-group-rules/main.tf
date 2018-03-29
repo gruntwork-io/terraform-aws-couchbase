@@ -14,7 +14,7 @@ resource "aws_security_group_rule" "rest_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "rest_port_security_groups" {
-  count                    = "${length(var.rest_port_security_groups)}"
+  count                    = "${var.num_rest_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.rest_port}"
   to_port                  = "${var.rest_port}"
@@ -43,7 +43,7 @@ resource "aws_security_group_rule" "ssl_rest_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "ssl_rest_port_security_groups" {
-  count                    = "${length(var.rest_port_security_groups)}"
+  count                    = "${var.num_rest_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.ssl_rest_port}"
   to_port                  = "${var.ssl_rest_port}"
@@ -77,7 +77,7 @@ resource "aws_security_group_rule" "capi_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "capi_port_security_groups" {
-  count                    = "${length(var.capi_port_security_groups)}"
+  count                    = "${var.num_capi_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.capi_port}"
   to_port                  = "${var.capi_port}"
@@ -106,7 +106,7 @@ resource "aws_security_group_rule" "ssl_capi_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "ssl_capi_port_security_groups" {
-  count                    = "${length(var.capi_port_security_groups)}"
+  count                    = "${var.num_capi_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.ssl_capi_port}"
   to_port                  = "${var.ssl_capi_port}"
@@ -140,7 +140,7 @@ resource "aws_security_group_rule" "query_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "query_port_security_groups" {
-  count                    = "${length(var.query_port_security_groups)}"
+  count                    = "${var.num_query_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.query_port}"
   to_port                  = "${var.query_port}"
@@ -169,7 +169,7 @@ resource "aws_security_group_rule" "ssl_query_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "ssl_query_port_security_groups" {
-  count                    = "${length(var.query_port_security_groups)}"
+  count                    = "${var.num_query_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.ssl_query_port}"
   to_port                  = "${var.ssl_query_port}"
@@ -203,7 +203,7 @@ resource "aws_security_group_rule" "fts_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "fts_port_security_groups" {
-  count                    = "${length(var.fts_port_security_groups)}"
+  count                    = "${var.num_fts_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.fts_port}"
   to_port                  = "${var.fts_port}"
@@ -232,7 +232,7 @@ resource "aws_security_group_rule" "ssl_fts_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "ssl_fts_port_security_groups" {
-  count                    = "${length(var.fts_port_security_groups)}"
+  count                    = "${var.num_fts_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.ssl_fts_port}"
   to_port                  = "${var.ssl_fts_port}"
@@ -266,7 +266,7 @@ resource "aws_security_group_rule" "memcached_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "memcached_port_security_groups" {
-  count                    = "${length(var.memcached_port_security_groups)}"
+  count                    = "${var.num_memcached_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.memcached_port}"
   to_port                  = "${var.memcached_port}"
@@ -295,7 +295,7 @@ resource "aws_security_group_rule" "ssl_memcached_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "ssl_memcached_port_security_groups" {
-  count                    = "${length(var.memcached_port_security_groups)}"
+  count                    = "${var.num_memcached_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.ssl_memcached_port}"
   to_port                  = "${var.ssl_memcached_port}"
@@ -329,7 +329,7 @@ resource "aws_security_group_rule" "moxi_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "moxi_port_security_groups" {
-  count                    = "${length(var.moxi_port_security_groups)}"
+  count                    = "${var.num_moxi_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.moxi_port}"
   to_port                  = "${var.moxi_port}"
@@ -363,7 +363,7 @@ resource "aws_security_group_rule" "epmd_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "epmd_port_security_groups" {
-  count                    = "${length(var.epmd_port_security_groups)}"
+  count                    = "${var.num_epmd_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.epmd_port}"
   to_port                  = "${var.epmd_port}"
@@ -397,7 +397,7 @@ resource "aws_security_group_rule" "indexer_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "indexer_port_security_groups" {
-  count                    = "${length(var.indexer_port_security_groups)}"
+  count                    = "${var.num_indexer_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.indexer_start_port_range}"
   to_port                  = "${var.indexer_end_port_range}"
@@ -431,7 +431,7 @@ resource "aws_security_group_rule" "projector_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "projector_port_security_groups" {
-  count                    = "${length(var.projector_port_security_groups)}"
+  count                    = "${var.num_projector_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.projector_port}"
   to_port                  = "${var.projector_port}"
@@ -465,7 +465,7 @@ resource "aws_security_group_rule" "memcached_dedicated_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "memcached_dedicated_port_security_groups" {
-  count                    = "${length(var.memcached_dedicated_port_security_groups)}"
+  count                    = "${var.num_memcached_dedicated_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.memcached_dedicated_port}"
   to_port                  = "${var.memcached_dedicated_port}"
@@ -499,7 +499,7 @@ resource "aws_security_group_rule" "internal_data_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "internal_data_port_security_groups" {
-  count                    = "${length(var.internal_data_port_security_groups)}"
+  count                    = "${var.num_internal_data_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.internal_data_start_port_range}"
   to_port                  = "${var.internal_data_end_port_range}"

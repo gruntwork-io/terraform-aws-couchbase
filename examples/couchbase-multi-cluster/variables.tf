@@ -25,9 +25,19 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-variable "cluster_name" {
-  description = "What to name the Couchbase cluster and all of its associated resources"
-  default     = "couchbase-example"
+variable "couchbase_data_node_cluster_name" {
+  description = "What to name the Couchbase data nodes cluster and all of its associated resources"
+  default     = "couchbase-data"
+}
+
+variable "couchbase_index_query_search_node_cluster_name" {
+  description = "What to name the Couchbase index/query/search nodes cluster and all of its associated resources"
+  default     = "couchbase-search"
+}
+
+variable "sync_gateway_cluster_name" {
+  description = "What to name the Sync Gateway cluster and all of its associated resources"
+  default     = "sync-gateway"
 }
 
 variable "ssh_key_name" {
@@ -60,9 +70,14 @@ variable "volume_owner" {
   default     = "couchbase"
 }
 
-variable "couchbase_load_balancer_port" {
-  description = "The port the load balancer should listen on for Couchbase Web Console requests."
+variable "data_nodes_load_balancer_port" {
+  description = "The port the load balancer should listen on for Couchbase Web Console requests for the data nodes."
   default     = 8091
+}
+
+variable "index_query_search_nodes_load_balancer_port" {
+  description = "The port the load balancer should listen on for Couchbase Web Console requests for the index, query, and search nodes."
+  default     = 9091
 }
 
 variable "sync_gateway_load_balancer_port" {

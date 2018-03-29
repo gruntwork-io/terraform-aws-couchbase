@@ -14,12 +14,21 @@ output "domain_names" {
   value = "${aws_route53_record.load_balancer.*.fqdn}"
 }
 
-output "http_listener_arn" {
-  value = "${element(concat(aws_alb_listener.http.*.arn, list("")), 0)}"
+output "http_listener_arns" {
+  value = ["${zipmap(var.http_listener_ports, aws_alb_listener.http.*.arn)}"]
 }
 
-output "https_listener_arn" {
-  value = "${element(concat(aws_alb_listener.https.*.arn, list("")), 0)}"
+data "template_file" "https_listener_ports" {
+  count    = "${length(var.https_listener_ports_and_certs)}"
+  template = "${lookup(var.https_listener_ports_and_certs[count.index], "port")}"
+}
+
+output "https_listener_arns" {
+  value = ["${zipmap(data.template_file.https_listener_ports.*.rendered, aws_alb_listener.https.*.arn)}"]
+}
+
+output "all_listener_arns" {
+  value = ["${merge(zipmap(var.http_listener_ports, aws_alb_listener.http.*.arn), zipmap(data.template_file.https_listener_ports.*.rendered, aws_alb_listener.https.*.arn))}"]
 }
 
 output "security_group_id" {

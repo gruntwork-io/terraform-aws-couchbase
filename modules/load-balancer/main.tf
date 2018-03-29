@@ -22,10 +22,10 @@ resource "aws_alb" "lb" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_alb_listener" "http" {
-  count = "${var.include_http_listener}"
+  count = "${length(var.http_listener_ports)}"
 
   load_balancer_arn = "${aws_alb.lb.arn}"
-  port              = "${var.http_port}"
+  port              = "${element(var.http_listener_ports, count.index)}"
   protocol          = "HTTP"
 
   default_action {
@@ -35,12 +35,12 @@ resource "aws_alb_listener" "http" {
 }
 
 resource "aws_alb_listener" "https" {
-  count = "${var.include_https_listener}"
+  count = "${length(var.https_listener_ports_and_certs)}"
 
   load_balancer_arn = "${aws_alb.lb.arn}"
-  port              = "${var.https_port}"
+  port              = "${lookup(var.https_listener_ports_and_certs[count.index], "port")}"
   protocol          = "HTTPS"
-  certificate_arn   = "${var.certificate_arn}"
+  certificate_arn   = "${lookup(var.https_listener_ports_and_certs[count.index], "certificate_arn")}"
 
   default_action {
     target_group_arn = "${length(var.default_target_group_arn) > 0 ? var.default_target_group_arn : element(concat(aws_alb_target_group.black_hole.*.arn, list("")), 0)}"
@@ -88,43 +88,43 @@ resource "aws_security_group_rule" "allow_all_outbound" {
 }
 
 resource "aws_security_group_rule" "allow_http_inbound_from_cidr_blocks" {
-  count             = "${var.include_http_listener && length(var.allow_http_inbound_from_cidr_blocks) > 0 ? 1 : 0}"
+  count             = "${length(var.http_listener_ports)}"
   type              = "ingress"
-  from_port         = "${var.http_port}"
-  to_port           = "${var.http_port}"
+  from_port         = "${element(var.http_listener_ports, count.index)}"
+  to_port           = "${element(var.http_listener_ports, count.index)}"
   protocol          = "tcp"
   security_group_id = "${aws_security_group.sg.id}"
-  cidr_blocks       = ["${var.allow_http_inbound_from_cidr_blocks}"]
+  cidr_blocks       = ["${var.allow_inbound_from_cidr_blocks}"]
 }
 
 resource "aws_security_group_rule" "allow_http_inbound_from_security_groups" {
-  count                    = "${var.include_http_listener && length(var.allow_http_inbound_from_security_groups) > 0 ? length(var.allow_http_inbound_from_security_groups) : 0}"
+  count                    = "${length(var.http_listener_ports) * length(var.allow_inbound_from_security_groups)}"
   type                     = "ingress"
-  from_port                = "${var.http_port}"
-  to_port                  = "${var.http_port}"
+  from_port                = "${element(var.http_listener_ports, count.index)}"
+  to_port                  = "${element(var.http_listener_ports, count.index)}"
   protocol                 = "tcp"
   security_group_id        = "${aws_security_group.sg.id}"
-  source_security_group_id = "${element(var.allow_http_inbound_from_security_groups, count.index)}"
+  source_security_group_id = "${element(var.allow_inbound_from_security_groups, count.index)}"
 }
 
 resource "aws_security_group_rule" "allow_https_inbound_from_cidr_blocks" {
-  count             = "${var.include_http_listener && length(var.allow_http_inbound_from_cidr_blocks) > 0 ? 1 : 0}"
+  count             = "${length(var.https_listener_ports_and_certs)}"
   type              = "ingress"
-  from_port         = "${var.https_port}"
-  to_port           = "${var.https_port}"
+  from_port         = "${lookup(var.https_listener_ports_and_certs[count.index], "port")}"
+  to_port           = "${lookup(var.https_listener_ports_and_certs[count.index], "port")}"
   protocol          = "tcp"
   security_group_id = "${aws_security_group.sg.id}"
-  cidr_blocks       = ["${var.allow_http_inbound_from_cidr_blocks}"]
+  cidr_blocks       = ["${var.allow_inbound_from_cidr_blocks}"]
 }
 
 resource "aws_security_group_rule" "allow_https_inbound_from_security_groups" {
-  count                    = "${var.include_http_listener && length(var.allow_http_inbound_from_security_groups) > 0 ? length(var.allow_http_inbound_from_security_groups) : 0}"
+  count                    = "${length(var.https_listener_ports_and_certs) * length(var.num_inbound_security_groups)}"
   type                     = "ingress"
-  from_port                = "${var.https_port}"
-  to_port                  = "${var.https_port}"
+  from_port                = "${lookup(var.https_listener_ports_and_certs[count.index], "port")}"
+  to_port                  = "${lookup(var.https_listener_ports_and_certs[count.index], "port")}"
   protocol                 = "tcp"
   security_group_id        = "${aws_security_group.sg.id}"
-  source_security_group_id = "${element(var.allow_http_inbound_from_security_groups, count.index)}"
+  source_security_group_id = "${element(var.allow_inbound_from_security_groups, count.index)}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

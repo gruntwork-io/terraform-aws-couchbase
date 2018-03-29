@@ -13,14 +13,6 @@ terraform {
   required_version = ">= 0.10.3"
 }
 
-locals {
-  data_volume_device_name  = "/dev/xvdh"
-  data_volume_mount_point  = "/couchbase-data"
-  index_volume_device_name = "/dev/xvdi"
-  index_volume_mount_point = "/couchbase-index"
-  volume_owner             = "couchbase"
-}
-
 # ---------------------------------------------------------------------------------------------------------------------
 # DEPLOY THE COUCHBASE CLUSTER
 # ---------------------------------------------------------------------------------------------------------------------
@@ -46,13 +38,13 @@ module "couchbase" {
   # directory.
   ebs_block_devices = [
     {
-      device_name = "${local.data_volume_device_name}"
+      device_name = "${var.data_volume_device_name}"
       volume_type = "gp2"
       volume_size = 50
       encrypted   = true
     },
     {
-      device_name = "${local.index_volume_device_name}"
+      device_name = "${var.index_volume_device_name}"
       volume_type = "gp2"
       volume_size = 50
       encrypted   = true
@@ -103,11 +95,11 @@ data "template_file" "user_data_server" {
 
     # Pass in the data about the EBS volumes so they can be mounted
 
-    data_volume_device_name  = "${local.data_volume_device_name}"
-    data_volume_mount_point  = "${local.data_volume_mount_point}"
-    index_volume_device_name = "${local.index_volume_device_name}"
-    index_volume_mount_point = "${local.index_volume_mount_point}"
-    volume_owner             = "${local.volume_owner}"
+    data_volume_device_name  = "${var.data_volume_device_name}"
+    data_volume_mount_point  = "${var.data_volume_mount_point}"
+    index_volume_device_name = "${var.index_volume_device_name}"
+    index_volume_mount_point = "${var.index_volume_mount_point}"
+    volume_owner             = "${var.volume_owner}"
   }
 }
 
@@ -117,7 +109,7 @@ data "template_file" "user_data_server" {
 # we do NOT route any traffic to other Couchbase APIs/ports: https://blog.couchbase.com/couchbase-101-q-and-a/
 # ---------------------------------------------------------------------------------------------------------------------
 
-module "couchbase_load_balancer" {
+module "load_balancer" {
   # When using these modules in your own code, you will need to use a Git URL with a ref attribute that pins you
   # to a specific version of the modules, such as the following example:
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/load-balancer?ref=v0.0.1"
@@ -127,13 +119,19 @@ module "couchbase_load_balancer" {
   vpc_id     = "${data.aws_vpc.default.id}"
   subnet_ids = "${data.aws_subnet_ids.default.ids}"
 
+  http_listener_ports            = ["${var.couchbase_load_balancer_port}", "${var.sync_gateway_load_balancer_port}"]
+  https_listener_ports_and_certs = []
+
   # To make testing easier, we allow inbound connections from any IP. In production usage, you may want to only allow
   # connectsion from certain trusted servers, or even use an internal load balancer, so it's only accessible from
   # within the VPC
 
-  allow_http_inbound_from_cidr_blocks = ["0.0.0.0/0"]
-  internal                            = false
-  # An example of custom tags
+  allow_inbound_from_cidr_blocks = ["0.0.0.0/0"]
+  internal                       = false
+  # Since Sync Gateway and Couchbase Lite can have long running connections for changes feeds, we recommend setting the
+  # idle timeout to the maximum value of 3,600 seconds (1 hour)
+  # https://developer.couchbase.com/documentation/mobile/1.5/guides/sync-gateway/nginx/index.html#aws-elastic-load-balancer-elb
+  idle_timeout = 3600
   tags = {
     Name = "${var.cluster_name}"
   }
@@ -150,42 +148,11 @@ module "couchbase_target_group" {
   port              = "${module.couchbase_security_group_rules.rest_port}"
   health_check_path = "/ui/index.html"
   vpc_id            = "${data.aws_vpc.default.id}"
-  http_listener_arn = "${module.couchbase_load_balancer.http_listener_arn}"
+  http_listener_arn = "${module.load_balancer.http_listener_arns[var.couchbase_load_balancer_port]}"
 
   # The Couchbase Web Console uses web sockets, so it's best to enable stickiness so each user is routed to the same
   # server
   enable_stickiness = true
-}
-
-# ---------------------------------------------------------------------------------------------------------------------
-# DEPLOY A LOAD BALANCER FOR SYNC GATEWAY
-# We use this load balancer to (1) perform health checks and (2) route traffic to Sync Gateway
-# ---------------------------------------------------------------------------------------------------------------------
-
-module "sync_gateway_load_balancer" {
-  # When using these modules in your own code, you will need to use a Git URL with a ref attribute that pins you
-  # to a specific version of the modules, such as the following example:
-  # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/load-balancer?ref=v0.0.1"
-  source = "../../modules/load-balancer"
-
-  name       = "${var.cluster_name}-sg"
-  vpc_id     = "${data.aws_vpc.default.id}"
-  subnet_ids = "${data.aws_subnet_ids.default.ids}"
-
-  # To make testing easier, we allow inbound connections from any IP. In production usage, you may want to only allow
-  # connectsion from certain trusted servers, or even use an internal load balancer, so it's only accessible from
-  # within the VPC
-
-  allow_http_inbound_from_cidr_blocks = ["0.0.0.0/0"]
-  internal                            = false
-  # Since Sync Gateway and Couchbase Lite can have long running connections for changes feeds, we recommend setting the
-  # idle timeout to the maximum value of 3,600 seconds (1 hour)
-  # https://developer.couchbase.com/documentation/mobile/1.5/guides/sync-gateway/nginx/index.html#aws-elastic-load-balancer-elb
-  idle_timeout = 3600
-  # An example of custom tags
-  tags = {
-    Name = "${var.cluster_name}"
-  }
 }
 
 module "sync_gateway_target_group" {
@@ -199,7 +166,7 @@ module "sync_gateway_target_group" {
   port              = "${module.sync_gateway_security_group_rules.interface_port}"
   health_check_path = "/"
   vpc_id            = "${data.aws_vpc.default.id}"
-  http_listener_arn = "${module.sync_gateway_load_balancer.http_listener_arn}"
+  http_listener_arn = "${module.load_balancer.http_listener_arns[var.sync_gateway_load_balancer_port]}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
