@@ -7,8 +7,9 @@ import (
 	terralog "github.com/gruntwork-io/terratest/log"
 	"fmt"
 	"github.com/gruntwork-io/terratest/test-structure"
-	"github.com/gruntwork-io/terratest/aws"
 )
+
+const COUCHBASE_CLUSTER_VAR_NAME = "cluster_name"
 
 func TestCouchbaseSingleClusterUbuntu(t *testing.T) {
 	t.Parallel()
@@ -23,11 +24,8 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 	couchbaseSingleClusterDir := filepath.Join(examplesFolder, "couchbase-single-cluster")
 
 	test_structure.RunTestStage("setup_ami", logger, func() {
-		resourceCollection := createBaseRandomResourceCollection(t)
-		amiId := buildCouchbaseWithPacker(t, logger, fmt.Sprintf("%s-ami", osName), resourceCollection.AwsRegion, couchbaseAmiDir)
-
-		test_structure.SaveAmiId(t, couchbaseSingleClusterDir, amiId, logger)
-		test_structure.SaveRandomResourceCollection(t, couchbaseSingleClusterDir, resourceCollection, logger)
+		testStageBuildCouchbaseAmi(t, osName, couchbaseAmiDir, couchbaseSingleClusterDir, logger)
+		
 	})
 
 	test_structure.RunTestStage("setup_deploy", logger, func() {
@@ -38,7 +36,7 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 		terratestOptions.Vars = map[string]interface{} {
 			"aws_region": resourceCollection.AwsRegion,
 			"ami_id": amiId,
-			"cluster_name": formatClusterName(resourceCollection),
+			COUCHBASE_CLUSTER_VAR_NAME: fmt.Sprintf("single-cluster-%s", resourceCollection.UniqueId),
 		}
 
 		deploy(t, terratestOptions)
@@ -47,29 +45,11 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 	})
 
 	defer test_structure.RunTestStage("teardown", logger, func() {
-		resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseSingleClusterDir, logger)
-		terratestOptions := test_structure.LoadTerratestOptions(t, couchbaseSingleClusterDir, logger)
-
-		if _, err := terratest.Destroy(terratestOptions, resourceCollection); err != nil {
-			t.Fatalf("Failed to run destory: %v", err)
-		}
-
-		test_structure.CleanupAmiId(t, couchbaseSingleClusterDir, logger)
-		test_structure.CleanupTerratestOptions(t, couchbaseSingleClusterDir, logger)
-		test_structure.CleanupRandomResourceCollection(t, couchbaseSingleClusterDir, logger)
+		testStageTeardown(t, couchbaseSingleClusterDir, logger)
 	})
 
 	defer test_structure.RunTestStage("logs", logger, func() {
-		resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseSingleClusterDir, logger)
-
-		logs, err := aws.GetSyslogForInstancesInAsg(formatClusterName(resourceCollection), resourceCollection.AwsRegion, logger)
-		if err != nil {
-			t.Fatalf("Failed to fetch syslog: %v", err)
-		}
-
-		for instanceId, syslog := range logs {
-			logger.Printf("Logs for instance %s in %s:\n\n%s\n\n", instanceId, resourceCollection.AwsRegion, syslog)
-		}
+		testStageLogs(t, couchbaseSingleClusterDir, COUCHBASE_CLUSTER_VAR_NAME, logger)
 	})
 
 	test_structure.RunTestStage("validation", logger, func() {
@@ -88,7 +68,7 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 		syncGatewayUrl = fmt.Sprintf("http://%s/%s", syncGatewayUrl, terratestOptions.Vars["cluster_name"])
 
 		checkCouchbaseConsoleIsRunning(t, couchbaseServerUrl, logger)
-		checkCouchbaseClusterIsInitialized(t, couchbaseServerUrl, logger)
+		checkCouchbaseClusterIsInitialized(t, couchbaseServerUrl, 3, logger)
 		checkCouchbaseDataNodesWorking(t, couchbaseServerUrl, logger)
 		checkSyncGatewayWorking(t, syncGatewayUrl, logger)
 	})

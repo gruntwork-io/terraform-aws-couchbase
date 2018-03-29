@@ -13,10 +13,15 @@ import (
 
 func TestUnitCouchbaseSingleClusterUbuntuInDocker(t *testing.T) {
 	t.Parallel()
-	testCouchbaseInDocker(t, "TestUnitCouchbaseSingleClusterUbuntuInDocker","ubuntu")
+	testCouchbaseInDocker(t, "TestUnitCouchbaseSingleClusterUbuntuInDocker","couchbase-single-cluster", "ubuntu")
 }
 
-func testCouchbaseInDocker(t *testing.T, testName string, osName string) {
+func TestUnitCouchbaseMultiClusterUbuntuInDocker(t *testing.T) {
+	t.Parallel()
+	testCouchbaseInDocker(t, "TestUnitCouchbaseMultiClusterUbuntuInDocker", "couchbase-multi-cluster","ubuntu")
+}
+
+func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName string, osName string) {
 	logger := terralog.NewLogger(testName)
 
 	tmpRootDir, err := files.CopyTerraformFolderToTemp("../", testName)
@@ -24,7 +29,7 @@ func testCouchbaseInDocker(t *testing.T, testName string, osName string) {
 		t.Fatal(err)
 	}
 	couchbaseAmiDir := filepath.Join(tmpRootDir, "examples", "couchbase-ami")
-	couchbaseSingleClusterDockerDir := filepath.Join(tmpRootDir, "examples", "couchbase-single-cluster", "local-test")
+	couchbaseSingleClusterDockerDir := filepath.Join(tmpRootDir, "examples", examplesFolderName, "local-test")
 
 	test_structure.RunTestStage("setup_image", logger, func() {
 		buildCouchbaseWithPacker(t, logger, fmt.Sprintf("%s-docker", osName), "us-east-1", couchbaseAmiDir)
@@ -44,7 +49,7 @@ func testCouchbaseInDocker(t *testing.T, testName string, osName string) {
 		checkCouchbaseConsoleIsRunning(t, consoleUrl, logger)
 
 		dataNodesUrl := fmt.Sprintf("http://%s:%s@localhost:%d", usernameForTest, passwordForTest, testWebConsolePorts[osName])
-		checkCouchbaseClusterIsInitialized(t, dataNodesUrl, logger)
+		checkCouchbaseClusterIsInitialized(t, dataNodesUrl, 3, logger)
 		checkCouchbaseDataNodesWorking(t, dataNodesUrl, logger)
 
 		syncGatewayUrl := fmt.Sprintf("http://localhost:%d/mock-couchbase-asg", testSyncGatewayPorts[osName])
