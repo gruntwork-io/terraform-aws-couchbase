@@ -52,7 +52,7 @@ func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName str
 		checkCouchbaseClusterIsInitialized(t, dataNodesUrl, 3, logger)
 		checkCouchbaseDataNodesWorking(t, dataNodesUrl, logger)
 
-		syncGatewayUrl := fmt.Sprintf("http://localhost:%d/mock-couchbase-asg", syncGatewayWebConsolePort int)
+		syncGatewayUrl := fmt.Sprintf("http://localhost:%d/mock-couchbase-asg", syncGatewayWebConsolePort)
 		checkSyncGatewayWorking(t, syncGatewayUrl, logger)
 	})
 }
