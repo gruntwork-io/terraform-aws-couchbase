@@ -27,7 +27,7 @@ This folder defines a [Terraform module](https://www.terraform.io/docs/modules/u
 code by adding a `module` configuration and setting its `source` parameter to URL of this folder:
 
 ```hcl
-module "couchbase_load_balancer" {
+module "load_balancer" {
   # TODO: replace <VERSION> with the latest version from the releases page: https://github.com/gruntwork-io/terraform-aws-couchbase/releases
   source = "github.com/gruntwork/terraform-aws-couchbase//modules/load-balancer?ref=<VERSION>"
   
@@ -35,7 +35,17 @@ module "couchbase_load_balancer" {
   vpc_id     = "vpc-abcd1234"
   subnet_ids = ["subnet-abcd1234", "subnet-efgh5678"]
 
-  allow_http_inbound_from_cidr_blocks = ["0.0.0.0/0"]
+  http_listener_ports = [80]
+
+  https_listener_ports_and_certs = [
+    {
+      port = 443
+      certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"
+    }
+  ]
+  
+  allow_
+  inbound_from_cidr_blocks = ["0.0.0.0/0"]
 
   # ... See vars.tf for the other parameters you must define for this module
 }
@@ -51,8 +61,13 @@ Note the following:
   this repo. That way, instead of using the latest version of this module from the `master` branch, which 
   will change every time you run Terraform, you're using a fixed version of the repo.
 
-* `allow_http_inbound_from_cidr_blocks`: Use this variable to specify which IP address ranges can connect to the Load
-  Balancer. You can also use `allow_http_inbound_from_security_groups` to allow specific security groups to connect.
+* `http_listener_ports`: Which ports the load balancer should listen on for HTTP requests.
+
+* `https_listener_ports_and_certs`: Whic ports the load balancer should listen on for HTTPS requests and which TLS
+  certs to use with those ports.
+
+* `allow_inbound_from_cidr_blocks`: Use this variable to specify which IP address ranges can connect to the Load
+  Balancer. You can also use `allow_inbound_from_security_groups` to allow specific security groups to connect.
 
 
 
@@ -61,13 +76,11 @@ Note the following:
 
 The ALB in this module is configured as follows:
 
-1. **Listeners**: If the `include_http_listener` parameter is true (default: `true`), the Load Balancer will listen on 
-   the default HTTP port 80 (configurable via the `http_port` parameter). If the `include_https_listener` parameter is 
-   true (default: `false`) the Load Balancer will listen on the default HTTPS port 443 (configurable via the `https_port` 
-   parameter).
+1. **Listeners**: The Load Balancer will create a listener for each port specified in `http_listener_ports` and
+   `https_listener_ports_and_certs`.
 
-1. **TLS certificates**: If the `include_https_listener` parameter is true, you must specify a TLS certificate to use
-   via the `certificate_arn` parameter. This must be the ARN of a certificate in 
+1. **TLS certificates**: Each port you specify via the `https_listener_ports_and_certs` should also include a
+   `certificate_arn` parameter to specify the ARN of a TLS certificate. This must be the ARN of a certificate in
    [ACM](https://aws.amazon.com/certificate-manager/) or 
    [IAM](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_server-certs.html).
    
