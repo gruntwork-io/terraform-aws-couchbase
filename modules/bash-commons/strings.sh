@@ -56,7 +56,15 @@ function join {
   shift
   local readonly values=("$@")
 
-  printf "%s$separator" "${values[@]}" | sed "s/$separator$//"
+  local out=""
+  for (( i=0; i<"${#values[@]}"; i++ )); do
+    if [[ "$i" -gt 0 ]]; then
+      out="${out}${separator}"
+    fi
+    out="${out}${values[i]}"
+  done
+
+  echo -n "$out"
 }
 
 function string_contains {
