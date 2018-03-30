@@ -18,7 +18,7 @@ func TestUnitCouchbaseSingleClusterUbuntuInDocker(t *testing.T) {
 
 func TestUnitCouchbaseMultiClusterUbuntuInDocker(t *testing.T) {
 	t.Parallel()
-	testCouchbaseInDocker(t, "TestUnitCouchbaseMultiClusterUbuntuInDocker", "couchbase-multi-cluster","ubuntu", 4,7091, 3984)
+	testCouchbaseInDocker(t, "TestUnitCouchbaseMultiClusterUbuntuInDocker", "couchbase-multi-cluster","ubuntu", 3,7091, 3984)
 }
 
 func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName string, osName string, clusterSize int, couchbaseWebConsolePort int, syncGatewayWebConsolePort int) {

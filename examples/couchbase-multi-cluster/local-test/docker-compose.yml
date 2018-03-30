@@ -46,7 +46,7 @@ services:
       # the User Data script, with the USER_DATA_ENV_ portion stripped off.
       USER_DATA_ENV_cluster_asg_name: mock-couchbase-asg
       USER_DATA_ENV_cluster_port: 8091
-      USER_DATA_ENV_cluster_size: 3
+      USER_DATA_ENV_cluster_size: 2
       USER_DATA_ENV_mock_aws_region: us-east-1
       USER_DATA_ENV_mock_availability_zone: us-east-1a
       USER_DATA_ENV_data_volume_device_name: /dev/xvdf
@@ -67,19 +67,6 @@ services:
   couchbase-ubuntu-data-1:
     <<: *couchbase_config
     container_name: couchbase-ubuntu-data-1
-    environment:
-      <<: *default_env
-      # The User Data script that will be executed on boot by entrypoint.sh
-      USER_DATA_SCRIPT: /user-data/user-data-couchbase-data-nodes.sh
-    ports:
-      # Map these ports to any available port number on the host
-      - "8091"
-      - "8092"
-      - "11210"
-
-  couchbase-ubuntu-data-2:
-    <<: *couchbase_config
-    container_name: couchbase-ubuntu-data-2
     environment:
       <<: *default_env
       # The User Data script that will be executed on boot by entrypoint.sh
