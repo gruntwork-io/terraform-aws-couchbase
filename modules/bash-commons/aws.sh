@@ -36,7 +36,7 @@ function get_instance_tag {
     local tag_value
     tag_value=$(echo "$tags" | jq -r ".Tags[] | select(.Key == \"$tag_key\") | .Value")
 
-    if is_empty_aws_response "$tag_value"; then
+    if is_empty_or_null "$tag_value"; then
       log_warn "Instance $instance_id in $instance_region does not yet seem to have tag $tag_key. Will sleep for $AWS_SLEEP_BETWEEN_RETRIES_SEC seconds and check again."
       sleep "$AWS_SLEEP_BETWEEN_RETRIES_SEC"
     else
@@ -84,13 +84,26 @@ function get_asg_size {
   local readonly asg_name="$1"
   local readonly aws_region="$2"
 
-  log_info "Looking up the size of the Auto Scaling Group $asg_name in $aws_region"
+  for (( i=0; i<"$AWS_MAX_RETRIES"; i++ )); do
+    log_info "Looking up the size of the Auto Scaling Group $asg_name in $aws_region"
 
-  local asg_json
-  asg_json=$(describe_asg "$asg_name" "$aws_region")
-  assert_not_empty_or_null "$asg_json" "Description of ASG $asg_name"
+    local asg_json
+    asg_json=$(describe_asg "$asg_name" "$aws_region")
 
-  echo "$asg_json" | jq -r '.AutoScalingGroups[0].DesiredCapacity'
+    local desired_capacity
+    desired_capacity=$(echo "$asg_json" | jq -r '.AutoScalingGroups[0]?.DesiredCapacity')
+
+    if is_empty_aws_response "$desired_capacity"; then
+      log_warn "Could not find desired capacity for ASG $asg_name. Perhaps the ASG has not been created yet? Will sleep for $AWS_SLEEP_BETWEEN_RETRIES_SEC and check again. AWS response:\n$asg_json"
+      sleep "$AWS_SLEEP_BETWEEN_RETRIES_SEC"
+    else
+      echo -n "$desired_capacity"
+      return
+    fi
+  done
+
+  log_error "Could not find size of ASG $asg_name after $AWS_MAX_RETRIES retries."
+  exit 1
 }
 
 # Describe the running instances in the given ASG and region. This method will retry until it is able to get the
