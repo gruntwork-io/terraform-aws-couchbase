@@ -59,6 +59,7 @@ func testCouchbaseMultiCluster(t *testing.T, testName string, osName string) {
 
 	test_structure.RunTestStage("validation", logger, func() {
 		terratestOptions := test_structure.LoadTerratestOptions(t, couchbaseMultiClusterDir, logger)
+		clusterName := getClusterName(t, syncGatewayClusterVarName, terratestOptions)
 
 		couchbaseDataNodesUrl, err := terratest.OutputRequired(terratestOptions, "couchbase_data_nodes_web_console_url")
 		if err != nil {
@@ -76,7 +77,7 @@ func testCouchbaseMultiCluster(t *testing.T, testName string, osName string) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		syncGatewayUrl = fmt.Sprintf("http://%s/%s", syncGatewayUrl, terratestOptions.Vars["cluster_name"])
+		syncGatewayUrl = fmt.Sprintf("http://%s/%s", syncGatewayUrl, clusterName)
 
 		checkCouchbaseConsoleIsRunning(t, couchbaseDataNodesUrl, logger)
 		checkCouchbaseClusterIsInitialized(t, couchbaseDataNodesUrl, 5, logger)

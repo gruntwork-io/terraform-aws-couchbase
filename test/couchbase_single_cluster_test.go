@@ -9,7 +9,7 @@ import (
 	"github.com/gruntwork-io/terratest/test-structure"
 )
 
-const COUCHBASE_CLUSTER_VAR_NAME = "cluster_name"
+const couchbaseClusterVarName = "cluster_name"
 
 func TestCouchbaseSingleClusterUbuntu(t *testing.T) {
 	t.Parallel()
@@ -34,9 +34,9 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 
 		terratestOptions := createBaseTerratestOptions(t, testName, couchbaseSingleClusterDir, resourceCollection)
 		terratestOptions.Vars = map[string]interface{} {
-			"aws_region": resourceCollection.AwsRegion,
-			"ami_id": amiId,
-			COUCHBASE_CLUSTER_VAR_NAME: fmt.Sprintf("single-cluster-%s", resourceCollection.UniqueId),
+			"aws_region":            resourceCollection.AwsRegion,
+			"ami_id":                amiId,
+			couchbaseClusterVarName: fmt.Sprintf("single-cluster-%s", resourceCollection.UniqueId),
 		}
 
 		deploy(t, terratestOptions)
@@ -49,11 +49,12 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 	})
 
 	defer test_structure.RunTestStage("logs", logger, func() {
-		testStageLogs(t, couchbaseSingleClusterDir, COUCHBASE_CLUSTER_VAR_NAME, logger)
+		testStageLogs(t, couchbaseSingleClusterDir, couchbaseClusterVarName, logger)
 	})
 
 	test_structure.RunTestStage("validation", logger, func() {
 		terratestOptions := test_structure.LoadTerratestOptions(t, couchbaseSingleClusterDir, logger)
+		clusterName := getClusterName(t, couchbaseClusterVarName, terratestOptions)
 
 		couchbaseServerUrl, err := terratest.OutputRequired(terratestOptions, "couchbase_web_console_url")
 		if err != nil {
@@ -65,7 +66,7 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		syncGatewayUrl = fmt.Sprintf("http://%s/%s", syncGatewayUrl, terratestOptions.Vars["cluster_name"])
+		syncGatewayUrl = fmt.Sprintf("http://%s/%s", syncGatewayUrl, clusterName)
 
 		checkCouchbaseConsoleIsRunning(t, couchbaseServerUrl, logger)
 		checkCouchbaseClusterIsInitialized(t, couchbaseServerUrl, 3, logger)

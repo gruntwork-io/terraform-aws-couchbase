@@ -293,15 +293,20 @@ func testStageTeardown(t *testing.T, couchbaseTerraformDir string, logger *log.L
 	test_structure.CleanupRandomResourceCollection(t, couchbaseTerraformDir, logger)
 }
 
-func testStageLogs(t *testing.T, couchbaseTerraformDir string, clusterVarName string, logger *log.Logger) {
-	resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseTerraformDir, logger)
-	terratestOptions := test_structure.LoadTerratestOptions(t, couchbaseTerraformDir, logger)
-
+func getClusterName(t *testing.T, clusterVarName string, terratestOptions *terratest.TerratestOptions) string {
 	clusterNameVal, ok := terratestOptions.Vars[clusterVarName]
 	if !ok {
 		t.Fatalf("Could not find cluster name in TerratestOptions Var %s", clusterVarName)
 	}
-	clusterName := fmt.Sprintf("%v", clusterNameVal)
+
+	return fmt.Sprintf("%v", clusterNameVal)
+}
+
+func testStageLogs(t *testing.T, couchbaseTerraformDir string, clusterVarName string, logger *log.Logger) {
+	resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseTerraformDir, logger)
+	terratestOptions := test_structure.LoadTerratestOptions(t, couchbaseTerraformDir, logger)
+
+	clusterName := getClusterName(t, clusterVarName, terratestOptions)
 
 	logs, err := aws.GetSyslogForInstancesInAsg(clusterName, resourceCollection.AwsRegion, logger)
 	if err != nil {
