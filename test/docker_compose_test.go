@@ -36,7 +36,7 @@ func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName str
 	})
 
 	test_structure.RunTestStage("setup_docker", logger, func() {
-		startCouchbaseWithDockerCompose(t, osName, couchbaseSingleClusterDockerDir, logger)
+		startCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, logger)
 	})
 
 	defer test_structure.RunTestStage("teardown", logger, func() {
@@ -57,41 +57,33 @@ func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName str
 	})
 }
 
-func startCouchbaseWithDockerCompose(t *testing.T, os string, exampleDir string, logger *log.Logger) {
-	cmd := shell.Command{
-		Command:    "docker-compose",
-		Args:       []string{"up", "-d"},
-		WorkingDir: exampleDir,
-	}
-
-	if err := shell.RunCommand(cmd, logger); err != nil {
-		t.Fatalf("Failed to start Couchbase using Docker Compose: %v", err)
-	}
+func startCouchbaseWithDockerCompose(t *testing.T, exampleDir string, logger *log.Logger) {
+	runDockerCompose(t, exampleDir, logger, "up", "-d")
 }
 
 func getDockerComposeLogs(t *testing.T, exampleDir string, logger *log.Logger) {
-	logger.Printf("Fetching docker-compse logs:")
-
-	cmd := shell.Command{
-		Command:    "docker-compose",
-		Args:       []string{"logs"},
-		WorkingDir: exampleDir,
-	}
-
-	if err := shell.RunCommand(cmd, logger); err != nil {
-		t.Fatalf("Failed to get Docker Compose logs: %v", err)
-	}
+	logger.Printf("Fetching docker-compose logs:")
+	runDockerCompose(t, exampleDir, logger, "logs")
 }
 
 func stopCouchbaseWithDockerCompose(t *testing.T, exampleDir string, logger *log.Logger) {
+	runDockerCompose(t, exampleDir, logger, "down")
+}
+
+func runDockerCompose(t *testing.T, exampleDir string, logger *log.Logger, args ... string) {
 	cmd := shell.Command{
 		Command:    "docker-compose",
-		Args:       []string{"down"},
+		Args:       args,
 		WorkingDir: exampleDir,
+		Env: map[string]string{
+			// Without this line, running docker-compose up in parallel gives the error "Renaming a container with the
+			// same name as its current name". This is because Docker-compose has no way of knowing different containers
+			// are from a different "project" unless we tell it so directly. https://github.com/docker/compose/issues/3966#issuecomment-248773016
+			"COMPOSE_PROJECT_NAME": filepath.Base(exampleDir),
+		},
 	}
 
 	if err := shell.RunCommand(cmd, logger); err != nil {
-		t.Fatalf("Failed to stop Couchbase using Docker Compose: %v", err)
+		t.Fatalf("Failed to run docker-compose %v in %s: %v", args, exampleDir, err)
 	}
 }
-
