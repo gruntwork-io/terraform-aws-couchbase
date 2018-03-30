@@ -13,7 +13,7 @@ import (
 
 func TestUnitCouchbaseSingleClusterUbuntuInDocker(t *testing.T) {
 	t.Parallel()
-	testCouchbaseInDocker(t, "TestUnitCouchbaseSingleClusterUbuntuInDocker","couchbase-single-cluster", "ubuntu", 3, 8091, 4984)
+	testCouchbaseInDocker(t, "TestUnitCouchbaseSingleClusterUbuntuInDocker","couchbase-single-cluster", "ubuntu", 2, 8091, 4984)
 }
 
 func TestUnitCouchbaseMultiClusterUbuntuInDocker(t *testing.T) {

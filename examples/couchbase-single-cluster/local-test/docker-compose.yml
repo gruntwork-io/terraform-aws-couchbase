@@ -46,7 +46,7 @@ services:
       # the User Data script, with the USER_DATA_ENV_ portion stripped off.
       USER_DATA_ENV_cluster_asg_name: mock-couchbase-asg
       USER_DATA_ENV_cluster_port: 8091
-      USER_DATA_ENV_cluster_size: 3
+      USER_DATA_ENV_cluster_size: 2
       USER_DATA_ENV_sync_gateway_interface: :4984
       USER_DATA_ENV_sync_gateway_admin_interface: 127.0.0.1:4985
       USER_DATA_ENV_mock_aws_region: us-east-1
@@ -86,18 +86,3 @@ services:
       - "9998"
       - "4984"
       - "4985"
-
-  couchbase-ubuntu-2:
-    <<: *couchbase_config
-    container_name: couchbase-ubuntu-2
-    ports:
-      # Map these ports to any available port number on the host
-      - "8091"
-      - "8092"
-      - "8093"
-      - "8094"
-      - "11210"
-      - "9998"
-      - "4984"
-      - "4985"
-
