@@ -93,7 +93,7 @@ function get_asg_size {
     local desired_capacity
     desired_capacity=$(echo "$asg_json" | jq -r '.AutoScalingGroups[0]?.DesiredCapacity')
 
-    if is_empty_aws_response "$desired_capacity"; then
+    if is_empty_or_null "$desired_capacity"; then
       log_warn "Could not find desired capacity for ASG $asg_name. Perhaps the ASG has not been created yet? Will sleep for $AWS_SLEEP_BETWEEN_RETRIES_SEC and check again. AWS response:\n$asg_json"
       sleep "$AWS_SLEEP_BETWEEN_RETRIES_SEC"
     else
