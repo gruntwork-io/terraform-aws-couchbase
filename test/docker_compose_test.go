@@ -73,14 +73,10 @@ func stopCouchbaseWithDockerCompose(t *testing.T, exampleDir string, logger *log
 func runDockerCompose(t *testing.T, exampleDir string, logger *log.Logger, args ... string) {
 	cmd := shell.Command{
 		Command:    "docker-compose",
-		Args:       args,
+		// We append --project-name to ensure containers from multiple different tests using Docker Compose don't end
+		// up in the same project and end up conflicting with each other.
+		Args:       append([]string{"--project-name", exampleDir}, args...),
 		WorkingDir: exampleDir,
-		Env: map[string]string{
-			// Without this line, running docker-compose up in parallel gives the error "Renaming a container with the
-			// same name as its current name". This is because Docker-compose has no way of knowing different containers
-			// are from a different "project" unless we tell it so directly. https://github.com/docker/compose/issues/3966#issuecomment-248773016
-			"COMPOSE_PROJECT_NAME": filepath.Base(exampleDir),
-		},
 	}
 
 	if err := shell.RunCommand(cmd, logger); err != nil {
