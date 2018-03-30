@@ -319,4 +319,7 @@ func testStageLogs(t *testing.T, couchbaseTerraformDir string, clusterVarName st
 	}
 }
 
-
+// Format a unique name for the Couchbase cluster. Note that Couchbase DB names must be lower case.
+func formatCouchbaseClusterName(baseName string, resourceCollection *terratest.RandomResourceCollection) string {
+	return strings.ToLower(fmt.Sprintf("%s-%s", baseName, resourceCollection.UniqueId))
+}

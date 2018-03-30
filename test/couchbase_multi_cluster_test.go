@@ -37,9 +37,9 @@ func testCouchbaseMultiCluster(t *testing.T, testName string, osName string) {
 		terratestOptions.Vars = map[string]interface{} {
 			"aws_region":                   resourceCollection.AwsRegion,
 			"ami_id":                       amiId,
-			dataNodeClusterVarName:         fmt.Sprintf("data-%s", resourceCollection.UniqueId),
-			indexQuerySearchClusterVarName: fmt.Sprintf("search-%s", resourceCollection.UniqueId),
-			syncGatewayClusterVarName: 		fmt.Sprintf("sync-%s", resourceCollection.UniqueId),
+			dataNodeClusterVarName:         formatCouchbaseClusterName("data", resourceCollection),
+			indexQuerySearchClusterVarName: formatCouchbaseClusterName("search", resourceCollection),
+			syncGatewayClusterVarName: 		formatCouchbaseClusterName("sync", resourceCollection),
 		}
 
 		deploy(t, terratestOptions)
