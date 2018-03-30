@@ -11,9 +11,9 @@ import (
 
 const couchbaseClusterVarName = "cluster_name"
 
-func TestCouchbaseSingleClusterUbuntu(t *testing.T) {
+func TestIntegrationCouchbaseSingleClusterUbuntu(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleCluster(t, "TestCouchbaseSingleClusterUbuntu", "ubuntu")
+	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseSingleClusterUbuntu", "ubuntu")
 }
 
 func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
