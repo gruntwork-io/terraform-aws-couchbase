@@ -12,16 +12,12 @@ import (
 )
 
 func TestUnitCouchbaseSingleClusterUbuntuInDocker(t *testing.T) {
-	// It seems that running multiple Couchbase clusters in Docker at the same time is more CPU/memory usage than
-	// CircleCI can handle, and they all fail to start, so we are disabling parallelism to see if that helps.
-	// t.Parallel()
+	t.Parallel()
 	testCouchbaseInDocker(t, "TestUnitCouchbaseSingleClusterUbuntuInDocker","couchbase-single-cluster", "ubuntu", 3, 8091, 4984)
 }
 
 func TestUnitCouchbaseMultiClusterUbuntuInDocker(t *testing.T) {
-	// It seems that running multiple Couchbase clusters in Docker at the same time is more CPU/memory usage than
-	// CircleCI can handle, and they all fail to start, so we are disabling parallelism to see if that helps.
-	// t.Parallel()
+	t.Parallel()
 	testCouchbaseInDocker(t, "TestUnitCouchbaseMultiClusterUbuntuInDocker", "couchbase-multi-cluster","ubuntu", 4,7091, 3984)
 }
 
