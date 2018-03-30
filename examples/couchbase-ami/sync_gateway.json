@@ -7,7 +7,7 @@
       "username": "<DB_USERNAME>",
       "password": "<DB_PASSWORD>",
       "bucket": "<BUCKET_NAME>",
-      "users": {"GUEST": { "disabled": false, "admin_channels": ["*"]}}
+      "users": {"GUEST": {"disabled": false, "admin_channels": ["*"]}}
     }
   },
   "logging": {
