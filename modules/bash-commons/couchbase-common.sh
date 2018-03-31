@@ -70,10 +70,7 @@ function get_cluster_status {
   server_list_args+=("--username=$cluster_username")
   server_list_args+=("--password=$cluster_password")
 
-  local out
-  out=$(run_couchbase_cli "${server_list_args[@]}")
-
-  echo -n "$out"
+  run_couchbase_cli "${server_list_args[@]}"
 }
 
 # Returns true if the node with the given hostname has already been added (via the server-add command) to the Couchbase
