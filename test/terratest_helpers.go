@@ -13,14 +13,6 @@ import (
 	"strings"
 )
 
-// The port numbers used by docker-compose.yml in the couchbase-ami example
-var testWebConsolePorts = map[string]int{
-	"ubuntu": 8091,
-}
-var testSyncGatewayPorts = map[string]int{
-	"ubuntu": 4984,
-}
-
 // The username and password we use in all the examples, mocks, and tests
 const usernameForTest = "admin"
 const passwordForTest = "password"
@@ -46,7 +38,7 @@ func createBaseTerratestOptions(t *testing.T, testName string, folder string, re
 	return terratestOptions
 }
 
-func buildCouchbaseWithPacker(t *testing.T, logger *log.Logger, builderName string, awsRegion string, folderPath string) string {
+func buildCouchbaseWithPacker(t *testing.T, logger *log.Logger, builderName string, baseAmiName string, awsRegion string, folderPath string) string {
 	templatePath := fmt.Sprintf("%s/couchbase.json", folderPath)
 
 	options := packer.PackerOptions{
@@ -54,6 +46,7 @@ func buildCouchbaseWithPacker(t *testing.T, logger *log.Logger, builderName stri
 		Only: builderName,
 		Vars: map[string]string{
 			"aws_region": awsRegion,
+			"base_ami_name": baseAmiName,
 		},
 	}
 

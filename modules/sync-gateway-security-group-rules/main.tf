@@ -14,7 +14,7 @@ resource "aws_security_group_rule" "interface_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "interface_port_security_groups" {
-  count                    = "${length(var.interface_port_security_groups)}"
+  count                    = "${var.num_interface_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.interface_port}"
   to_port                  = "${var.interface_port}"
@@ -48,7 +48,7 @@ resource "aws_security_group_rule" "admin_interface_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "admin_interface_port_security_groups" {
-  count                    = "${length(var.admin_interface_port_security_groups)}"
+  count                    = "${var.num_admin_interface_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.admin_interface_port}"
   to_port                  = "${var.admin_interface_port}"

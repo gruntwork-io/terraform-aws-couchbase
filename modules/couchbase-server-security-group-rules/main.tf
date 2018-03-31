@@ -4,7 +4,7 @@
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_security_group_rule" "rest_port_cidr_blocks" {
-  count             = "${signum(length(var.rest_port_cidr_blocks))}"
+  count             = "${signum(length(var.rest_port_cidr_blocks)) * var.enable_non_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.rest_port}"
   to_port           = "${var.rest_port}"
@@ -14,7 +14,7 @@ resource "aws_security_group_rule" "rest_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "rest_port_security_groups" {
-  count                    = "${length(var.rest_port_security_groups)}"
+  count                    = "${var.num_rest_port_security_groups * var.enable_non_ssl_ports}"
   type                     = "ingress"
   from_port                = "${var.rest_port}"
   to_port                  = "${var.rest_port}"
@@ -24,6 +24,7 @@ resource "aws_security_group_rule" "rest_port_security_groups" {
 }
 
 resource "aws_security_group_rule" "rest_port_self" {
+  count             = "${var.enable_non_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.rest_port}"
   to_port           = "${var.rest_port}"
@@ -33,7 +34,7 @@ resource "aws_security_group_rule" "rest_port_self" {
 }
 
 resource "aws_security_group_rule" "ssl_rest_port_cidr_blocks" {
-  count             = "${signum(length(var.rest_port_cidr_blocks))}"
+  count             = "${signum(length(var.rest_port_cidr_blocks)) * var.enable_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.ssl_rest_port}"
   to_port           = "${var.ssl_rest_port}"
@@ -43,7 +44,7 @@ resource "aws_security_group_rule" "ssl_rest_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "ssl_rest_port_security_groups" {
-  count                    = "${length(var.rest_port_security_groups)}"
+  count                    = "${var.num_rest_port_security_groups * var.enable_ssl_ports}"
   type                     = "ingress"
   from_port                = "${var.ssl_rest_port}"
   to_port                  = "${var.ssl_rest_port}"
@@ -53,6 +54,7 @@ resource "aws_security_group_rule" "ssl_rest_port_security_groups" {
 }
 
 resource "aws_security_group_rule" "ssl_rest_port_self" {
+  count             = "${var.enable_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.ssl_rest_port}"
   to_port           = "${var.ssl_rest_port}"
@@ -67,7 +69,7 @@ resource "aws_security_group_rule" "ssl_rest_port_self" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_security_group_rule" "capi_port_cidr_blocks" {
-  count             = "${signum(length(var.capi_port_cidr_blocks))}"
+  count             = "${signum(length(var.capi_port_cidr_blocks)) * var.enable_non_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.capi_port}"
   to_port           = "${var.capi_port}"
@@ -77,7 +79,7 @@ resource "aws_security_group_rule" "capi_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "capi_port_security_groups" {
-  count                    = "${length(var.capi_port_security_groups)}"
+  count                    = "${var.num_capi_port_security_groups * var.enable_non_ssl_ports}"
   type                     = "ingress"
   from_port                = "${var.capi_port}"
   to_port                  = "${var.capi_port}"
@@ -87,6 +89,7 @@ resource "aws_security_group_rule" "capi_port_security_groups" {
 }
 
 resource "aws_security_group_rule" "capi_port_self" {
+  count             = "${var.enable_non_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.capi_port}"
   to_port           = "${var.capi_port}"
@@ -96,7 +99,7 @@ resource "aws_security_group_rule" "capi_port_self" {
 }
 
 resource "aws_security_group_rule" "ssl_capi_port_cidr_blocks" {
-  count             = "${signum(length(var.capi_port_cidr_blocks))}"
+  count             = "${signum(length(var.capi_port_cidr_blocks)) * var.enable_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.ssl_capi_port}"
   to_port           = "${var.ssl_capi_port}"
@@ -106,7 +109,7 @@ resource "aws_security_group_rule" "ssl_capi_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "ssl_capi_port_security_groups" {
-  count                    = "${length(var.capi_port_security_groups)}"
+  count                    = "${var.num_capi_port_security_groups * var.enable_ssl_ports}"
   type                     = "ingress"
   from_port                = "${var.ssl_capi_port}"
   to_port                  = "${var.ssl_capi_port}"
@@ -116,6 +119,7 @@ resource "aws_security_group_rule" "ssl_capi_port_security_groups" {
 }
 
 resource "aws_security_group_rule" "ssl_capi_self" {
+  count             = "${var.enable_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.ssl_capi_port}"
   to_port           = "${var.ssl_capi_port}"
@@ -130,7 +134,7 @@ resource "aws_security_group_rule" "ssl_capi_self" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_security_group_rule" "query_port_cidr_blocks" {
-  count             = "${signum(length(var.query_port_cidr_blocks))}"
+  count             = "${signum(length(var.query_port_cidr_blocks)) * var.enable_non_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.query_port}"
   to_port           = "${var.query_port}"
@@ -140,7 +144,7 @@ resource "aws_security_group_rule" "query_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "query_port_security_groups" {
-  count                    = "${length(var.query_port_security_groups)}"
+  count                    = "${var.num_query_port_security_groups * var.enable_non_ssl_ports}"
   type                     = "ingress"
   from_port                = "${var.query_port}"
   to_port                  = "${var.query_port}"
@@ -150,6 +154,7 @@ resource "aws_security_group_rule" "query_port_security_groups" {
 }
 
 resource "aws_security_group_rule" "query_port_self" {
+  count             = "${var.enable_non_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.query_port}"
   to_port           = "${var.query_port}"
@@ -159,7 +164,7 @@ resource "aws_security_group_rule" "query_port_self" {
 }
 
 resource "aws_security_group_rule" "ssl_query_port_cidr_blocks" {
-  count             = "${signum(length(var.query_port_cidr_blocks))}"
+  count             = "${signum(length(var.query_port_cidr_blocks)) * var.enable_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.ssl_query_port}"
   to_port           = "${var.ssl_query_port}"
@@ -169,7 +174,7 @@ resource "aws_security_group_rule" "ssl_query_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "ssl_query_port_security_groups" {
-  count                    = "${length(var.query_port_security_groups)}"
+  count                    = "${var.num_query_port_security_groups * var.enable_ssl_ports}"
   type                     = "ingress"
   from_port                = "${var.ssl_query_port}"
   to_port                  = "${var.ssl_query_port}"
@@ -179,6 +184,7 @@ resource "aws_security_group_rule" "ssl_query_port_security_groups" {
 }
 
 resource "aws_security_group_rule" "ssl_query_port_self" {
+  count             = "${var.enable_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.ssl_query_port}"
   to_port           = "${var.ssl_query_port}"
@@ -193,7 +199,7 @@ resource "aws_security_group_rule" "ssl_query_port_self" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_security_group_rule" "fts_port_cidr_blocks" {
-  count             = "${signum(length(var.fts_port_cidr_blocks))}"
+  count             = "${signum(length(var.fts_port_cidr_blocks)) * var.enable_non_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.fts_port}"
   to_port           = "${var.fts_port}"
@@ -203,7 +209,7 @@ resource "aws_security_group_rule" "fts_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "fts_port_security_groups" {
-  count                    = "${length(var.fts_port_security_groups)}"
+  count                    = "${var.num_fts_port_security_groups * var.enable_non_ssl_ports}"
   type                     = "ingress"
   from_port                = "${var.fts_port}"
   to_port                  = "${var.fts_port}"
@@ -213,6 +219,7 @@ resource "aws_security_group_rule" "fts_port_security_groups" {
 }
 
 resource "aws_security_group_rule" "fts_port_self" {
+  count             = "${var.enable_non_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.fts_port}"
   to_port           = "${var.fts_port}"
@@ -222,7 +229,7 @@ resource "aws_security_group_rule" "fts_port_self" {
 }
 
 resource "aws_security_group_rule" "ssl_fts_port_cidr_blocks" {
-  count             = "${signum(length(var.fts_port_cidr_blocks))}"
+  count             = "${signum(length(var.fts_port_cidr_blocks)) * var.enable_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.ssl_fts_port}"
   to_port           = "${var.ssl_fts_port}"
@@ -232,7 +239,7 @@ resource "aws_security_group_rule" "ssl_fts_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "ssl_fts_port_security_groups" {
-  count                    = "${length(var.fts_port_security_groups)}"
+  count                    = "${var.num_fts_port_security_groups * var.enable_ssl_ports}"
   type                     = "ingress"
   from_port                = "${var.ssl_fts_port}"
   to_port                  = "${var.ssl_fts_port}"
@@ -242,6 +249,7 @@ resource "aws_security_group_rule" "ssl_fts_port_security_groups" {
 }
 
 resource "aws_security_group_rule" "ssl_fts_port_self" {
+  count             = "${var.enable_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.ssl_fts_port}"
   to_port           = "${var.ssl_fts_port}"
@@ -256,7 +264,7 @@ resource "aws_security_group_rule" "ssl_fts_port_self" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_security_group_rule" "memcached_port_cidr_blocks" {
-  count             = "${signum(length(var.memcached_port_cidr_blocks))}"
+  count             = "${signum(length(var.memcached_port_cidr_blocks)) * var.enable_non_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.memcached_port}"
   to_port           = "${var.memcached_port}"
@@ -266,7 +274,7 @@ resource "aws_security_group_rule" "memcached_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "memcached_port_security_groups" {
-  count                    = "${length(var.memcached_port_security_groups)}"
+  count                    = "${var.num_memcached_port_security_groups * var.enable_non_ssl_ports}"
   type                     = "ingress"
   from_port                = "${var.memcached_port}"
   to_port                  = "${var.memcached_port}"
@@ -276,6 +284,7 @@ resource "aws_security_group_rule" "memcached_port_security_groups" {
 }
 
 resource "aws_security_group_rule" "memcached_port_self" {
+  count             = "${var.enable_non_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.memcached_port}"
   to_port           = "${var.memcached_port}"
@@ -285,7 +294,7 @@ resource "aws_security_group_rule" "memcached_port_self" {
 }
 
 resource "aws_security_group_rule" "ssl_memcached_port_cidr_blocks" {
-  count             = "${signum(length(var.memcached_port_cidr_blocks))}"
+  count             = "${signum(length(var.memcached_port_cidr_blocks)) * var.enable_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.ssl_memcached_port}"
   to_port           = "${var.ssl_memcached_port}"
@@ -295,7 +304,7 @@ resource "aws_security_group_rule" "ssl_memcached_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "ssl_memcached_port_security_groups" {
-  count                    = "${length(var.memcached_port_security_groups)}"
+  count                    = "${var.num_memcached_port_security_groups * var.enable_ssl_ports}"
   type                     = "ingress"
   from_port                = "${var.ssl_memcached_port}"
   to_port                  = "${var.ssl_memcached_port}"
@@ -305,9 +314,44 @@ resource "aws_security_group_rule" "ssl_memcached_port_security_groups" {
 }
 
 resource "aws_security_group_rule" "ssl_memcached_port_self" {
+  count             = "${var.enable_ssl_ports}"
   type              = "ingress"
   from_port         = "${var.ssl_memcached_port}"
   to_port           = "${var.ssl_memcached_port}"
+  protocol          = "tcp"
+  security_group_id = "${var.security_group_id}"
+  self              = true
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# MEMCACHED DEDICATED PORT
+# Data Service
+# ---------------------------------------------------------------------------------------------------------------------
+
+resource "aws_security_group_rule" "memcached_dedicated_port_cidr_blocks" {
+  count             = "${signum(length(var.memcached_dedicated_port_cidr_blocks))}"
+  type              = "ingress"
+  from_port         = "${var.memcached_dedicated_port}"
+  to_port           = "${var.memcached_dedicated_port}"
+  protocol          = "tcp"
+  security_group_id = "${var.security_group_id}"
+  cidr_blocks       = ["${var.memcached_dedicated_port_cidr_blocks}"]
+}
+
+resource "aws_security_group_rule" "memcached_dedicated_port_security_groups" {
+  count                    = "${var.num_memcached_dedicated_port_security_groups}"
+  type                     = "ingress"
+  from_port                = "${var.memcached_dedicated_port}"
+  to_port                  = "${var.memcached_dedicated_port}"
+  protocol                 = "tcp"
+  security_group_id        = "${var.security_group_id}"
+  source_security_group_id = "${element(var.memcached_dedicated_port_security_groups, count.index)}"
+}
+
+resource "aws_security_group_rule" "memcached_dedicated_port_self" {
+  type              = "ingress"
+  from_port         = "${var.memcached_dedicated_port}"
+  to_port           = "${var.memcached_dedicated_port}"
   protocol          = "tcp"
   security_group_id = "${var.security_group_id}"
   self              = true
@@ -329,7 +373,7 @@ resource "aws_security_group_rule" "moxi_port_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "moxi_port_security_groups" {
-  count                    = "${length(var.moxi_port_security_groups)}"
+  count                    = "${var.num_moxi_port_security_groups}"
   type                     = "ingress"
   from_port                = "${var.moxi_port}"
   to_port                  = "${var.moxi_port}"
@@ -353,23 +397,23 @@ resource "aws_security_group_rule" "moxi_port_self" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_security_group_rule" "epmd_port_cidr_blocks" {
-  count             = "${signum(length(var.epmd_port_cidr_blocks))}"
+  count             = "${signum(length(var.internal_ports_cidr_blocks))}"
   type              = "ingress"
   from_port         = "${var.epmd_port}"
   to_port           = "${var.epmd_port}"
   protocol          = "tcp"
   security_group_id = "${var.security_group_id}"
-  cidr_blocks       = ["${var.epmd_port_cidr_blocks}"]
+  cidr_blocks       = ["${var.internal_ports_cidr_blocks}"]
 }
 
 resource "aws_security_group_rule" "epmd_port_security_groups" {
-  count                    = "${length(var.epmd_port_security_groups)}"
+  count                    = "${var.num_internal_ports_security_groups}"
   type                     = "ingress"
   from_port                = "${var.epmd_port}"
   to_port                  = "${var.epmd_port}"
   protocol                 = "tcp"
   security_group_id        = "${var.security_group_id}"
-  source_security_group_id = "${element(var.epmd_port_security_groups, count.index)}"
+  source_security_group_id = "${element(var.internal_ports_security_groups, count.index)}"
 }
 
 resource "aws_security_group_rule" "epmd_port_self" {
@@ -387,23 +431,23 @@ resource "aws_security_group_rule" "epmd_port_self" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_security_group_rule" "indexer_port_cidr_blocks" {
-  count             = "${signum(length(var.indexer_port_cidr_blocks))}"
+  count             = "${signum(length(var.internal_ports_cidr_blocks))}"
   type              = "ingress"
   from_port         = "${var.indexer_start_port_range}"
   to_port           = "${var.indexer_end_port_range}"
   protocol          = "tcp"
   security_group_id = "${var.security_group_id}"
-  cidr_blocks       = ["${var.indexer_port_cidr_blocks}"]
+  cidr_blocks       = ["${var.internal_ports_cidr_blocks}"]
 }
 
 resource "aws_security_group_rule" "indexer_port_security_groups" {
-  count                    = "${length(var.indexer_port_security_groups)}"
+  count                    = "${var.num_internal_ports_security_groups}"
   type                     = "ingress"
   from_port                = "${var.indexer_start_port_range}"
   to_port                  = "${var.indexer_end_port_range}"
   protocol                 = "tcp"
   security_group_id        = "${var.security_group_id}"
-  source_security_group_id = "${element(var.indexer_port_security_groups, count.index)}"
+  source_security_group_id = "${element(var.internal_ports_security_groups, count.index)}"
 }
 
 resource "aws_security_group_rule" "indexer_port_self" {
@@ -421,23 +465,23 @@ resource "aws_security_group_rule" "indexer_port_self" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_security_group_rule" "projector_port_cidr_blocks" {
-  count             = "${signum(length(var.projector_port_cidr_blocks))}"
+  count             = "${signum(length(var.internal_ports_cidr_blocks))}"
   type              = "ingress"
   from_port         = "${var.projector_port}"
   to_port           = "${var.projector_port}"
   protocol          = "tcp"
   security_group_id = "${var.security_group_id}"
-  cidr_blocks       = ["${var.projector_port_cidr_blocks}"]
+  cidr_blocks       = ["${var.internal_ports_cidr_blocks}"]
 }
 
 resource "aws_security_group_rule" "projector_port_security_groups" {
-  count                    = "${length(var.projector_port_security_groups)}"
+  count                    = "${var.num_internal_ports_security_groups}"
   type                     = "ingress"
   from_port                = "${var.projector_port}"
   to_port                  = "${var.projector_port}"
   protocol                 = "tcp"
   security_group_id        = "${var.security_group_id}"
-  source_security_group_id = "${element(var.projector_port_security_groups, count.index)}"
+  source_security_group_id = "${element(var.internal_ports_security_groups, count.index)}"
 }
 
 resource "aws_security_group_rule" "projector_port_self" {
@@ -450,62 +494,28 @@ resource "aws_security_group_rule" "projector_port_self" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# MEMCACHED DEDICATED PORT
-# Data Service
-# ---------------------------------------------------------------------------------------------------------------------
-
-resource "aws_security_group_rule" "memcached_dedicated_port_cidr_blocks" {
-  count             = "${signum(length(var.memcached_dedicated_port_cidr_blocks))}"
-  type              = "ingress"
-  from_port         = "${var.memcached_dedicated_port}"
-  to_port           = "${var.memcached_dedicated_port}"
-  protocol          = "tcp"
-  security_group_id = "${var.security_group_id}"
-  cidr_blocks       = ["${var.memcached_dedicated_port_cidr_blocks}"]
-}
-
-resource "aws_security_group_rule" "memcached_dedicated_port_security_groups" {
-  count                    = "${length(var.memcached_dedicated_port_security_groups)}"
-  type                     = "ingress"
-  from_port                = "${var.memcached_dedicated_port}"
-  to_port                  = "${var.memcached_dedicated_port}"
-  protocol                 = "tcp"
-  security_group_id        = "${var.security_group_id}"
-  source_security_group_id = "${element(var.memcached_dedicated_port_security_groups, count.index)}"
-}
-
-resource "aws_security_group_rule" "memcached_dedicated_port_self" {
-  type              = "ingress"
-  from_port         = "${var.memcached_dedicated_port}"
-  to_port           = "${var.memcached_dedicated_port}"
-  protocol          = "tcp"
-  security_group_id = "${var.security_group_id}"
-  self              = true
-}
-
-# ---------------------------------------------------------------------------------------------------------------------
 # INTERNAL DATA PORTS
 # Data Service
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_security_group_rule" "internal_data_port_cidr_blocks" {
-  count             = "${signum(length(var.internal_data_port_cidr_blocks))}"
+  count             = "${signum(length(var.internal_ports_cidr_blocks))}"
   type              = "ingress"
   from_port         = "${var.internal_data_start_port_range}"
   to_port           = "${var.internal_data_end_port_range}"
   protocol          = "tcp"
   security_group_id = "${var.security_group_id}"
-  cidr_blocks       = ["${var.internal_data_port_cidr_blocks}"]
+  cidr_blocks       = ["${var.internal_ports_cidr_blocks}"]
 }
 
 resource "aws_security_group_rule" "internal_data_port_security_groups" {
-  count                    = "${length(var.internal_data_port_security_groups)}"
+  count                    = "${var.num_internal_ports_security_groups}"
   type                     = "ingress"
   from_port                = "${var.internal_data_start_port_range}"
   to_port                  = "${var.internal_data_end_port_range}"
   protocol                 = "tcp"
   security_group_id        = "${var.security_group_id}"
-  source_security_group_id = "${element(var.internal_data_port_security_groups, count.index)}"
+  source_security_group_id = "${element(var.internal_ports_security_groups, count.index)}"
 }
 
 resource "aws_security_group_rule" "internal_data_port_self" {

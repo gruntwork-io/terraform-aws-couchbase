@@ -11,6 +11,8 @@ import (
 	"github.com/gruntwork-io/terratest/util"
 	"encoding/json"
 	"github.com/gruntwork-io/terratest"
+	"github.com/gruntwork-io/terratest/test-structure"
+	"github.com/gruntwork-io/terratest/aws"
 )
 
 func checkCouchbaseConsoleIsRunning(t *testing.T, clusterUrl string, logger *log.Logger) {
@@ -38,7 +40,7 @@ type ServerNode struct {
 	ClusterMembership string `json:"clusterMembership"`
 }
 
-func checkCouchbaseClusterIsInitialized(t *testing.T, clusterUrl string, logger *log.Logger) {
+func checkCouchbaseClusterIsInitialized(t *testing.T, clusterUrl string, expectedNodes int, logger *log.Logger) {
 	maxRetries := 60
 	sleepBetweenRetries := 5 * time.Second
 	serverNodeUrl := fmt.Sprintf("%s/pools/nodes", clusterUrl)
@@ -55,8 +57,8 @@ func checkCouchbaseClusterIsInitialized(t *testing.T, clusterUrl string, logger 
 			return false
 		}
 
-		if len(serverNodesReponse.Nodes) != 3 {
-			logger.Printf("Expected to find 3 nodes in the cluster, but %s returned %d. Response body:\n%s", serverNodeUrl, len(serverNodesReponse.Nodes), body)
+		if len(serverNodesReponse.Nodes) != expectedNodes {
+			logger.Printf("Expected to find %d nodes in the cluster, but %s returned %d. Response body:\n%s", expectedNodes, serverNodeUrl, len(serverNodesReponse.Nodes), body)
 			return false
 		}
 
@@ -257,7 +259,8 @@ func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key stri
 }
 
 func checkSyncGatewayWorking(t *testing.T, syncGatewayUrl string, logger *log.Logger) {
-	maxRetries := 60
+	// It can take a LONG time for the Couchbase cluster to rebalance itself, so we may have to wait a while
+	maxRetries := 200
 	sleepBetweenRetries := 5 * time.Second
 
 	err := http_helper.HttpGetWithRetryWithCustomValidation(syncGatewayUrl, maxRetries, sleepBetweenRetries, logger, func(status int, body string) bool {
@@ -269,7 +272,54 @@ func checkSyncGatewayWorking(t *testing.T, syncGatewayUrl string, logger *log.Lo
 	}
 }
 
-// Format a name for a Couchbase cluser. Note that Couchbase DB names must be lowercase.
-func formatClusterName(resourceCollection *terratest.RandomResourceCollection) string {
-	return strings.ToLower(fmt.Sprintf("single-cluster-%s", resourceCollection.UniqueId))
+func testStageBuildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, couchbaseTerraformDir string, logger *log.Logger) {
+	resourceCollection := createBaseRandomResourceCollection(t)
+	amiId := buildCouchbaseWithPacker(t, logger, fmt.Sprintf("%s-ami", osName), fmt.Sprintf("couchbase-%s", resourceCollection.UniqueId), resourceCollection.AwsRegion, couchbaseAmiDir)
+
+	test_structure.SaveAmiId(t, couchbaseTerraformDir, amiId, logger)
+	test_structure.SaveRandomResourceCollection(t, couchbaseTerraformDir, resourceCollection, logger)
+}
+
+func testStageTeardown(t *testing.T, couchbaseTerraformDir string, logger *log.Logger) {
+	resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseTerraformDir, logger)
+	terratestOptions := test_structure.LoadTerratestOptions(t, couchbaseTerraformDir, logger)
+
+	if _, err := terratest.Destroy(terratestOptions, resourceCollection); err != nil {
+		t.Fatalf("Failed to run destory: %v", err)
+	}
+
+	test_structure.CleanupAmiId(t, couchbaseTerraformDir, logger)
+	test_structure.CleanupTerratestOptions(t, couchbaseTerraformDir, logger)
+	test_structure.CleanupRandomResourceCollection(t, couchbaseTerraformDir, logger)
+}
+
+func getClusterName(t *testing.T, clusterVarName string, terratestOptions *terratest.TerratestOptions) string {
+	clusterNameVal, ok := terratestOptions.Vars[clusterVarName]
+	if !ok {
+		t.Fatalf("Could not find cluster name in TerratestOptions Var %s", clusterVarName)
+	}
+
+	return fmt.Sprintf("%v", clusterNameVal)
+}
+
+func testStageLogs(t *testing.T, couchbaseTerraformDir string, clusterVarName string, logger *log.Logger) {
+	resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseTerraformDir, logger)
+	terratestOptions := test_structure.LoadTerratestOptions(t, couchbaseTerraformDir, logger)
+
+	clusterName := getClusterName(t, clusterVarName, terratestOptions)
+
+	logs, err := aws.GetSyslogForInstancesInAsg(clusterName, resourceCollection.AwsRegion, logger)
+	if err != nil {
+		t.Fatalf("Failed to fetch syslog: %v", err)
+	}
+
+	logger.Printf("\n\n============== Logs for cluster %s ==============", clusterName)
+	for instanceId, syslog := range logs {
+		logger.Printf("Most recent 64 KB of logs for instance %s in %s:\n\n%s\n\n", instanceId, resourceCollection.AwsRegion, syslog)
+	}
+}
+
+// Format a unique name for the Couchbase cluster. Note that Couchbase DB names must be lower case.
+func formatCouchbaseClusterName(baseName string, resourceCollection *terratest.RandomResourceCollection) string {
+	return strings.ToLower(fmt.Sprintf("%s-%s", baseName, resourceCollection.UniqueId))
 }

@@ -42,18 +42,18 @@ function assert_empty {
 
 # Check that the given response from AWS is not empty or null (the null often comes from trying to parse AWS responses
 # with jq). If it is, exit with an error.
-function assert_not_empty_aws_response {
+function assert_not_empty_or_null {
   local readonly response="$1"
   local readonly description="$2"
 
-  if is_empty_aws_response "$response"; then
+  if is_empty_or_null "$response"; then
     log_error "Got empty response for $description"
     exit 1
   fi
 }
 
 # Return true if the given response is empty or null (the latter is from jq parsing).
-function is_empty_aws_response {
+function is_empty_or_null {
   local readonly response="$1"
   [[ -z "$response" || "$response" == "null" ]]
 }

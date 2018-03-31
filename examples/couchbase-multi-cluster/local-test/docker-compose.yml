@@ -3,10 +3,10 @@
 
 version: '3'
 services:
-  couchbase-ubuntu-0: &couchbase_config
+  couchbase-ubuntu-data-0: &couchbase_config
     image: gruntwork/couchbase-ubuntu-test
     entrypoint: ["/entrypoint/entrypoint.sh"]
-    container_name: couchbase-ubuntu-0
+    container_name: couchbase-ubuntu-data-0
 
     # These are all settings required to make systemd happy
     privileged: true
@@ -38,25 +38,21 @@ services:
       - ../user-data:/user-data
       - ../../local-mocks/entrypoint:/entrypoint
 
-    environment:
+    environment: &default_env
       # The User Data script that will be executed on boot by entrypoint.sh
-      USER_DATA_SCRIPT: /user-data/user-data.sh
+      USER_DATA_SCRIPT: /user-data/user-data-couchbase-data-nodes.sh
 
       # Any environment variable starting with USER_DATA_ENV_ will be read in by entrypoint.sh and made available in
       # the User Data script, with the USER_DATA_ENV_ portion stripped off.
       USER_DATA_ENV_cluster_asg_name: mock-couchbase-asg
       USER_DATA_ENV_cluster_port: 8091
       USER_DATA_ENV_cluster_size: 2
-      USER_DATA_ENV_sync_gateway_interface: :4984
-      USER_DATA_ENV_sync_gateway_admin_interface: 127.0.0.1:4985
       USER_DATA_ENV_mock_aws_region: us-east-1
       USER_DATA_ENV_mock_availability_zone: us-east-1a
       USER_DATA_ENV_data_volume_device_name: /dev/xvdf
       USER_DATA_ENV_data_volume_mount_point: /couchbase-data
-      USER_DATA_ENV_index_volume_device_name: /dev/xvdg
-      USER_DATA_ENV_index_volume_mount_point: /couchbase-index
       USER_DATA_ENV_volume_owner: couchbase
-      USER_DATA_ENV_data_node_container_base_name: couchbase-ubuntu
+      USER_DATA_ENV_data_node_container_base_name: couchbase-ubuntu-data
 
     # Map each container to unique ports on the host. Note that you can talk to this container from your host OS via the
     # HTTP/REST APIs but NOT the Couchbase SDKs! The SDKs will try to connect to the internal node IPs, which can only
@@ -64,25 +60,54 @@ services:
     # Couchbase doesn't allow all port numbers to be overridden, so the Erlang Port Mapper service clashes.
     # https://developer.couchbase.com/documentation/server/current/install/install-ports.html
     ports:
-      - "8091:8091"
-      - "8092:8092"
-      - "8093:8093"
-      - "8094:8094"
-      - "11210:11210"
-      - "9998:9998"
-      - "4984:4984"
-      - "4985:4985"
+      - "7091:8091"
+      - "7092:8092"
+      - "10210:11210"
 
-  couchbase-ubuntu-1:
+  couchbase-ubuntu-data-1:
     <<: *couchbase_config
-    container_name: couchbase-ubuntu-1
+    container_name: couchbase-ubuntu-data-1
+    environment:
+      <<: *default_env
+      # The User Data script that will be executed on boot by entrypoint.sh
+      USER_DATA_SCRIPT: /user-data/user-data-couchbase-data-nodes.sh
+    ports:
+      # Map these ports to any available port number on the host
+      - "8091"
+      - "8092"
+      - "11210"
+
+  couchbase-ubuntu-index-query-search-0:
+    <<: *couchbase_config
+    container_name: couchbase-ubuntu-index-query-search-0
+    environment:
+      <<: *default_env
+      # The User Data script that will be executed on boot by entrypoint.sh
+      USER_DATA_SCRIPT: /user-data/user-data-couchbase-index-query-search-nodes.sh
+      # Any environment variable starting with USER_DATA_ENV_ will be read in by entrypoint.sh and made available in
+      # the User Data script, with the USER_DATA_ENV_ portion stripped off.
+      USER_DATA_ENV_index_volume_device_name: /dev/xvdg
+      USER_DATA_ENV_index_volume_mount_point: /couchbase-index
     ports:
       # Map these ports to any available port number on the host
       - "8091"
       - "8092"
       - "8093"
       - "8094"
-      - "11210"
-      - "9998"
-      - "4984"
+
+  couchbase-ubuntu-sync-gateway-0:
+    <<: *couchbase_config
+    container_name: couchbase-ubuntu-sync-gateway-0
+    environment:
+      <<: *default_env
+      # The User Data script that will be executed on boot by entrypoint.sh
+      USER_DATA_SCRIPT: /user-data/user-data-sync-gateway.sh
+      # Any environment variable starting with USER_DATA_ENV_ will be read in by entrypoint.sh and made available in
+      # the User Data script, with the USER_DATA_ENV_ portion stripped off.
+      USER_DATA_ENV_sync_gateway_interface: :4984
+      USER_DATA_ENV_sync_gateway_admin_interface: 127.0.0.1:4985
+    ports:
+      # Map these ports to any available port number on the host
+      - "3984:4984"
       - "4985"
+

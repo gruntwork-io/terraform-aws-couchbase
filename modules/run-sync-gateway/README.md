@@ -19,8 +19,8 @@ As part of the installation process, we recommend that you create a [Sync Gatewa
 file](https://developer.couchbase.com/documentation/mobile/1.5/guides/sync-gateway/config-properties/index.html) and 
 install it using the `--config` option of the `install-sync-gteway` script.
 
-You may notice that some of the configs, such as the IPs of the Couchbase servers, should be filled in dynamically, 
-when the server is booting up. You can do this using the `run-sync-gateway` script! Simply leave placeholders in your
+You may want some of the configs, such as the IPs of the Couchbase servers, to be filled in dynamically, when the 
+server is booting up. You can do this using the `run-sync-gateway` script! Simply leave placeholders in your
 Sync Gateway config file like this (see the [couchbase-ami
 folder](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-ami) for a full example):
 
@@ -49,6 +49,8 @@ This will:
 
 1. Replace all instances of the text `<PORT>` in the Sync Gateway config file with `4984`.
 
+1. Wait for all databases in the Sync Gateway config to initialize.
+
 1. Start Sync Gateway on the local node.
 
 We recommend using the `run-sync-gateway` command as part of [User 
@@ -76,6 +78,7 @@ Options:
   --auto-fill KEY=VALUE			Search the Sync Gateway config file for KEY and replace it with VALUE. May be repeated.
   --use-public-hostname			If this flag is set, use the public hostname for each server in --auto-fill. Without this flag, the private hostname will be used.
   --config				The path to a JSON config file for Sync Gateway. Default: /home/sync_gateway/sync_gateway.json.
+  --skip-wait				Don't wait for each Couchbase server defined in the config file to be healthy and active and just boot Sync Gateway immediately.
   --help				Show this help text and exit.
 
 Example:

@@ -15,6 +15,19 @@ variable "port" {
   description = "The port the servers are listening on for requests."
 }
 
+variable "listener_arns" {
+  description = "The ARNs of ALB listeners to which Listener Rules that route to this Target Group should be added."
+  type        = "list"
+}
+
+variable "num_listener_arns" {
+  description = "The number of ARNs in var.listener_arns. We should be able to compute this automatically, but due to a Terraform limitation, if there are any dynamic resources in var.listener_arns, then we won't be able to: https://github.com/hashicorp/terraform/pull/11482"
+}
+
+variable "listener_rule_starting_priority" {
+  description = "The starting priority for the Listener Rules"
+}
+
 variable "health_check_path" {
   description = "The path to use for health check requests."
 }
@@ -73,36 +86,6 @@ variable "health_check_unhealthy_threshold" {
 variable "health_check_matcher" {
   description = "The HTTP codes to use when checking for a successful response from a server. You can specify multiple comma-separated values (for example, \"200,202\") or a range of values (for example, \"200-299\")."
   default     = "200"
-}
-
-variable "create_http_listener_rule" {
-  description = "Set to true to create a Listener Rule for the Load Balancer HTTP Listener. If this is set to true, you must also set var.http_listener_arn."
-  default     = true
-}
-
-variable "http_listener_arn" {
-  description = "The ARN of the HTTP Listener. Only used if var.create_http_listener_rule is true."
-  default     = "replace-me"
-}
-
-variable "http_listener_rule_priority" {
-  description = "The priority for the ALB HTTP listener rule. Only used if var.create_http_listener_rule is true."
-  default     = 100
-}
-
-variable "create_https_listener_rule" {
-  description = "Set to true to create a Listener Rule for the Load Balancer HTTPS Listener. If this is set to true, you must also set var.https_listener_arn."
-  default     = false
-}
-
-variable "https_listener_arn" {
-  description = "The ARN of the HTTPS Listener. Only used if var.create_https_listener_rule is true."
-  default     = "replace-me"
-}
-
-variable "https_listener_rule_priority" {
-  description = "The priority for the ALB HTTPS listener rule. Only used if var.create_https_listener_rule is true."
-  default     = 100
 }
 
 variable "enable_stickiness" {

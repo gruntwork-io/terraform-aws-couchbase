@@ -7,6 +7,34 @@ variable "name" {
   description = "The name to use for the Load Balancer"
 }
 
+variable "http_listener_ports" {
+  description = "A list of ports to listen on for HTTP requests."
+  type        = "list"
+
+  # Example:
+  #
+  # default = [80]
+}
+
+variable "https_listener_ports_and_certs" {
+  description = "A list of objects that define the ports to listen on for HTTPS requests. Each object should have the keys 'port' (the port number to listen on) and 'certificate_arn' (the ARN of an ACM or IAM TLS cert to use on this listener)."
+  type        = "list"
+
+  # Example:
+  #
+  # default = [
+  #   {
+  #     port            = 443
+  #     certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"
+  #   }
+  # ]
+}
+
+variable "allow_inbound_from_cidr_blocks" {
+  description = "A list of IP addresses in CIDR notation from which the load balancer will allow incoming HTTP/HTTPS requests."
+  type        = "list"
+}
+
 variable "vpc_id" {
   description = "The ID of the VPC in which to deploy the Load Balancer"
 }
@@ -21,16 +49,15 @@ variable "subnet_ids" {
 # These parameters have reasonable defaults.
 # ---------------------------------------------------------------------------------------------------------------------
 
-variable "allow_http_inbound_from_cidr_blocks" {
-  description = "A list of IP addresses in CIDR notation from which the load balancer will allow incoming HTTP/HTTPS requests. At least one of var.allow_http_inbound_from_cidr_blocks or var.allow_http_inbound_from_security_groups must be non-empty or the Load Balancer won't allow any incoming requests!"
+variable "allow_inbound_from_security_groups" {
+  description = "A list of Security Group IDs from which the load balancer will allow incoming HTTP/HTTPS requests. Any time you change this value, make sure to update var.allow_inbound_from_security_groups too!"
   type        = "list"
   default     = []
 }
 
-variable "allow_http_inbound_from_security_groups" {
-  description = "A list of Security Group IDs from which the load balancer will allow incoming HTTP/HTTPS requests. At least one of var.allow_http_inbound_from_cidr_blocks or var.allow_http_inbound_from_security_groups must be non-empty or the Load Balancer won't allow any incoming requests!"
-  type        = "list"
-  default     = []
+variable "num_inbound_security_groups" {
+  description = "The number of Security Group IDs in var.allow_inbound_from_security_groups. We should be able to compute this automatically, but due to a Terraform limitation, if there are any dynamic resources in var.allow_inbound_from_cidr_blocks, then we won't be able to: https://github.com/hashicorp/terraform/pull/11482"
+  default     = 0
 }
 
 variable "default_target_group_arn" {
@@ -62,31 +89,6 @@ variable "tags" {
 variable "idle_timeout" {
   description = "The time in seconds that the connection is allowed to be idle."
   default     = 30
-}
-
-variable "include_http_listener" {
-  description = "Set to true to include an HTTP listener with the Load Balancer."
-  default     = true
-}
-
-variable "include_https_listener" {
-  description = "Set to true to include an HTTPS listener with the Load Balancer. If set to true, you must also specify var.certificate_arn."
-  default     = false
-}
-
-variable "certificate_arn" {
-  description = "The ARN of an ACM or IAM TLS certificate to use with the Load Balancer's HTTPS listener. Only used if var.include_https_listener is true."
-  default     = ""
-}
-
-variable "http_port" {
-  description = "The port the Load Balancer should listen on for HTTP requests. Only used if var.include_http_listener is true."
-  default     = 80
-}
-
-variable "https_port" {
-  description = "The port the Load Balancer should listen on for HTTPS requests. Only used if var.include_https_listener is true."
-  default     = 443
 }
 
 variable "route53_records" {

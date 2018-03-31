@@ -2,7 +2,7 @@
 
 This folder contains a [Terraform](https://www.terraform.io/) module to deploy a 
 [Couchbase](https://www.couchbase.com/) cluster in [AWS](https://aws.amazon.com/) on top of an Auto Scaling Group. 
-This module can be used to deploy any or all of the Couchbase services (data, search, index, query, manager) or Sync
+This module can be used to deploy any or all of the Couchbase services (data, search, index, query) or Sync
 Gateway. The idea is to create an [Amazon Machine Image (AMI)](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html)
 that has Couchbase and/or Sync Gateway installed using the 
 [install-couchbase-server](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/install-couchbase-server) and/or

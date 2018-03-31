@@ -11,6 +11,7 @@ source "$BASH_COMMONS_INSTALL_DIR/aws.sh"
 source "$BASH_COMMONS_INSTALL_DIR/os.sh"
 source "$BASH_COMMONS_INSTALL_DIR/collections.sh"
 source "$BASH_COMMONS_INSTALL_DIR/strings.sh"
+source "$BASH_COMMONS_INSTALL_DIR/couchbase-common.sh"
 
 readonly SYNC_GATEWAY_BASE_DIR="/opt/couchbase-sync-gateway"
 readonly SYNC_GATEWAY_BIN_DIR="$SYNC_GATEWAY_BASE_DIR/bin"
@@ -35,6 +36,7 @@ function print_usage {
   echo -e "  --auto-fill KEY=VALUE\t\t\tSearch the Sync Gateway config file for KEY and replace it with VALUE. May be repeated."
   echo -e "  --use-public-hostname\t\t\tIf this flag is set, use the public hostname for each server in --auto-fill. Without this flag, the private hostname will be used."
   echo -e "  --config\t\t\t\tThe path to a JSON config file for Sync Gateway. Default: $DEFAULT_SYNC_GATEWAY_CONFIG_PATH."
+  echo -e "  --skip-wait\t\t\t\tDon't wait for each Couchbase server defined in the config file to be healthy and active and just boot Sync Gateway immediately."
   echo -e "  --help\t\t\t\tShow this help text and exit."
   echo
   echo "Example:"
@@ -55,12 +57,12 @@ function get_hostnames {
 
   local hostnames
   hostnames=($(echo "$instances_response" | jq -r ".Reservations[].Instances[].$hostname_param"))
-  assert_not_empty_aws_response "$hostnames" "Could not find hostnames in describe-instances value:\n$instances_response"
+  assert_not_empty_or_null "$hostnames" "hostnames in describe-instances value:\n$instances_response"
 
   local hostnames_with_ports=()
   local hostname
   for hostname in "${hostnames[@]}"; do
-    assert_not_empty_aws_response "$hostname" "Get empty $hostname_param value! Full describe-instances response:\n$instances_response"
+    assert_not_empty_or_null "$hostname" "Get empty $hostname_param value! Full describe-instances response:\n$instances_response"
     hostnames_with_ports+=("$hostname$port_param")
   done
 
@@ -104,7 +106,7 @@ function auto_fill_config_asg {
 
   local aws_region
   aws_region=$(get_instance_region)
-  assert_not_empty_aws_response "$aws_region" "AWS region"
+  assert_not_empty_or_null "$aws_region" "AWS region"
 
   local param
   for param in "${auto_fill_asg[@]}"; do
@@ -142,11 +144,11 @@ function auto_fill_asg_param {
 
   local instances
   instances=$(wait_for_instances_in_asg "$asg_name" "$aws_region")
-  assert_not_empty_aws_response "$instances" "Get info about Instances in ASG $asg_name in $aws_region"
+  assert_not_empty_or_null "$instances" "Get info about Instances in ASG $asg_name in $aws_region"
 
   local hostnames
   hostnames=$(get_hostnames "$instances" "$use_public_hostname" "$port")
-  assert_not_empty_aws_response "$hostnames" "Unable to parse host names for ASG $asg_name in $aws_region"
+  assert_not_empty_or_null "$hostnames" "Unable to parse host names for ASG $asg_name in $aws_region"
 
   # https://developer.couchbase.com/documentation/mobile/1.5/guides/sync-gateway/config-properties/index.html#1.5/databases-foo_db-server
   local readonly placeholder_value="http://$hostnames"
@@ -161,12 +163,98 @@ function start_sync_gateway {
   sudo systemctl start sync_gateway
 }
 
+function wait_for_couchbase_clusters {
+  local readonly config="$1"
+  local readonly skip_wait="$2"
+
+  if [[ "$skip_wait" == "true" ]]; then
+    log_info "The --skip-wait flag is set, so will start Sync Gateway without waiting for all Couchbase servers to be healthy."
+    return
+  fi
+
+  local databases
+  databases=($(cat "$config" | jq -c '.databases | .[]?'))
+
+  if [[ -z "${databases[@]}" ]]; then
+    log_warn "No databases found in $config. Nothing to wait for."
+    return
+  fi
+
+  log_info "Waiting for ${#databases[@]} Couchbase clusters to be active and healthy..."
+
+  local database
+  for database in "${databases[@]}"; do
+    local readonly cluster_url=$(echo "$database" | jq -r '.server')
+    local readonly cluster_url_single=$(echo "$cluster_url" | cut -f1 -d ",")
+    local readonly cluster_username=$(echo "$database" | jq -r '.username')
+    local readonly cluster_password=$(echo "$database" | jq -r '.password')
+    local readonly bucket=$(echo "$database" | jq -r '.bucket')
+
+    wait_for_couchbase_cluster "$cluster_url_single" "$cluster_username" "$cluster_password" "$bucket"
+  done
+
+  log_info "${#databases[@]} / ${#databases[@]} Couchbase clusters are active and healthy!"
+}
+
+function wait_for_couchbase_cluster {
+  local readonly cluster_url="$1"
+  local readonly cluster_username="$2"
+  local readonly cluster_password="$3"
+  local readonly bucket="$4"
+
+  # It can take a LONG time for a Couchbase cluster to rebalance and be available, so do lots of retries
+  local readonly wait_for_cluster_retries=200
+
+  for (( i=0; i<"$wait_for_cluster_retries"; i++ )); do
+    if cluster_is_ready "$cluster_url" "$cluster_username" "$cluster_password" "$bucket"; then
+      log_info "Cluster $cluster_url is ready!"
+      return
+    else
+      log_warn "Cluster $cluster_url is not yet ready. Will sleep for $SLEEP_BETWEEN_RETRIES_SEC seconds and check again."
+      sleep "$SLEEP_BETWEEN_RETRIES_SEC"
+    fi
+  done
+
+  log_error "Cluster $cluster_url still not initialized after $wait_for_cluster_retries retries."
+  exit 1
+}
+
+function cluster_is_ready {
+  local readonly cluster_url="$1"
+  local readonly cluster_username="$2"
+  local readonly cluster_password="$3"
+  local readonly bucket="$4"
+
+  if ! cluster_is_initialized "$cluster_url" "$cluster_username" "$cluster_password"; then
+    log_warn "Cluster $cluster_url is not yet initialized."
+    return 1
+  fi
+
+  if cluster_is_rebalancing "$cluster_url" "$cluster_username" "$cluster_password"; then
+    log_warn "Cluster $cluster_url is currently rebalancing."
+    return 1
+  fi
+
+  if [[ -z "$bucket" ]]; then
+    log_info "No bucket specified for cluster $cluster_url, so assuming cluster is ready."
+    return
+  fi
+
+  if ! has_bucket "$cluster_url" "$cluster_username" "$cluster_password" "$bucket"; then
+    log_warn "Bucket $bucket does not yet exist in cluster $cluster_url."
+    return 1
+  fi
+
+  return 0
+}
+
 # The main entrypoint for this code
 function run {
   local auto_fill_asg=()
   local auto_fill=()
   local use_public_hostname="false"
   local config="$DEFAULT_SYNC_GATEWAY_CONFIG_PATH"
+  local skip_wait="false"
 
   while [[ $# > 0 ]]; do
     local key="$1"
@@ -190,6 +278,9 @@ function run {
         config="$2"
         shift
         ;;
+      --skip-wait)
+        skip_wait="true"
+        ;;
       --help)
         print_usage
         exit
@@ -206,12 +297,14 @@ function run {
 
   assert_is_installed "aws"
   assert_is_installed "jq"
+  assert_is_installed "curl"
 
   log_info "Starting configuration of Sync Gateway..."
 
   update_config_path "$config" "$DEFAULT_SYNC_GATEWAY_SYSTEMD_UNIT_PATH"
   auto_fill_config_asg "$config" "$use_public_hostname" "${auto_fill_asg[@]}"
   auto_fill_config "$config" "${auto_fill[@]}"
+  wait_for_couchbase_clusters "$config" "$skip_wait"
   start_sync_gateway
 
   log_info "Sync Gateway configured successfully!"
