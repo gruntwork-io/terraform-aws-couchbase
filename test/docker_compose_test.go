@@ -36,12 +36,12 @@ func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName str
 	})
 
 	test_structure.RunTestStage("setup_docker", logger, func() {
-		startCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, logger)
+		startCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, testName, logger)
 	})
 
 	defer test_structure.RunTestStage("teardown", logger, func() {
-		getDockerComposeLogs(t, couchbaseSingleClusterDockerDir, logger)
-		stopCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, logger)
+		getDockerComposeLogs(t, couchbaseSingleClusterDockerDir, testName, logger)
+		stopCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, testName, logger)
 	})
 
 	test_structure.RunTestStage("validation", logger, func() {
@@ -57,25 +57,26 @@ func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName str
 	})
 }
 
-func startCouchbaseWithDockerCompose(t *testing.T, exampleDir string, logger *log.Logger) {
-	runDockerCompose(t, exampleDir, logger, "up", "-d")
+func startCouchbaseWithDockerCompose(t *testing.T, exampleDir string, testName string, logger *log.Logger) {
+	runDockerCompose(t, exampleDir, testName, logger, "up", "-d")
 }
 
-func getDockerComposeLogs(t *testing.T, exampleDir string, logger *log.Logger) {
+func getDockerComposeLogs(t *testing.T, exampleDir string, testName string, logger *log.Logger) {
 	logger.Printf("Fetching docker-compose logs:")
-	runDockerCompose(t, exampleDir, logger, "logs")
+	runDockerCompose(t, exampleDir, testName, logger, "logs")
 }
 
-func stopCouchbaseWithDockerCompose(t *testing.T, exampleDir string, logger *log.Logger) {
-	runDockerCompose(t, exampleDir, logger, "down")
+func stopCouchbaseWithDockerCompose(t *testing.T, exampleDir string, testName string, logger *log.Logger) {
+	runDockerCompose(t, exampleDir, testName, logger, "down")
+	runDockerCompose(t, exampleDir, testName, logger, "rm", "-f")
 }
 
-func runDockerCompose(t *testing.T, exampleDir string, logger *log.Logger, args ... string) {
+func runDockerCompose(t *testing.T, exampleDir string, testName string, logger *log.Logger, args ... string) {
 	cmd := shell.Command{
 		Command:    "docker-compose",
 		// We append --project-name to ensure containers from multiple different tests using Docker Compose don't end
 		// up in the same project and end up conflicting with each other.
-		Args:       append([]string{"--project-name", exampleDir}, args...),
+		Args:       append([]string{"--project-name", testName}, args...),
 		WorkingDir: exampleDir,
 	}
 
