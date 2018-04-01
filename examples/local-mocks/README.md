@@ -13,7 +13,7 @@ production!
 
 First, use the Packer template in the [couchbase-ami 
 example](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-ami) to build a Docker 
-image with Couchbase and Sync Gateway installed: 
+image with Couchbase and Sync Gateway installed on Ubuntu:
 
 ```
 packer build -only=ubuntu-docker couchbase.json
@@ -23,6 +23,18 @@ To run the Docker image, head into one of the `examples/couchbase-xxx/local-test
 
 ```
 docker-compose up
+```
+
+Alternatively, to create an Amazon Linux Docker image:
+
+```
+packer build -only=amazon-linux-docker couchbase.json
+```
+
+And to run it:
+
+```
+OS_NAME=amazon-linux docker-compose up
 ```
 
 Wait 10-15 seconds and then open your browser to http://localhost:8091/ for the single-cluster example or

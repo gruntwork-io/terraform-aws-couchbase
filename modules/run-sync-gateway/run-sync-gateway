@@ -159,8 +159,17 @@ function auto_fill_asg_param {
 
 function start_sync_gateway {
   log_info "Starting Sync Gateway"
-  sudo systemctl enable sync_gateway
-  sudo systemctl start sync_gateway
+
+  if is_ubuntu; then
+    sudo systemctl enable sync_gateway
+    sudo systemctl start sync_gateway
+  elif is_amazon_linux; then
+    sudo chkconfig sync_gateway on
+    sudo service sync_gateway start
+  else
+    log_error "This script only supports Ubuntu and Amazon Linux."
+    exit 1
+  fi
 }
 
 function wait_for_couchbase_clusters {

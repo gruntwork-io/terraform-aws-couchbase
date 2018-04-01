@@ -7,7 +7,13 @@ function get_available_memory_mb {
   free -m | awk 'NR==2{print $2}'
 }
 
-# Returns true if this script is executing on an Ubuntu server
+# Returns true (0) if this is an Amazon Linux server at the given version or false (1) otherwise.
+function is_amazon_linux {
+  grep -q "Amazon Linux" /etc/*release
+}
+
+# Returns true (0) if this is an Ubuntu server at the given version or false (1) otherwise.
 function is_ubuntu {
-  grep -q "Ubuntu" /etc/os-release
+  local readonly version="$1"
+  grep -q "Ubuntu $version" /etc/*release
 }

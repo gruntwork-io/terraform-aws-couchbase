@@ -3,10 +3,10 @@
 
 version: '3'
 services:
-  couchbase-ubuntu-data-0: &couchbase_config
-    image: gruntwork/couchbase-ubuntu-test
+  couchbase-data-0: &couchbase_config
+    image: gruntwork/couchbase-${OS_NAME}-test
     entrypoint: ["/entrypoint/entrypoint.sh"]
-    container_name: couchbase-ubuntu-data-0
+    container_name: couchbase-data-0
 
     # These are all settings required to make systemd happy
     privileged: true
@@ -52,7 +52,7 @@ services:
       USER_DATA_ENV_data_volume_device_name: /dev/xvdf
       USER_DATA_ENV_data_volume_mount_point: /couchbase-data
       USER_DATA_ENV_volume_owner: couchbase
-      USER_DATA_ENV_data_node_container_base_name: couchbase-ubuntu-data
+      USER_DATA_ENV_data_node_container_base_name: couchbase-data
 
     # Map each container to unique ports on the host. Note that you can talk to this container from your host OS via the
     # HTTP/REST APIs but NOT the Couchbase SDKs! The SDKs will try to connect to the internal node IPs, which can only
@@ -64,9 +64,9 @@ services:
       - "7092:8092"
       - "10210:11210"
 
-  couchbase-ubuntu-data-1:
+  couchbase-data-1:
     <<: *couchbase_config
-    container_name: couchbase-ubuntu-data-1
+    container_name: couchbase-data-1
     environment:
       <<: *default_env
       # The User Data script that will be executed on boot by entrypoint.sh
@@ -77,9 +77,9 @@ services:
       - "8092"
       - "11210"
 
-  couchbase-ubuntu-index-query-search-0:
+  couchbase-index-query-search-0:
     <<: *couchbase_config
-    container_name: couchbase-ubuntu-index-query-search-0
+    container_name: couchbase-index-query-search-0
     environment:
       <<: *default_env
       # The User Data script that will be executed on boot by entrypoint.sh
@@ -95,9 +95,9 @@ services:
       - "8093"
       - "8094"
 
-  couchbase-ubuntu-sync-gateway-0:
+  couchbase-sync-gateway-0:
     <<: *couchbase_config
-    container_name: couchbase-ubuntu-sync-gateway-0
+    container_name: couchbase-sync-gateway-0
     environment:
       <<: *default_env
       # The User Data script that will be executed on boot by entrypoint.sh

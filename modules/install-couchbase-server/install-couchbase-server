@@ -11,7 +11,8 @@ source "$BASH_COMMONS_DIR/strings.sh"
 source "$BASH_COMMONS_DIR/os.sh"
 
 readonly DEFAULT_COUCHBASE_VERSION="5.1.0"
-readonly DEFAULT_COUCHBASE_SHA256_CHECKSUM="4d6a1f159577f283f6f980f6ab9161630eb2d8fd228429029de004b1be46ad76"
+readonly DEFAULT_COUCHBASE_SHA256_CHECKSUM_UBUNTU_16_04="4d6a1f159577f283f6f980f6ab9161630eb2d8fd228429029de004b1be46ad76"
+readonly DEFAULT_COUCHBASE_SHA256_CHECKSUM_AMAZON_LINUX="6c87268118cd21a0083a99aee8164712b3536720c11e8fcd7fe55646c8c83c56"
 readonly DEFAULT_SWAPINESS="0"
 
 readonly SWAPINESS_CONFIG_FILE="/etc/sysctl.conf"
@@ -35,18 +36,20 @@ function print_usage {
   echo
   echo "Example:"
   echo
-  echo "  install-couchbase-server --version $DEFAULT_COUCHBASE_VERSION --checksum $DEFAULT_COUCHBASE_SHA256_CHECKSUM"
+  echo "  install-couchbase-server --version $DEFAULT_COUCHBASE_VERSION --checksum $DEFAULT_COUCHBASE_SHA256_CHECKSUM_UBUNTU_16_04"
 }
 
 function install_couchbase_on_ubuntu {
   local readonly version="$1"
   local readonly checksum="$2"
 
+  log_info "Installing Couchbase on Ubuntu"
+
   # TODO: what about the community edition?
   local readonly filepath="couchbase-server-enterprise_${version}-ubuntu16.04_amd64.deb"
   local readonly url="https://packages.couchbase.com/releases/$version/$filepath"
 
-  log_info "Installing Couchbase dependencies on Ubuntu"
+  log_info "Installing Couchbase dependencies"
   sudo DEBIAN_FRONTEND=noninteractive apt-get update
   sudo apt-get install -y python-httplib2
 
@@ -61,6 +64,36 @@ function install_couchbase_on_ubuntu {
   log_info "Installing Couchbase from $filepath"
   sudo INSTALL_DONT_START_SERVER=1 dpkg -i "$filepath"
   sudo systemctl disable couchbase-server
+
+  log_info "Cleaning up $filepath"
+  rm -f "$filepath"
+}
+
+function install_couchbase_on_amazon_linux {
+  local readonly version="$1"
+  local readonly checksum="$2"
+
+  log_info "Installing Couchbase on Amazon Linux"
+
+  # TODO: what about the community edition?
+  local readonly filepath="couchbase-server-enterprise-${version}-centos6.x86_64.rpm"
+  local readonly url="https://packages.couchbase.com/releases/$version/$filepath"
+
+  log_info "Installing Couchbase dependencies"
+  sudo yum update -y
+  sudo yum install -y openssl
+
+  log_info "Downloading Couchbase from $url to $filepath"
+  curl --location --silent --fail --show-error -O "$url"
+
+  log_info "Verifying checksum is $checksum"
+  echo "$checksum $filepath" | sha256sum -c
+
+  # Install Couchbase, but configure it to NOT start on boot. This allows the run-couchbase-server script to configure
+  # Couchbase, including what ports to use, and THEN boot it up.
+  log_info "Installing Couchbase from $filepath"
+  sudo INSTALL_DONT_START_SERVER=1 rpm --install "$filepath"
+  sudo chkconfig couchbase-server off
 
   log_info "Cleaning up $filepath"
   rm -f "$filepath"
@@ -103,7 +136,7 @@ function install_bash_commons {
 
 function install {
   local version="$DEFAULT_COUCHBASE_VERSION"
-  local checksum="$DEFAULT_COUCHBASE_SHA256_CHECKSUM"
+  local checksum=$(is_amazon_linux && echo -n "$DEFAULT_COUCHBASE_SHA256_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_COUCHBASE_SHA256_CHECKSUM_UBUNTU_16_04")
   local swapiness="$DEFAULT_SWAPINESS"
 
   while [[ $# > 0 ]]; do
@@ -141,20 +174,26 @@ function install {
 
   assert_is_installed "curl"
 
-  log_info "Starting Couchbase install..."
-
-  # TODO: add Amazon Linux
-  if is_ubuntu; then
-    install_couchbase_on_ubuntu "$version" "$checksum"
-  else
-    log_error "This script only supports Ubuntu and Amazon Linux."
+  if [[ ! -z "$version" && -z "$checksum" ]]; then
+    log_error "You must specify the --checksum parameter when specifying the --version parameter. You can find the checksums on the Couchbase downloads page."
     exit 1
   fi
 
-  install_run_couchbase_script "$DEFAULT_COUCHBASE_BIN_DIR"
-  install_bash_commons "$BASH_COMMONS_INSTALL_DIR"
+  log_info "Starting Couchbase install..."
+
+  if is_ubuntu "16.04"; then
+    install_couchbase_on_ubuntu "$version" "$checksum"
+  elif is_amazon_linux; then
+    install_couchbase_on_amazon_linux "$version" "$checksum"
+  else
+    log_error "This script only supports Ubuntu 16.04 and Amazon Linux."
+    exit 1
+  fi
+
   update_swapiness "$swapiness"
   disable_transparent_huge_pages
+  install_run_couchbase_script "$DEFAULT_COUCHBASE_BIN_DIR"
+  install_bash_commons "$BASH_COMMONS_INSTALL_DIR"
 
   log_info "Couchbase installed successfully!"
 }

@@ -55,7 +55,7 @@
   },{
     "name": "amazon-linux-docker",
     "type": "docker",
-    "image": "gruntwork/amazonlinux-test:latest",
+    "image": "gruntwork/amazon-linux-test:2017.12",
     "commit": true
   }],
   "provisioners": [{
@@ -69,13 +69,11 @@
     "only": ["ubuntu-docker"]
   },{
     "type": "shell",
-    "pause_before": "30s",
+    "pause_before": "5s",
     "inline": [
-      "DEBIAN_FRONTEND=noninteractive sudo apt-get update",
-      "sudo apt-get install -y jq curl python-pip",
-      "sudo -H pip install --upgrade awscli"
+      "yum install -y shadow-utils initscripts"
     ],
-    "only": ["ubuntu-ami"]
+    "only": ["amazon-linux-docker"]
   },{
     "type": "file",
     "source": "{{template_dir}}/../../../terraform-aws-couchbase",

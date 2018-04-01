@@ -614,8 +614,17 @@ function wait_for_node_to_be_active_in_cluster {
 
 function start_couchbase {
   log_info "Starting Couchbase"
-  sudo systemctl enable couchbase-server
-  sudo systemctl start couchbase-server
+
+  if is_ubuntu; then
+    sudo systemctl enable couchbase-server
+    sudo systemctl start couchbase-server
+  elif is_amazon_linux; then
+    sudo chkconfig couchbase-server on
+    sudo service couchbase-server start
+  else
+    log_error "This script only supports Ubuntu and Amazon Linux."
+    exit 1
+  fi
 }
 
 # The main entrypoint for this code
