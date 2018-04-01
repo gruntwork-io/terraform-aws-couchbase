@@ -16,6 +16,11 @@ func TestIntegrationCouchbaseSingleClusterUbuntu(t *testing.T) {
 	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseSingleClusterUbuntu", "ubuntu")
 }
 
+func TestIntegrationCouchbaseSingleClusterAmazonLinux(t *testing.T) {
+	t.Parallel()
+	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseSingleClusterAmazonLinux", "amazon-linux")
+}
+
 func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 	logger := terralog.NewLogger(testName)
 

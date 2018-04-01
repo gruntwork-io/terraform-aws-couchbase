@@ -21,6 +21,16 @@ func TestUnitCouchbaseMultiClusterUbuntuInDocker(t *testing.T) {
 	testCouchbaseInDocker(t, "TestUnitCouchbaseMultiClusterUbuntuInDocker", "couchbase-multi-cluster","ubuntu", 3,7091, 3984)
 }
 
+func TestUnitCouchbaseSingleClusterAmazonLinuxInDocker(t *testing.T) {
+	t.Parallel()
+	testCouchbaseInDocker(t, "TestUnitCouchbaseSingleClusterAmazonLinuxInDocker","couchbase-single-cluster", "amazon-linux", 2, 8091, 4984)
+}
+
+func TestUnitCouchbaseMultiClusterAmazonLinuxInDocker(t *testing.T) {
+	t.Parallel()
+	testCouchbaseInDocker(t, "TestUnitCouchbaseMultiClusterAmazonLinuxInDocker", "couchbase-multi-cluster","amazon-linux", 3,7091, 3984)
+}
+
 func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName string, osName string, clusterSize int, couchbaseWebConsolePort int, syncGatewayWebConsolePort int) {
 	logger := terralog.NewLogger(testName)
 
@@ -36,12 +46,12 @@ func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName str
 	})
 
 	test_structure.RunTestStage("setup_docker", logger, func() {
-		startCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, testName, logger)
+		startCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, testName, osName, logger)
 	})
 
 	defer test_structure.RunTestStage("teardown", logger, func() {
-		getDockerComposeLogs(t, couchbaseSingleClusterDockerDir, testName, logger)
-		stopCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, testName, logger)
+		getDockerComposeLogs(t, couchbaseSingleClusterDockerDir, testName, osName, logger)
+		stopCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, testName, osName, logger)
 	})
 
 	test_structure.RunTestStage("validation", logger, func() {
@@ -57,27 +67,30 @@ func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName str
 	})
 }
 
-func startCouchbaseWithDockerCompose(t *testing.T, exampleDir string, testName string, logger *log.Logger) {
-	runDockerCompose(t, exampleDir, testName, logger, "up", "-d")
+func startCouchbaseWithDockerCompose(t *testing.T, exampleDir string, testName string, osName string, logger *log.Logger) {
+	runDockerCompose(t, exampleDir, testName, osName, logger, "up", "-d")
 }
 
-func getDockerComposeLogs(t *testing.T, exampleDir string, testName string, logger *log.Logger) {
+func getDockerComposeLogs(t *testing.T, exampleDir string, testName string, osName string, logger *log.Logger) {
 	logger.Printf("Fetching docker-compose logs:")
-	runDockerCompose(t, exampleDir, testName, logger, "logs")
+	runDockerCompose(t, exampleDir, testName, osName, logger, "logs")
 }
 
-func stopCouchbaseWithDockerCompose(t *testing.T, exampleDir string, testName string, logger *log.Logger) {
-	runDockerCompose(t, exampleDir, testName, logger, "down")
-	runDockerCompose(t, exampleDir, testName, logger, "rm", "-f")
+func stopCouchbaseWithDockerCompose(t *testing.T, exampleDir string, testName string, osName string, logger *log.Logger) {
+	runDockerCompose(t, exampleDir, testName, osName, logger, "down")
+	runDockerCompose(t, exampleDir, testName, osName, logger, "rm", "-f")
 }
 
-func runDockerCompose(t *testing.T, exampleDir string, testName string, logger *log.Logger, args ... string) {
+func runDockerCompose(t *testing.T, exampleDir string, testName string, osName string, logger *log.Logger, args ... string) {
 	cmd := shell.Command{
 		Command:    "docker-compose",
 		// We append --project-name to ensure containers from multiple different tests using Docker Compose don't end
 		// up in the same project and end up conflicting with each other.
 		Args:       append([]string{"--project-name", testName}, args...),
 		WorkingDir: exampleDir,
+		Env: map[string]string{
+			"OS_NAME": osName,
+		},
 	}
 
 	if err := shell.RunCommand(cmd, logger); err != nil {
