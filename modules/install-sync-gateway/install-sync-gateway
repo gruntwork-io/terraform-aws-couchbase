@@ -20,7 +20,10 @@ readonly DEFAULT_SYNC_GATEWAY_BIN_DIR="$DEFAULT_SYNC_GATEWAY_DIR/bin"
 readonly BASH_COMMONS_INSTALL_DIR="$DEFAULT_SYNC_GATEWAY_DIR/bash-commons"
 
 # The systemd unit for Sync Gateway configures it load the config file at this path
-readonly DEFAULT_SYNC_GATEWAY_CONFIG_PATH="/home/sync_gateway/sync_gateway.json"
+readonly DEFAULT_SYNC_GATEWAY_HOME="/home/sync_gateway"
+readonly DEFAULT_SYNC_GATEWAY_CONFIG_PATH="$DEFAULT_SYNC_GATEWAY_HOME/sync_gateway.json"
+readonly DEFAULT_SYNC_GATEWAY_LOGS_PATH="$DEFAULT_SYNC_GATEWAY_HOME/logs"
+readonly DEFAULT_SYNC_GATEWAY_INITD_UNIT_PATH="/etc/init.d/sync_gateway"
 
 function print_usage {
   echo
@@ -87,11 +90,19 @@ function install_sync_gateway_on_amazon_linux {
   log_info "Installing SyncGateway from $filepath"
   sudo rpm --install "$filepath"
 
-  # These commands sometimes exit with an error for no obvious reason, so just ignore the error...
+  log_info "Preparing Sync Gateway logs paths at $DEFAULT_SYNC_GATEWAY_LOGS_PATH"
+  sudo mkdir -p "$DEFAULT_SYNC_GATEWAY_LOGS_PATH"
+  sudo chown -R "sync_gateway:sync_gateway" "$DEFAULT_SYNC_GATEWAY_HOME"
+  replace_or_append_in_file "^LOGS=.*$" "LOGS=$DEFAULT_SYNC_GATEWAY_LOGS_PATH" "$DEFAULT_SYNC_GATEWAY_INITD_UNIT_PATH"
+
+  # These commands sometimes exit with an error for no obvious reason, so we just ignore the error...
   set +e
-  sudo service sync_gateway stop
   sudo chkconfig sync_gateway off
+  sudo service sync_gateway stop
   set -e
+
+  # Remove the original log paths to reduce confusion
+  sudo rm -rf /var/log/sync_gateway
 
   log_info "Cleaning up $filepath"
   rm -f "$filepath"

@@ -23,6 +23,7 @@ readonly SLEEP_BETWEEN_RETRIES_SEC=5
 # The systemd unit for Sync Gateway configures it load the config file at this path
 readonly DEFAULT_SYNC_GATEWAY_CONFIG_PATH="/home/sync_gateway/sync_gateway.json"
 readonly DEFAULT_SYNC_GATEWAY_SYSTEMD_UNIT_PATH="/lib/systemd/system/sync_gateway.service"
+readonly DEFAULT_SYNC_GATEWAY_INITD_UNIT_PATH="/etc/init.d/sync_gateway"
 
 function print_usage {
   echo
@@ -69,12 +70,20 @@ function get_hostnames {
   join "," "${hostnames_with_ports[@]}"
 }
 
-function update_config_path {
+function update_config_path_in_systemd {
   local readonly config_path="$1"
   local readonly systemd_unit_path="$2"
 
   log_info "Setting Sync Gateway systemd unit $systemd_unit_path config path to $config_path"
   replace_or_append_in_file "^Environment=\"CONFIG=.*\"$" "Environment=\"CONFIG=$config_path\"" "$systemd_unit_path"
+}
+
+function update_config_path_in_initd {
+  local readonly config_path="$1"
+  local readonly initd_unit_path="$2"
+
+  log_info "Setting Sync Gateway init.d unit $initd_unit_path config path to $config_path"
+  replace_or_append_in_file "^CONFIG=.*$" "CONFIG=$config_path" "$initd_unit_path"
 }
 
 function auto_fill_config {
@@ -157,19 +166,18 @@ function auto_fill_asg_param {
   replace_text_in_file "$placeholder_name" "$placeholder_value" "$config"
 }
 
-function start_sync_gateway {
+function start_sync_gateway_systemd {
   log_info "Starting Sync Gateway"
 
-  if is_ubuntu; then
-    sudo systemctl enable sync_gateway
-    sudo systemctl start sync_gateway
-  elif is_amazon_linux; then
-    sudo chkconfig sync_gateway on
-    sudo service sync_gateway start
-  else
-    log_error "This script only supports Ubuntu and Amazon Linux."
-    exit 1
-  fi
+  sudo systemctl enable sync_gateway
+  sudo systemctl start sync_gateway
+}
+
+function start_sync_gateway_initd {
+  log_info "Starting Sync Gateway"
+
+  sudo chkconfig sync_gateway on
+  sudo service sync_gateway start
 }
 
 function wait_for_couchbase_clusters {
@@ -310,11 +318,23 @@ function run {
 
   log_info "Starting configuration of Sync Gateway..."
 
-  update_config_path "$config" "$DEFAULT_SYNC_GATEWAY_SYSTEMD_UNIT_PATH"
-  auto_fill_config_asg "$config" "$use_public_hostname" "${auto_fill_asg[@]}"
-  auto_fill_config "$config" "${auto_fill[@]}"
-  wait_for_couchbase_clusters "$config" "$skip_wait"
-  start_sync_gateway
+  if is_ubuntu; then
+    update_config_path_in_systemd "$config" "$DEFAULT_SYNC_GATEWAY_SYSTEMD_UNIT_PATH"
+    auto_fill_config_asg "$config" "$use_public_hostname" "${auto_fill_asg[@]}"
+    auto_fill_config "$config" "${auto_fill[@]}"
+    wait_for_couchbase_clusters "$config" "$skip_wait"
+    start_sync_gateway_systemd
+  elif is_amazon_linux; then
+    update_config_path_in_initd "$config" "$DEFAULT_SYNC_GATEWAY_INITD_UNIT_PATH"
+    auto_fill_config_asg "$config" "$use_public_hostname" "${auto_fill_asg[@]}"
+    auto_fill_config "$config" "${auto_fill[@]}"
+    wait_for_couchbase_clusters "$config" "$skip_wait"
+    start_sync_gateway_initd
+  else
+    log_error "This script only supports Ubuntu and Amazon Linux."
+    exit 1
+  fi
+
 
   log_info "Sync Gateway configured successfully!"
 }
