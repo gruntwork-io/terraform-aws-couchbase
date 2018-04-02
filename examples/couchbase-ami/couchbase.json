@@ -71,6 +71,14 @@
     ],
     "only": ["amazon-linux-docker"]
   },{
+    "type": "shell",
+    "pause_before": "30s",
+    "inline": [
+      "sudo yum update -y",
+      "sudo yum install -y jq"
+    ],
+    "only": ["amazon-linux-ami"]
+  },{
     "type": "file",
     "source": "{{template_dir}}/../../../terraform-aws-couchbase",
     "destination": "/tmp"
