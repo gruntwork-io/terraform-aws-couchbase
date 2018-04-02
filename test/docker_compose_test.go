@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"github.com/gruntwork-io/terratest/test-structure"
 	terralog "github.com/gruntwork-io/terratest/log"
-	"github.com/gruntwork-io/terratest/files"
 	"log"
 	"github.com/gruntwork-io/terratest/shell"
 	"strconv"
@@ -36,12 +35,9 @@ func TestUnitCouchbaseMultiClusterAmazonLinuxInDocker(t *testing.T) {
 func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName string, osName string, clusterSize int, couchbaseWebConsolePort int, syncGatewayWebConsolePort int) {
 	logger := terralog.NewLogger(testName)
 
-	tmpRootDir, err := files.CopyTerraformFolderToTemp("../", testName)
-	if err != nil {
-		t.Fatal(err)
-	}
-	couchbaseAmiDir := filepath.Join(tmpRootDir, "examples", "couchbase-ami")
-	couchbaseSingleClusterDockerDir := filepath.Join(tmpRootDir, "examples", examplesFolderName, "local-test")
+	tmpExamplesDir := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName, logger)
+	couchbaseAmiDir := filepath.Join(tmpExamplesDir, "couchbase-ami")
+	couchbaseSingleClusterDockerDir := filepath.Join(tmpExamplesDir, examplesFolderName, "local-test")
 	uniqueId := util.UniqueId()
 
 	test_structure.RunTestStage("setup_image", logger, func() {
