@@ -60,9 +60,7 @@ services:
     # Couchbase doesn't allow all port numbers to be overridden, so the Erlang Port Mapper service clashes.
     # https://developer.couchbase.com/documentation/server/current/install/install-ports.html
     ports:
-      - "7091:8091"
-      - "7092:8092"
-      - "10210:11210"
+      - "${WEB_CONSOLE_PORT}:8091"
 
   couchbase-data-1:
     <<: *couchbase_config
@@ -74,8 +72,6 @@ services:
     ports:
       # Map these ports to any available port number on the host
       - "8091"
-      - "8092"
-      - "11210"
 
   couchbase-index-query-search-0:
     <<: *couchbase_config
@@ -91,9 +87,6 @@ services:
     ports:
       # Map these ports to any available port number on the host
       - "8091"
-      - "8092"
-      - "8093"
-      - "8094"
 
   couchbase-sync-gateway-0:
     <<: *couchbase_config
@@ -108,6 +101,7 @@ services:
       USER_DATA_ENV_sync_gateway_admin_interface: 127.0.0.1:4985
     ports:
       # Map these ports to any available port number on the host
-      - "3984:4984"
-      - "4985"
+      - "8091"
+      # Sync Gateway port
+      - "${SYNC_GATEWAY_PORT}:4984"
 
