@@ -36,7 +36,7 @@ function print_usage {
   echo
   echo "Usage: run-couchbase-server [options]"
   echo
-  echo "This script can be used to configure and initialize a Couchbase Server. This script has been tested with Ubuntu 16.04 and Amazon Linux."
+  echo "This script can be used to configure and initialize a Couchbase Server. This script has been tested with Ubuntu 16.04 and Amazon Linux 2."
   echo
   echo "Required arguments:"
   echo
@@ -615,16 +615,8 @@ function wait_for_node_to_be_active_in_cluster {
 function start_couchbase {
   log_info "Starting Couchbase"
 
-  if is_ubuntu; then
-    sudo systemctl enable couchbase-server
-    sudo systemctl start couchbase-server
-  elif is_amazon_linux; then
-    sudo chkconfig couchbase-server on
-    sudo service couchbase-server start
-  else
-    log_error "This script only supports Ubuntu and Amazon Linux."
-    exit 1
-  fi
+  sudo systemctl enable couchbase-server
+  sudo systemctl start couchbase-server
 }
 
 # The main entrypoint for this code

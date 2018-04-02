@@ -26,7 +26,7 @@ function print_usage {
   echo
   echo "Usage: install-couchbase-server [options]"
   echo
-  echo "This script can be used to install Couchbase Server and its dependencies. This script has been tested with Ubuntu 16.04 and Amazon Linux."
+  echo "This script can be used to install Couchbase Server and its dependencies. This script has been tested with Ubuntu 16.04 and Amazon Linux 2."
   echo
   echo "Options:"
   echo
@@ -183,10 +183,10 @@ function install {
 
   if is_ubuntu "16.04"; then
     install_couchbase_on_ubuntu "$version" "$checksum"
-  elif is_amazon_linux; then
+  elif is_amazon_linux "2"; then
     install_couchbase_on_amazon_linux "$version" "$checksum"
   else
-    log_error "This script only supports Ubuntu 16.04 and Amazon Linux."
+    log_error "This script only supports Ubuntu 16.04 and Amazon Linux 2."
     exit 1
   fi
 

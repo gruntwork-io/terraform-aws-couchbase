@@ -9,7 +9,7 @@ Images (AMIs)](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) tha
 and their dependencies installed on top of:
  
 1. Ubuntu 16.04
-1. Amazon Linux
+1. Amazon Linux 2
 
 
 

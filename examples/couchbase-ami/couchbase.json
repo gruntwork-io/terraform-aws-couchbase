@@ -26,7 +26,7 @@
   },{
     "name": "amazon-linux-ami",
     "ami_name": "{{user `base_ami_name`}}-amazon-linux-{{isotime | clean_ami_name}}",
-    "ami_description": "An Amazon Linux AMI that has Couchbase installed.",
+    "ami_description": "An Amazon Linux 2 AMI that has Couchbase installed.",
     "instance_type": "t2.micro",
     "region": "{{user `aws_region`}}",
     "type": "amazon-ebs",
@@ -34,7 +34,7 @@
       "filters": {
         "virtualization-type": "hvm",
         "architecture": "x86_64",
-        "name": "*amzn-ami-hvm-*",
+        "name": "*amzn2-ami-hvm-*",
         "block-device-mapping.volume-type": "gp2",
         "root-device-type": "ebs"
       },
