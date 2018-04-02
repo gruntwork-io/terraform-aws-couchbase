@@ -6,7 +6,7 @@ services:
   couchbase-0: &couchbase_config
     image: gruntwork/couchbase-${OS_NAME}-test
     entrypoint: ["/entrypoint/entrypoint.sh"]
-    container_name: couchbase-0
+    container_name: ${CONTAINER_BASE_NAME}-0
 
     # These are all settings required to make systemd happy
     privileged: true
@@ -56,7 +56,7 @@ services:
       USER_DATA_ENV_index_volume_device_name: /dev/xvdg
       USER_DATA_ENV_index_volume_mount_point: /couchbase-index
       USER_DATA_ENV_volume_owner: couchbase
-      USER_DATA_ENV_data_node_container_base_name: couchbase
+      USER_DATA_ENV_data_node_container_base_name: ${CONTAINER_BASE_NAME}
 
     # Map each container to unique ports on the host. Note that you can talk to this container from your host OS via the
     # HTTP/REST APIs but NOT the Couchbase SDKs! The SDKs will try to connect to the internal node IPs, which can only
@@ -69,7 +69,7 @@ services:
 
   couchbase-1:
     <<: *couchbase_config
-    container_name: couchbase-1
+    container_name: ${CONTAINER_BASE_NAME}-1
     ports:
       # Map these ports to any available port number on the host
       - "8091"

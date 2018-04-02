@@ -10,6 +10,7 @@ import (
 	"log"
 	"github.com/gruntwork-io/terratest/shell"
 	"strconv"
+	"github.com/gruntwork-io/terratest/util"
 )
 
 func TestUnitCouchbaseSingleClusterUbuntuInDocker(t *testing.T) {
@@ -41,18 +42,19 @@ func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName str
 	}
 	couchbaseAmiDir := filepath.Join(tmpRootDir, "examples", "couchbase-ami")
 	couchbaseSingleClusterDockerDir := filepath.Join(tmpRootDir, "examples", examplesFolderName, "local-test")
+	uniqueId := util.UniqueId()
 
 	test_structure.RunTestStage("setup_image", logger, func() {
 		buildCouchbaseWithPacker(t, logger, fmt.Sprintf("%s-docker", osName), "couchbase","us-east-1", couchbaseAmiDir)
 	})
 
 	test_structure.RunTestStage("setup_docker", logger, func() {
-		startCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, testName, osName, couchbaseWebConsolePort, syncGatewayWebConsolePort, logger)
+		startCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, testName, osName, couchbaseWebConsolePort, syncGatewayWebConsolePort, uniqueId, logger)
 	})
 
 	defer test_structure.RunTestStage("teardown", logger, func() {
-		getDockerComposeLogs(t, couchbaseSingleClusterDockerDir, testName, osName, couchbaseWebConsolePort, syncGatewayWebConsolePort, logger)
-		stopCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, testName, osName, couchbaseWebConsolePort, syncGatewayWebConsolePort, logger)
+		getDockerComposeLogs(t, couchbaseSingleClusterDockerDir, testName, osName, couchbaseWebConsolePort, syncGatewayWebConsolePort, uniqueId, logger)
+		stopCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, testName, osName, couchbaseWebConsolePort, syncGatewayWebConsolePort, uniqueId, logger)
 	})
 
 	test_structure.RunTestStage("validation", logger, func() {
@@ -68,21 +70,21 @@ func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName str
 	})
 }
 
-func startCouchbaseWithDockerCompose(t *testing.T, exampleDir string, testName string, osName string, webConsolePort int, syncGatewayPort int, logger *log.Logger) {
-	runDockerCompose(t, exampleDir, testName, osName, webConsolePort, syncGatewayPort, logger, "up", "-d")
+func startCouchbaseWithDockerCompose(t *testing.T, exampleDir string, testName string, osName string, webConsolePort int, syncGatewayPort int, uniqueId string, logger *log.Logger) {
+	runDockerCompose(t, exampleDir, testName, osName, webConsolePort, syncGatewayPort, uniqueId, logger, "up", "-d")
 }
 
-func getDockerComposeLogs(t *testing.T, exampleDir string, testName string, osName string, webConsolePort int, syncGatewayPort int, logger *log.Logger) {
+func getDockerComposeLogs(t *testing.T, exampleDir string, testName string, osName string, webConsolePort int, syncGatewayPort int, uniqueId string, logger *log.Logger) {
 	logger.Printf("Fetching docker-compose logs:")
-	runDockerCompose(t, exampleDir, testName, osName, webConsolePort, syncGatewayPort, logger, "logs")
+	runDockerCompose(t, exampleDir, testName, osName, webConsolePort, syncGatewayPort, uniqueId, logger, "logs")
 }
 
-func stopCouchbaseWithDockerCompose(t *testing.T, exampleDir string, testName string, osName string, webConsolePort int, syncGatewayPort int, logger *log.Logger) {
-	runDockerCompose(t, exampleDir, testName, osName, webConsolePort, syncGatewayPort, logger, "down")
-	runDockerCompose(t, exampleDir, testName, osName, webConsolePort, syncGatewayPort, logger, "rm", "-f")
+func stopCouchbaseWithDockerCompose(t *testing.T, exampleDir string, testName string, osName string, webConsolePort int, syncGatewayPort int, uniqueId string, logger *log.Logger) {
+	runDockerCompose(t, exampleDir, testName, osName, webConsolePort, syncGatewayPort, uniqueId, logger, "down")
+	runDockerCompose(t, exampleDir, testName, osName, webConsolePort, syncGatewayPort, uniqueId, logger, "rm", "-f")
 }
 
-func runDockerCompose(t *testing.T, exampleDir string, testName string, osName string, webConsolePort int, syncGatewayPort int, logger *log.Logger, args ... string) {
+func runDockerCompose(t *testing.T, exampleDir string, testName string, osName string, webConsolePort int, syncGatewayPort int, uniqueId string, logger *log.Logger, args ... string) {
 	cmd := shell.Command{
 		Command:    "docker-compose",
 		// We append --project-name to ensure containers from multiple different tests using Docker Compose don't end
@@ -93,6 +95,7 @@ func runDockerCompose(t *testing.T, exampleDir string, testName string, osName s
 			"OS_NAME": osName,
 			"WEB_CONSOLE_PORT": strconv.Itoa(webConsolePort),
 			"SYNC_GATEWAY_PORT": strconv.Itoa(syncGatewayPort),
+			"CONTAINER_BASE_NAME": fmt.Sprintf("couchbase-%s", uniqueId),
 		},
 	}
 
