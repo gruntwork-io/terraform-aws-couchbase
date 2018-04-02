@@ -25,6 +25,8 @@ func (build DockerBuilder) Build(t *testing.T, osName string, logger *log.Logger
 }
 
 func TestUnitCouchbaseInDocker(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		testName string
 		examplesFolderName string
@@ -49,6 +51,8 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 	dockerBuilders := map[string]DockerBuilder{}
 
 	for _, testCase := range testCases {
+		testCase := testCase // capture range variable; otherwise, only the very last test case will run!
+
 		dockerBuilder, containsBuilderForOs := dockerBuilders[testCase.osName]
 		if !containsBuilderForOs {
 			dockerBuilder = DockerBuilder{}
