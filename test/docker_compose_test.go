@@ -15,11 +15,12 @@ import (
 
 // This type is used to ensure that a given Docker build runs at most once. Repated calls to the Build() method will
 // not rebuild the same Docker image.
-type DockerBuilder sync.Once
+type DockerBuilder struct {
+	once sync.Once
+}
 
-func (build DockerBuilder) Build(t *testing.T, osName string, logger *log.Logger, packerTemplateDir string) {
-	asOnce := sync.Once(build)
-	(&asOnce).Do(func() {
+func (build *DockerBuilder) Build(t *testing.T, osName string, logger *log.Logger, packerTemplateDir string) {
+	build.once.Do(func() {
 		buildCouchbaseWithPacker(t, logger, fmt.Sprintf("%s-docker", osName), "couchbase","us-east-1", packerTemplateDir)
 	})
 }
@@ -48,25 +49,22 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 	//
 	// We only need to build the container for each OS once per build, so we use the DockerBuilder struct to ensure
 	// each test runs the build for a given OS at most once.
-	dockerBuilders := map[string]DockerBuilder{}
+	dockerBuilders := map[string]*DockerBuilder{}
+	for _, testCase := range testCases {
+		dockerBuilders[testCase.osName] = &DockerBuilder{}
+	}
 
 	for _, testCase := range testCases {
 		testCase := testCase // capture range variable; otherwise, only the very last test case will run!
 
-		dockerBuilder, containsBuilderForOs := dockerBuilders[testCase.osName]
-		if !containsBuilderForOs {
-			dockerBuilder = DockerBuilder{}
-			dockerBuilders[testCase.osName] = dockerBuilder
-		}
-
 		t.Run(testCase.testName, func(t *testing.T) {
 			t.Parallel()
-			testCouchbaseInDocker(t, testCase.testName, testCase.examplesFolderName, testCase.osName, testCase.clusterSize, testCase.couchbaseWebConsolePort, testCase.syncGatewayWebConsolePort, dockerBuilder)
+			testCouchbaseInDocker(t, testCase.testName, testCase.examplesFolderName, testCase.osName, testCase.clusterSize, testCase.couchbaseWebConsolePort, testCase.syncGatewayWebConsolePort, dockerBuilders[testCase.osName])
 		})
 	}
 }
 
-func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName string, osName string, clusterSize int, couchbaseWebConsolePort int, syncGatewayWebConsolePort int, dockerBuilder DockerBuilder) {
+func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName string, osName string, clusterSize int, couchbaseWebConsolePort int, syncGatewayWebConsolePort int, dockerBuilder *DockerBuilder) {
 	logger := terralog.NewLogger(testName)
 
 	tmpExamplesDir := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName, logger)
