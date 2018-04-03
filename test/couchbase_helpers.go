@@ -41,7 +41,7 @@ type ServerNode struct {
 }
 
 func checkCouchbaseClusterIsInitialized(t *testing.T, clusterUrl string, expectedNodes int, logger *log.Logger) {
-	maxRetries := 200
+	maxRetries := 300
 	sleepBetweenRetries := 5 * time.Second
 	serverNodeUrl := fmt.Sprintf("%s/pools/nodes", clusterUrl)
 
