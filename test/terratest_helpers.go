@@ -41,6 +41,11 @@ func createBaseTerratestOptions(t *testing.T, testName string, folder string, re
 func buildCouchbaseWithPacker(t *testing.T, logger *log.Logger, builderName string, baseAmiName string, awsRegion string, folderPath string) string {
 	templatePath := fmt.Sprintf("%s/couchbase.json", folderPath)
 
+	packerTmpDir, err := ioutil.TempDir("", builderName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	options := packer.PackerOptions{
 		Template: templatePath,
 		Only: builderName,
@@ -48,7 +53,17 @@ func buildCouchbaseWithPacker(t *testing.T, logger *log.Logger, builderName stri
 			"aws_region": awsRegion,
 			"base_ami_name": baseAmiName,
 		},
+
+		// If you're using the Docker build with Packer and use the file provisioner to upload files, Packer will first
+		// stage those files in a temporary directory it creates under home. If you're building multiple Docker images
+		// with Packer at the same time, then these builds may overwrite each other's files in that temp directory. To
+		// avoid that, we allow users to override that tmp dir. For more info, see:
+		// https://www.packer.io/docs/builders/docker.html#overriding-the-host-directory
+		Env: map[string]string{
+			"PACKER_TMP_DIR": packerTmpDir,
+		},
 	}
+
 
 	artifactId, err := packer.BuildAmi(options, logger)
 	if err != nil {
