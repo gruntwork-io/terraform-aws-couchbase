@@ -53,6 +53,9 @@ services:
       USER_DATA_ENV_data_volume_mount_point: /couchbase-data
       USER_DATA_ENV_volume_owner: couchbase
       USER_DATA_ENV_data_node_container_base_name: ${CONTAINER_BASE_NAME}-data
+      USER_DATA_ENV_data_ramsize: 512
+      USER_DATA_ENV_index_ramsize: 256
+      USER_DATA_ENV_fts_ramsize: 256
 
     # Map each container to unique ports on the host. Note that you can talk to this container from your host OS via the
     # HTTP/REST APIs but NOT the Couchbase SDKs! The SDKs will try to connect to the internal node IPs, which can only

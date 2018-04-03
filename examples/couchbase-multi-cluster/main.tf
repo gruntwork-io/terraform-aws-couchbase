@@ -22,9 +22,12 @@ module "couchbase_data_nodes" {
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/couchbase-cluster?ref=v0.0.1"
   source = "../../modules/couchbase-cluster"
 
-  cluster_name  = "${var.couchbase_data_node_cluster_name}"
-  min_size      = 3
-  max_size      = 3
+  cluster_name = "${var.couchbase_data_node_cluster_name}"
+  min_size     = 3
+  max_size     = 3
+
+  # We use small instance types to keep these examples cheap to run. In a production setting, you'll probably want
+  # R4 or M4 instances.
   instance_type = "t2.micro"
 
   ami_id    = "${var.ami_id}"
@@ -76,9 +79,12 @@ module "couchbase_index_query_search_nodes" {
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/couchbase-cluster?ref=v0.0.1"
   source = "../../modules/couchbase-cluster"
 
-  cluster_name  = "${var.couchbase_index_query_search_node_cluster_name}"
-  min_size      = 2
-  max_size      = 2
+  cluster_name = "${var.couchbase_index_query_search_node_cluster_name}"
+  min_size     = 2
+  max_size     = 2
+
+  # We use small instance types to keep these examples cheap to run. In a production setting, you'll probably want
+  # R4 or M4 instances.
   instance_type = "t2.micro"
 
   ami_id    = "${var.ami_id}"
@@ -130,9 +136,12 @@ module "sync_gateway" {
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/couchbase-cluster?ref=v0.0.1"
   source = "../../modules/couchbase-cluster"
 
-  cluster_name  = "${var.sync_gateway_cluster_name}"
-  min_size      = 2
-  max_size      = 2
+  cluster_name = "${var.sync_gateway_cluster_name}"
+  min_size     = 2
+  max_size     = 2
+
+  # We use small instance types to keep these examples cheap to run. In a production setting, you'll probably want
+  # R4 or M4 instances.
   instance_type = "t2.micro"
 
   ami_id    = "${var.ami_id}"
@@ -181,6 +190,11 @@ data "template_file" "user_data_couchbase_data_nodes" {
     data_volume_device_name = "${var.data_volume_device_name}"
     data_volume_mount_point = "${var.data_volume_mount_point}"
     volume_owner            = "${var.volume_owner}"
+    # Use a small amount of memory so this example can fit on a t2.micro. In production settings, you'll want to run
+    # on
+    data_ramsize = "512"
+    index_ramsize = "256"
+    fts_ramsize   = "256"
   }
 }
 
