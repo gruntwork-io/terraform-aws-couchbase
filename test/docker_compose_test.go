@@ -17,8 +17,7 @@ type BuildRequest struct {
 	TestName string
 	Dir      string
 	Logger   *log.Logger
-	T        *testing.T
-	Finished chan bool
+	Finished chan error
 }
 
 func TestUnitCouchbaseInDocker(t *testing.T) {
@@ -62,26 +61,24 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 }
 
 func dockerImageBuilder(t *testing.T, buildRequests chan BuildRequest) {
-	completedBuildsByOs := map[string]bool{}
+	completedBuildsByOs := map[string]error{}
 
 	for {
 		processBuildRequest(<-buildRequests, completedBuildsByOs)
 	}
 }
 
-func processBuildRequest(request BuildRequest, completedBuildsByOs map[string]bool) {
-	// Always make sure to send a response to the requester, even if the Packer build fails, so we don't have tests
-	// hanging
-	defer func() {
-		request.Logger.Printf("Notifying test %s that Packer build for OS %s is done", request.TestName, request.OsName)
-		completedBuildsByOs[request.OsName] = true
-		request.Finished <- true
-	}()
+func processBuildRequest(request BuildRequest, completedBuildsByOs map[string]error) {
+	err, buildFinished := completedBuildsByOs[request.OsName]
 
-	if _, buildFinished := completedBuildsByOs[request.OsName]; !buildFinished {
+	if !buildFinished {
 		request.Logger.Printf("Kicking off Packer build for test %s on OS %s in %s", request.TestName, request.OsName, request.Dir)
-		buildCouchbaseWithPacker(request.T, request.Logger, fmt.Sprintf("%s-docker", request.OsName), "couchbase","us-east-1", request.Dir)
+		_, err = buildCouchbaseWithPacker(request.Logger, fmt.Sprintf("%s-docker", request.OsName), "couchbase","us-east-1", request.Dir)
 	}
+
+	request.Logger.Printf("Notifying test %s that Packer build for OS %s is done", request.TestName, request.OsName)
+	completedBuildsByOs[request.OsName] = err
+	request.Finished <- err
 }
 
 func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName string, osName string, clusterSize int, couchbaseWebConsolePort int, syncGatewayWebConsolePort int, buildRequests chan BuildRequest) {
@@ -94,9 +91,14 @@ func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName str
 
 	test_structure.RunTestStage("setup_image", logger, func() {
 		logger.Printf("Requesting Packer build for OS %s in %s", osName, couchbaseAmiDir)
-		buildFinished := make(chan bool)
-		buildRequests <- BuildRequest{OsName: osName, TestName: testName, Dir: couchbaseAmiDir, Logger: logger, Finished: buildFinished, T: t}
-		<-buildFinished
+
+		buildFinished := make(chan error)
+		buildRequests <- BuildRequest{OsName: osName, TestName: testName, Dir: couchbaseAmiDir, Logger: logger, Finished: buildFinished}
+
+		err := <-buildFinished
+		if err != nil {
+			t.Fatalf("Failed to build Couchbase Docker image: %v", err)
+		}
 	})
 
 	test_structure.RunTestStage("setup_docker", logger, func() {

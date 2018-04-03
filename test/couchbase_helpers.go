@@ -274,7 +274,10 @@ func checkSyncGatewayWorking(t *testing.T, syncGatewayUrl string, logger *log.Lo
 
 func testStageBuildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, couchbaseTerraformDir string, logger *log.Logger) {
 	resourceCollection := createBaseRandomResourceCollection(t)
-	amiId := buildCouchbaseWithPacker(t, logger, fmt.Sprintf("%s-ami", osName), fmt.Sprintf("couchbase-%s", resourceCollection.UniqueId), resourceCollection.AwsRegion, couchbaseAmiDir)
+	amiId, err := buildCouchbaseWithPacker(logger, fmt.Sprintf("%s-ami", osName), fmt.Sprintf("couchbase-%s", resourceCollection.UniqueId), resourceCollection.AwsRegion, couchbaseAmiDir)
+	if err != nil {
+		t.Fatalf("Failed to build Couchbase AMI: %v", err)
+	}
 
 	test_structure.SaveAmiId(t, couchbaseTerraformDir, amiId, logger)
 	test_structure.SaveRandomResourceCollection(t, couchbaseTerraformDir, resourceCollection, logger)
