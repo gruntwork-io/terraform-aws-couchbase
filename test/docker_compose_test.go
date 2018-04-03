@@ -55,7 +55,7 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 		testCase := testCase // capture range variable; otherwise, only the very last test case will run!
 
 		t.Run(testCase.testName, func(t *testing.T) {
-			t.Parallel()
+			//t.Parallel()
 			testCouchbaseInDocker(t, testCase.testName, testCase.examplesFolderName, testCase.osName, testCase.clusterSize, testCase.couchbaseWebConsolePort, testCase.syncGatewayWebConsolePort, buildRequests)
 		})
 	}
@@ -73,7 +73,7 @@ func processBuildRequest(request BuildRequest, completedBuildsByOs map[string]er
 	err, buildFinished := completedBuildsByOs[request.OsName]
 
 	if !buildFinished {
-		description := fmt.Sprintf("Kicking off Packer build for test %s on OS %s in %s", request.TestName, request.OsName, request.Dir)
+		description := fmt.Sprintf("Packer build for Couchbase Docker image for test %s on OS %s in %s", request.TestName, request.OsName, request.Dir)
 		maxRetries := 3
 		sleepBetweenRetries := 15 * time.Second
 
