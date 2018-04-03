@@ -22,7 +22,7 @@ type BuildRequest struct {
 }
 
 func TestUnitCouchbaseInDocker(t *testing.T) {
-	t.Parallel()
+	//t.Parallel()
 
 	testCases := []struct {
 		testName string
@@ -103,15 +103,17 @@ func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName str
 	uniqueId := util.UniqueId()
 
 	test_structure.RunTestStage("setup_image", logger, func() {
-		logger.Printf("Requesting Packer build for OS %s in %s", osName, couchbaseAmiDir)
+		//logger.Printf("Requesting Packer build for OS %s in %s", osName, couchbaseAmiDir)
+		//
+		//buildFinished := make(chan error)
+		//buildRequests <- BuildRequest{OsName: osName, TestName: testName, Dir: couchbaseAmiDir, Logger: logger, Finished: buildFinished}
+		//
+		//err := <-buildFinished
+		//if err != nil {
+		//	t.Fatalf("Failed to build Couchbase Docker image: %v", err)
+		//}
 
-		buildFinished := make(chan error)
-		buildRequests <- BuildRequest{OsName: osName, TestName: testName, Dir: couchbaseAmiDir, Logger: logger, Finished: buildFinished}
-
-		err := <-buildFinished
-		if err != nil {
-			t.Fatalf("Failed to build Couchbase Docker image: %v", err)
-		}
+		buildCouchbaseWithPacker(logger, fmt.Sprintf("%s-docker", osName), "couchbase","us-east-1", couchbaseAmiDir)
 	})
 
 	test_structure.RunTestStage("setup_docker", logger, func() {
