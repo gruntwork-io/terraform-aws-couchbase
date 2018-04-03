@@ -10,6 +10,7 @@ import (
 	"github.com/gruntwork-io/terratest/shell"
 	"strconv"
 	"github.com/gruntwork-io/terratest/util"
+	"time"
 )
 
 type BuildRequest struct {
@@ -72,8 +73,20 @@ func processBuildRequest(request BuildRequest, completedBuildsByOs map[string]er
 	err, buildFinished := completedBuildsByOs[request.OsName]
 
 	if !buildFinished {
-		request.Logger.Printf("Kicking off Packer build for test %s on OS %s in %s", request.TestName, request.OsName, request.Dir)
-		_, err = buildCouchbaseWithPacker(request.Logger, fmt.Sprintf("%s-docker", request.OsName), "couchbase","us-east-1", request.Dir)
+		description := fmt.Sprintf("Kicking off Packer build for test %s on OS %s in %s", request.TestName, request.OsName, request.Dir)
+		maxRetries := 3
+		sleepBetweenRetries := 15 * time.Second
+
+		// For some reason, when we run multiple Packer builds with Docker builders in parallel in CircleCI, we
+		// intermittently get the error:
+		//
+		// Failed to upload to '/tmp' in container: Error response from daemon: Error processing tar file(exit status 1): lchown <RANDOM_FILE>: no such file or directory
+		//
+		// There seems to be no workaround for this, so we just retry the build a few times if it fails.
+		request.Logger.Println(description)
+		_, err = util.DoWithRetry(description, maxRetries, sleepBetweenRetries, request.Logger, func() (string, error) {
+			return buildCouchbaseWithPacker(request.Logger, fmt.Sprintf("%s-docker", request.OsName), "couchbase","us-east-1", request.Dir)
+		})
 	}
 
 	request.Logger.Printf("Notifying test %s that Packer build for OS %s is done", request.TestName, request.OsName)
