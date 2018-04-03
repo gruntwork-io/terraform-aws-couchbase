@@ -10,20 +10,7 @@ import (
 	"github.com/gruntwork-io/terratest/shell"
 	"strconv"
 	"github.com/gruntwork-io/terratest/util"
-	"sync"
 )
-
-// This type is used to ensure that a given Docker build runs at most once. Repated calls to the Build() method will
-// not rebuild the same Docker image.
-type DockerBuilder struct {
-	once sync.Once
-}
-
-func (build *DockerBuilder) Build(t *testing.T, osName string, logger *log.Logger, packerTemplateDir string) {
-	build.once.Do(func() {
-		buildCouchbaseWithPacker(t, logger, fmt.Sprintf("%s-docker", osName), "couchbase","us-east-1", packerTemplateDir)
-	})
-}
 
 func TestUnitCouchbaseInDocker(t *testing.T) {
 	t.Parallel()
@@ -42,29 +29,17 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 		{"TestUnitCouchbaseMultiClusterAmazonLinuxInDocker", "couchbase-multi-cluster","amazon-linux", 3,5091, 1984},
 	}
 
-	// For some reason, if we run too many Docker builds in parallel, they start to fail with strange, intermittent
-	// errors:
-	//
-	// "Failed to upload to 'XXX' in container: Error response from daemon: Error processing tar file(exit status 1): lchown YYY: no such file or directory
-	//
-	// We only need to build the container for each OS once per build, so we use the DockerBuilder struct to ensure
-	// each test runs the build for a given OS at most once.
-	dockerBuilders := map[string]*DockerBuilder{}
-	for _, testCase := range testCases {
-		dockerBuilders[testCase.osName] = &DockerBuilder{}
-	}
-
 	for _, testCase := range testCases {
 		testCase := testCase // capture range variable; otherwise, only the very last test case will run!
 
 		t.Run(testCase.testName, func(t *testing.T) {
 			t.Parallel()
-			testCouchbaseInDocker(t, testCase.testName, testCase.examplesFolderName, testCase.osName, testCase.clusterSize, testCase.couchbaseWebConsolePort, testCase.syncGatewayWebConsolePort, dockerBuilders[testCase.osName])
+			testCouchbaseInDocker(t, testCase.testName, testCase.examplesFolderName, testCase.osName, testCase.clusterSize, testCase.couchbaseWebConsolePort, testCase.syncGatewayWebConsolePort)
 		})
 	}
 }
 
-func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName string, osName string, clusterSize int, couchbaseWebConsolePort int, syncGatewayWebConsolePort int, dockerBuilder *DockerBuilder) {
+func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName string, osName string, clusterSize int, couchbaseWebConsolePort int, syncGatewayWebConsolePort int) {
 	logger := terralog.NewLogger(testName)
 
 	tmpExamplesDir := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName, logger)
@@ -73,7 +48,7 @@ func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName str
 	uniqueId := util.UniqueId()
 
 	test_structure.RunTestStage("setup_image", logger, func() {
-		dockerBuilder.Build(t, osName, logger, couchbaseAmiDir)
+		buildCouchbaseWithPacker(t, logger, fmt.Sprintf("%s-docker", osName), "couchbase","us-east-1", couchbaseAmiDir)
 	})
 
 	test_structure.RunTestStage("setup_docker", logger, func() {
