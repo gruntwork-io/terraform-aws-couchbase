@@ -41,7 +41,9 @@ func createBaseTerratestOptions(t *testing.T, testName string, folder string, re
 func buildCouchbaseWithPacker(t *testing.T, logger *log.Logger, builderName string, baseAmiName string, awsRegion string, folderPath string) string {
 	templatePath := fmt.Sprintf("%s/couchbase.json", folderPath)
 
-	packerTmpDir, err := ioutil.TempDir("", builderName)
+	// Explicitly specify /tmp here, as otherwise, on Mac, we get /var/folders/xx/yyy, which is not available in the
+	// VM or mounted by default.
+	packerTmpDir, err := ioutil.TempDir("/tmp", builderName)
 	if err != nil {
 		t.Fatal(err)
 	}

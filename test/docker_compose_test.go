@@ -12,6 +12,15 @@ import (
 	"github.com/gruntwork-io/terratest/util"
 )
 
+type BuildRequest struct {
+	OsName   string
+	TestName string
+	Dir      string
+	Logger   *log.Logger
+	T        *testing.T
+	Finished chan bool
+}
+
 func TestUnitCouchbaseInDocker(t *testing.T) {
 	t.Parallel()
 
@@ -29,17 +38,53 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 		{"TestUnitCouchbaseMultiClusterAmazonLinuxInDocker", "couchbase-multi-cluster","amazon-linux", 3,5091, 1984},
 	}
 
+	// Running multiple Packer builds in parallel to build Docker images leads to really strange, intermittent errors
+	// such as:
+	//
+	// Failed to upload to '/tmp' in container: Error response from daemon: Error processing tar file(exit status 1): chtimes /foo/bar: no such file or directory.
+	//
+	// It fails on different files and different builds every time, and setting different PACKER_TMP_DIR does not help.
+	// Therefore, as a workaround, we spin up a single goroutine to do all the Packer builds. It will receive message
+	// on a channel asking it to build a Docker image for a particular OS and then go off to either build that image,
+	// or if it has already built it, simplify notify the caller the image is already done. This way, all the Packer
+	// builds will happen sequentially and at most once for each OS we support.
+	buildRequests := make(chan BuildRequest)
+	go dockerImageBuilder(t, buildRequests)
+
 	for _, testCase := range testCases {
 		testCase := testCase // capture range variable; otherwise, only the very last test case will run!
 
 		t.Run(testCase.testName, func(t *testing.T) {
 			t.Parallel()
-			testCouchbaseInDocker(t, testCase.testName, testCase.examplesFolderName, testCase.osName, testCase.clusterSize, testCase.couchbaseWebConsolePort, testCase.syncGatewayWebConsolePort)
+			testCouchbaseInDocker(t, testCase.testName, testCase.examplesFolderName, testCase.osName, testCase.clusterSize, testCase.couchbaseWebConsolePort, testCase.syncGatewayWebConsolePort, buildRequests)
 		})
 	}
 }
 
-func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName string, osName string, clusterSize int, couchbaseWebConsolePort int, syncGatewayWebConsolePort int) {
+func dockerImageBuilder(t *testing.T, buildRequests chan BuildRequest) {
+	completedBuildsByOs := map[string]bool{}
+
+	for {
+		processBuildRequest(<-buildRequests, completedBuildsByOs)
+	}
+}
+
+func processBuildRequest(request BuildRequest, completedBuildsByOs map[string]bool) {
+	// Always make sure to send a response to the requester, even if the Packer build fails, so we don't have tests
+	// hanging
+	defer func() {
+		request.Logger.Printf("Notifying test %s that Packer build for OS %s is done", request.TestName, request.OsName)
+		completedBuildsByOs[request.OsName] = true
+		request.Finished <- true
+	}()
+
+	if _, buildFinished := completedBuildsByOs[request.OsName]; !buildFinished {
+		request.Logger.Printf("Kicking off Packer build for test %s on OS %s in %s", request.TestName, request.OsName, request.Dir)
+		buildCouchbaseWithPacker(request.T, request.Logger, fmt.Sprintf("%s-docker", request.OsName), "couchbase","us-east-1", request.Dir)
+	}
+}
+
+func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName string, osName string, clusterSize int, couchbaseWebConsolePort int, syncGatewayWebConsolePort int, buildRequests chan BuildRequest) {
 	logger := terralog.NewLogger(testName)
 
 	tmpExamplesDir := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName, logger)
@@ -48,7 +93,10 @@ func testCouchbaseInDocker(t *testing.T, testName string, examplesFolderName str
 	uniqueId := util.UniqueId()
 
 	test_structure.RunTestStage("setup_image", logger, func() {
-		buildCouchbaseWithPacker(t, logger, fmt.Sprintf("%s-docker", osName), "couchbase","us-east-1", couchbaseAmiDir)
+		logger.Printf("Requesting Packer build for OS %s in %s", osName, couchbaseAmiDir)
+		buildFinished := make(chan bool)
+		buildRequests <- BuildRequest{OsName: osName, TestName: testName, Dir: couchbaseAmiDir, Logger: logger, Finished: buildFinished, T: t}
+		<-buildFinished
 	})
 
 	test_structure.RunTestStage("setup_docker", logger, func() {
