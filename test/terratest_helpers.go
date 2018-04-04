@@ -63,6 +63,7 @@ func buildCouchbaseWithPacker(logger *log.Logger, builderName string, baseAmiNam
 		// https://www.packer.io/docs/builders/docker.html#overriding-the-host-directory
 		Env: map[string]string{
 			"PACKER_TMP_DIR": packerTmpDir,
+			"PACKER_LOG": "1",
 		},
 	}
 
