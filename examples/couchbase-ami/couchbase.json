@@ -67,9 +67,7 @@
   "provisioners": [{
     "type": "shell",
     "pause_before": "5s",
-    "inline": [
-      "yum install -y shadow-utils initscripts"
-    ],
+    "inline": ["yum install -y shadow-utils initscripts"],
     "only": ["amazon-linux-docker"]
   },{
     "type": "shell",
@@ -88,6 +86,9 @@
       "sudo -H pip install --upgrade awscli"
     ],
     "only": ["ubuntu-ami"]
+  },{
+    "type": "shell",
+    "inline": ["mkdir -p /tmp/terraform-aws-couchbase"]
   },{
     "type": "file",
     "source": "{{user `root_folder_path`}}",
