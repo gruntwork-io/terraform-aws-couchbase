@@ -31,7 +31,9 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 		testCase := testCase // capture range variable; otherwise, only the very last test case will run!
 
 		t.Run(testCase.testName, func(t *testing.T) {
-			t.Parallel()
+			// Disable parallelism, as running more than one Docker test at a time in CircleCi, for some reason,
+			// causes them to fail.
+			//t.Parallel()
 			testCouchbaseInDocker(t, testCase.testName, testCase.examplesFolderName, testCase.osName, testCase.clusterSize, testCase.couchbaseWebConsolePort, testCase.syncGatewayWebConsolePort)
 		})
 	}
