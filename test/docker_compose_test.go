@@ -33,9 +33,7 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 		syncGatewayWebConsolePort int
 	} {
 		{"TestUnitCouchbaseSingleClusterUbuntuInDocker","couchbase-single-cluster", "ubuntu", 2, 8091, 4984},
-		{"TestUnitCouchbaseMultiClusterUbuntuInDocker", "couchbase-multi-cluster","ubuntu", 3,7091, 3984},
-		{"TestUnitCouchbaseSingleClusterAmazonLinuxInDocker","couchbase-single-cluster", "amazon-linux", 2, 6091, 2984},
-		{"TestUnitCouchbaseMultiClusterAmazonLinuxInDocker", "couchbase-multi-cluster","amazon-linux", 3,5091, 1984},
+		{"TestUnitCouchbaseMultiClusterAmazonLinuxInDocker", "couchbase-multi-cluster", "amazon-linux", 3,7091, 3984},
 	}
 
 	// Running multiple Packer builds in parallel to build Docker images leads to really strange, intermittent errors
