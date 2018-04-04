@@ -74,7 +74,7 @@ func processBuildRequest(request BuildRequest, completedBuildsByOs map[string]er
 
 	if !buildFinished {
 		description := fmt.Sprintf("Packer build for Couchbase Docker image for test %s on OS %s in %s", request.TestName, request.OsName, request.Dir)
-		maxRetries := 3
+		maxRetries := 5
 		sleepBetweenRetries := 15 * time.Second
 
 		// For some reason, when we run multiple Packer builds with Docker builders in parallel in CircleCI, we
