@@ -53,7 +53,7 @@ services:
       USER_DATA_ENV_data_volume_mount_point: /couchbase-data
       USER_DATA_ENV_volume_owner: couchbase
       USER_DATA_ENV_data_node_container_base_name: ${CONTAINER_BASE_NAME}-data
-      USER_DATA_ENV_data_ramsize: 512
+      USER_DATA_ENV_data_ramsize: 1024
       USER_DATA_ENV_index_ramsize: 256
       USER_DATA_ENV_fts_ramsize: 256
 
