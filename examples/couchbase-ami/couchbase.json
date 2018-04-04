@@ -2,7 +2,8 @@
   "min_packer_version": "0.12.0",
   "variables": {
     "aws_region": "us-east-1",
-    "base_ami_name": "couchbase"
+    "base_ami_name": "couchbase",
+    "root_folder_path": "{{template_dir}}/../../../terraform-aws-couchbase/"
   },
   "builders": [{
     "name": "ubuntu-ami",
@@ -89,8 +90,8 @@
     "only": ["ubuntu-ami"]
   },{
     "type": "file",
-    "source": "{{template_dir}}/../../../terraform-aws-couchbase",
-    "destination": "/tmp"
+    "source": "{{user `root_folder_path`}}",
+    "destination": "/tmp/terraform-aws-couchbase"
   },{
     "type": "shell",
     "inline": [
