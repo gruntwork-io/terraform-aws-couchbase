@@ -23,7 +23,7 @@
 
 [[constraint]]
   name = "github.com/gruntwork-io/terratest"
-  version = "0.7.11"
+  version = "0.7.12"
 
 [[constraint]]
   name = "github.com/stretchr/testify"

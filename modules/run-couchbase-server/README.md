@@ -4,7 +4,7 @@ This folder contains a script for configuring and initializing Couchbase on an [
 This script has been tested on the following operating systems:
 
 * Ubuntu 16.04
-* Amazon Linux
+* Amazon Linux 2
 
 There is a good chance it will work on other flavors of Debian, CentOS, and RHEL as well.
 
@@ -52,7 +52,7 @@ Run `run-couchbase-server --help` to see all available arguments.
 ```
 Usage: run-couchbase-server [options]
 
-This script can be used to configure and initialize a Couchbase Server. This script has been tested with Ubuntu 16.04 and Amazon Linux.
+This script can be used to configure and initialize a Couchbase Server. This script has been tested with Ubuntu 16.04 and Amazon Linux 2.
 
 Required arguments:
 

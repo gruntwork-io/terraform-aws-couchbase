@@ -36,7 +36,7 @@ function print_usage {
   echo
   echo "Usage: run-couchbase-server [options]"
   echo
-  echo "This script can be used to configure and initialize a Couchbase Server. This script has been tested with Ubuntu 16.04 and Amazon Linux."
+  echo "This script can be used to configure and initialize a Couchbase Server. This script has been tested with Ubuntu 16.04 and Amazon Linux 2."
   echo
   echo "Required arguments:"
   echo
@@ -234,7 +234,7 @@ function init_new_cluster {
   local readonly cluster_services="${10}"
   local readonly node_services="${11}"
 
-  log_info "Initializing cluster $cluster_name with rally point $rally_point_hostname, port $rest_port, and services $cluster_services. This node will be configured to run the $node_services services."
+  log_info "Initializing cluster $cluster_name: rally point: $rally_point_hostname, port: $rest_port, services: $cluster_services, data_ramsize: $data_ramsize, index_ramsize: $index_ramsize, fts_ramsize: $fts_ramsize. This node will be configured to run the $node_services services."
 
   local cluster_init_args=()
 
@@ -496,8 +496,6 @@ function calculate_memory_settings_automatically {
     fts_ramsize=256
   fi
 
-  log_info "Setting data_ramsize = $data_ramsize, index_ramsize = $index_ramsize, fts_ramsize = $fts_ramsize."
-
   # This is a hacky way to return multiple values from Bash that happens to work because our values contain no spaces
   # https://stackoverflow.com/a/39063403/483528
   echo "$data_ramsize" "$index_ramsize" "$fts_ramsize"
@@ -614,6 +612,7 @@ function wait_for_node_to_be_active_in_cluster {
 
 function start_couchbase {
   log_info "Starting Couchbase"
+
   sudo systemctl enable couchbase-server
   sudo systemctl start couchbase-server
 }

@@ -41,7 +41,7 @@ type ServerNode struct {
 }
 
 func checkCouchbaseClusterIsInitialized(t *testing.T, clusterUrl string, expectedNodes int, logger *log.Logger) {
-	maxRetries := 200
+	maxRetries := 300
 	sleepBetweenRetries := 5 * time.Second
 	serverNodeUrl := fmt.Sprintf("%s/pools/nodes", clusterUrl)
 
@@ -127,7 +127,7 @@ func checkCouchbaseDataNodesWorking(t *testing.T, dataNodesUrl string, logger *l
 // "Connect via SDK" on this page: https://developer.couchbase.com/documentation/server/current/install/docker-deploy-multi-node-cluster.html
 func createBucket(t *testing.T, clusterUrl string, bucketName string, logger *log.Logger) {
 	description := fmt.Sprintf("Creating bucket %s", bucketName)
-	maxRetries := 10
+	maxRetries := 120
 	sleepBetweenRetries := 5 * time.Second
 
 	logger.Printf(description)
@@ -192,7 +192,7 @@ func writeToBucket(t *testing.T, clusterUrl string, bucketName string, key strin
 	}
 
 	description := fmt.Sprintf("Write to bucket params: %s", string(jsonBytes))
-	retries := 30
+	retries := 120
 	timeBetweenRetries := 5 * time.Second
 
 	// Buckets take a while to replicate, and until they do, you get vague errors such as "Unexpected server error",
@@ -222,7 +222,7 @@ func writeToBucket(t *testing.T, clusterUrl string, bucketName string, key strin
 // "Connect via SDK" on this page: https://developer.couchbase.com/documentation/server/current/install/docker-deploy-multi-node-cluster.html
 func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key string, logger *log.Logger) TestData {
 	description := fmt.Sprintf("Reading key %s from bucket %s", key, bucketName)
-	maxRetries := 10
+	maxRetries := 120
 	timeBetweenRetries := 5 * time.Second
 
 	// This is an undocumented API. I found it here: https://stackoverflow.com/a/37425574/483528. You can also find it
@@ -274,7 +274,10 @@ func checkSyncGatewayWorking(t *testing.T, syncGatewayUrl string, logger *log.Lo
 
 func testStageBuildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, couchbaseTerraformDir string, logger *log.Logger) {
 	resourceCollection := createBaseRandomResourceCollection(t)
-	amiId := buildCouchbaseWithPacker(t, logger, fmt.Sprintf("%s-ami", osName), fmt.Sprintf("couchbase-%s", resourceCollection.UniqueId), resourceCollection.AwsRegion, couchbaseAmiDir)
+	amiId, err := buildCouchbaseWithPacker(logger, fmt.Sprintf("%s-ami", osName), fmt.Sprintf("couchbase-%s", resourceCollection.UniqueId), resourceCollection.AwsRegion, couchbaseAmiDir)
+	if err != nil {
+		t.Fatalf("Failed to build Couchbase AMI: %v", err)
+	}
 
 	test_structure.SaveAmiId(t, couchbaseTerraformDir, amiId, logger)
 	test_structure.SaveRandomResourceCollection(t, couchbaseTerraformDir, resourceCollection, logger)

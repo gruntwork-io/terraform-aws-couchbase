@@ -18,6 +18,11 @@ func TestIntegrationCouchbaseMultiClusterUbuntu(t *testing.T) {
 	testCouchbaseMultiCluster(t, "TestIntegrationCouchbaseMultiClusterUbuntu", "ubuntu")
 }
 
+func TestIntegrationCouchbaseMultiClusterAmazonLinux(t *testing.T) {
+	t.Parallel()
+	testCouchbaseMultiCluster(t, "TestIntegrationCouchbaseMultiClusterAmazonLinux", "amazon-linux")
+}
+
 func testCouchbaseMultiCluster(t *testing.T, testName string, osName string) {
 	logger := terralog.NewLogger(testName)
 

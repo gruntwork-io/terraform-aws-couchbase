@@ -2,7 +2,8 @@
   "min_packer_version": "0.12.0",
   "variables": {
     "aws_region": "us-east-1",
-    "base_ami_name": "couchbase"
+    "base_ami_name": "couchbase",
+    "root_folder_path": "{{template_dir}}/../../../terraform-aws-couchbase/"
   },
   "builders": [{
     "name": "ubuntu-ami",
@@ -26,7 +27,7 @@
   },{
     "name": "amazon-linux-ami",
     "ami_name": "{{user `base_ami_name`}}-amazon-linux-{{isotime | clean_ami_name}}",
-    "ami_description": "An Amazon Linux AMI that has Couchbase installed.",
+    "ami_description": "An Amazon Linux 2 AMI that has Couchbase installed.",
     "instance_type": "t2.micro",
     "region": "{{user `aws_region`}}",
     "type": "amazon-ebs",
@@ -34,7 +35,7 @@
       "filters": {
         "virtualization-type": "hvm",
         "architecture": "x86_64",
-        "name": "*amzn-ami-hvm-*",
+        "name": "*amzn2-ami-hvm-*",
         "block-device-mapping.volume-type": "gp2",
         "root-device-type": "ebs"
       },
@@ -55,18 +56,27 @@
   },{
     "name": "amazon-linux-docker",
     "type": "docker",
-    "image": "gruntwork/amazonlinux-test:latest",
-    "commit": true
+    "image": "gruntwork/amazon-linux-test:2017.12",
+    "commit": true,
+    "run_command": ["-d", "-i", "-t", "{{.Image}}", "/sbin/init"],
+    "privileged": true,
+    "volumes": {
+      "/sys/fs/cgroup": "/sys/fs/cgroup"
+    }
   }],
   "provisioners": [{
     "type": "shell",
     "pause_before": "5s",
+    "inline": ["yum install -y shadow-utils initscripts"],
+    "only": ["amazon-linux-docker"]
+  },{
+    "type": "shell",
+    "pause_before": "30s",
     "inline": [
-      "echo 'Cleaning up systemd files so we only boot up the bare minimum services necessary in the Docker container.'",
-      "sudo find /etc/systemd/system /lib/systemd/system -path '*.wants/*' -not -name '*journald*' -not -name '*systemd-tmpfiles*' -not -name '*systemd-user-sessions*' -exec rm {} \\;",
-      "sudo systemctl set-default multi-user.target"
+      "sudo yum update -y",
+      "sudo yum install -y jq"
     ],
-    "only": ["ubuntu-docker"]
+    "only": ["amazon-linux-ami"]
   },{
     "type": "shell",
     "pause_before": "30s",
@@ -77,9 +87,12 @@
     ],
     "only": ["ubuntu-ami"]
   },{
+    "type": "shell",
+    "inline": ["mkdir -p /tmp/terraform-aws-couchbase"]
+  },{
     "type": "file",
-    "source": "{{template_dir}}/../../../terraform-aws-couchbase",
-    "destination": "/tmp"
+    "source": "{{user `root_folder_path`}}",
+    "destination": "/tmp/terraform-aws-couchbase"
   },{
     "type": "shell",
     "inline": [

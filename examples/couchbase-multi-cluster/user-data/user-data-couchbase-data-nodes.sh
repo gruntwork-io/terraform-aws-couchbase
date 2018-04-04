@@ -25,6 +25,9 @@ function run_couchbase {
   local readonly cluster_password="$3"
   local readonly cluster_port="$4"
   local readonly data_dir="$5"
+  local readonly data_ramsize="$6"
+  local readonly index_ramsize="$7"
+  local readonly fts_ramsize="$8"
 
   echo "Starting Couchbase data nodes"
 
@@ -36,6 +39,10 @@ function run_couchbase {
     --data-dir "$data_dir" \
     --node-services "data" \
     --use-public-hostname \
+    --manage-memory-manually \
+    --data-ramsize "$data_ramsize" \
+    --index-ramsize "$index_ramsize" \
+    --fts-ramsize "$fts_ramsize" \
     --wait-for-all-nodes
 }
 
@@ -80,6 +87,9 @@ function run {
   local readonly data_volume_device_name="$3"
   local readonly data_volume_mount_point="$4"
   local readonly volume_owner="$5"
+  local readonly data_ramsize="$6"
+  local readonly index_ramsize="$7"
+  local readonly fts_ramsize="$8"
 
   # To keep this example simple, we are hard-coding all credentials in this file in plain text. You should NOT do this
   # in production usage!!! Instead, you should use tools such as Vault, Keywhiz, or KMS to fetch the credentials at
@@ -91,7 +101,7 @@ function run {
   local readonly test_bucket_name="test-bucket"
 
   mount_volumes "$data_volume_device_name" "$data_volume_mount_point" "$volume_owner"
-  run_couchbase "$cluster_asg_name" "$cluster_username" "$cluster_password" "$cluster_port" "$data_volume_mount_point"
+  run_couchbase "$cluster_asg_name" "$cluster_username" "$cluster_password" "$cluster_port" "$data_volume_mount_point" "$data_ramsize" "$index_ramsize" "$fts_ramsize"
   create_test_resources "$cluster_username" "$cluster_password" "$cluster_port" "$test_user_name" "$test_user_password" "$test_bucket_name"
 }
 
@@ -101,5 +111,8 @@ run \
   "${cluster_port}" \
   "${data_volume_device_name}" \
   "${data_volume_mount_point}" \
-  "${volume_owner}"
+  "${volume_owner}" \
+  "${data_ramsize}" \
+  "${index_ramsize}" \
+  "${fts_ramsize}"
 

@@ -28,7 +28,7 @@ function print_usage {
   echo
   echo "Usage: run-sync-gateway [options]"
   echo
-  echo "This script can be used to configure and run Couchbase Sync Gateway. This script has been tested with Ubuntu 16.04 and Amazon Linux."
+  echo "This script can be used to configure and run Couchbase Sync Gateway. This script has been tested with Ubuntu 16.04 and Amazon Linux 2."
   echo
   echo "Options:"
   echo
@@ -75,6 +75,14 @@ function update_config_path {
 
   log_info "Setting Sync Gateway systemd unit $systemd_unit_path config path to $config_path"
   replace_or_append_in_file "^Environment=\"CONFIG=.*\"$" "Environment=\"CONFIG=$config_path\"" "$systemd_unit_path"
+}
+
+function update_config_path_in_initd {
+  local readonly config_path="$1"
+  local readonly initd_unit_path="$2"
+
+  log_info "Setting Sync Gateway init.d unit $initd_unit_path config path to $config_path"
+  replace_or_append_in_file "^CONFIG=.*$" "CONFIG=$config_path" "$initd_unit_path"
 }
 
 function auto_fill_config {
@@ -159,6 +167,7 @@ function auto_fill_asg_param {
 
 function start_sync_gateway {
   log_info "Starting Sync Gateway"
+
   sudo systemctl enable sync_gateway
   sudo systemctl start sync_gateway
 }

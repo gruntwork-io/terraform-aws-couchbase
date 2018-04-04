@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"io/ioutil"
 	"strings"
+	"os"
 )
 
 // The username and password we use in all the examples, mocks, and tests
@@ -38,7 +39,7 @@ func createBaseTerratestOptions(t *testing.T, testName string, folder string, re
 	return terratestOptions
 }
 
-func buildCouchbaseWithPacker(t *testing.T, logger *log.Logger, builderName string, baseAmiName string, awsRegion string, folderPath string) string {
+func buildCouchbaseWithPacker(logger *log.Logger, builderName string, baseAmiName string, awsRegion string, folderPath string) (string, error) {
 	templatePath := fmt.Sprintf("%s/couchbase.json", folderPath)
 
 	options := packer.PackerOptions{
@@ -50,12 +51,18 @@ func buildCouchbaseWithPacker(t *testing.T, logger *log.Logger, builderName stri
 		},
 	}
 
-	artifactId, err := packer.BuildAmi(options, logger)
-	if err != nil {
-		t.Fatalf("Failed to build Packer template %s: %v", templatePath, err)
+	// The Packer file provisioner we use tries to copy this entire Couchbase module using a relative path like
+	// ../../../terraform-aws-couchbase. This works fine in a normal checkout, but with CircleCi, (a) the code is
+	// checked out into a folder called "project" and not "terraform-aws-couchbase" and (b) to support GOPATH, we
+	// create a symlink to the original project and run the tests from that symlinked folder. One or both of these
+	// issues leads to very strange issues that sometimes cause the Packer build to fail:
+	// https://github.com/hashicorp/packer/issues/6103
+	if os.Getenv("CIRCLECI") != "" {
+		logger.Printf("Overriding root folder path for Packer build to /home/circleci/project/")
+		options.Vars["root_folder_path"] = "/home/circleci/project/"
 	}
 
-	return artifactId
+	return packer.BuildAmi(options, logger)
 }
 
 func deploy(t *testing.T, terratestOptions *terratest.TerratestOptions) {

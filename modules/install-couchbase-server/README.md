@@ -10,7 +10,7 @@ module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modu
 This script has been tested on the following operating systems:
 
 * Ubuntu 16.04
-* Amazon Linux
+* Amazon Linux 2
 
 There is a good chance it will work on other flavors of Debian, CentOS, and RHEL as well.
 
@@ -50,7 +50,7 @@ Run `install-couchbase-server --help` to see all available arguments.
 ```
 Usage: install-couchbase-server [options]
 
-This script can be used to install Couchbase Server and its dependencies. This script has been tested with Ubuntu 16.04 and Amazon Linux.
+This script can be used to install Couchbase Server and its dependencies. This script has been tested with Ubuntu 16.04 and Amazon Linux 2.
 
 Options:
 
