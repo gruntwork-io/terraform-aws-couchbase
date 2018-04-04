@@ -234,7 +234,7 @@ function init_new_cluster {
   local readonly cluster_services="${10}"
   local readonly node_services="${11}"
 
-  log_info "Initializing cluster $cluster_name with rally point $rally_point_hostname, port $rest_port, and services $cluster_services. This node will be configured to run the $node_services services."
+  log_info "Initializing cluster $cluster_name: rally point: $rally_point_hostname, port: $rest_port, services: $cluster_services, data_ramsize: $data_ramsize, index_ramsize: $index_ramsize, fts_ramsize: $fts_ramsize. This node will be configured to run the $node_services services."
 
   local cluster_init_args=()
 
@@ -495,8 +495,6 @@ function calculate_memory_settings_automatically {
   if [[ "$fts_ramsize" -gt 0 && "$fts_ramsize" -lt 256 ]]; then
     fts_ramsize=256
   fi
-
-  log_info "Setting data_ramsize = $data_ramsize, index_ramsize = $index_ramsize, fts_ramsize = $fts_ramsize."
 
   # This is a hacky way to return multiple values from Bash that happens to work because our values contain no spaces
   # https://stackoverflow.com/a/39063403/483528
