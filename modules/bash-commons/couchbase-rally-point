@@ -1,0 +1,127 @@
+#!/bin/bash
+
+set -e
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly BASH_COMMONS_INSTALL_DIR="$SCRIPT_DIR/../bash-commons"
+
+source "$BASH_COMMONS_INSTALL_DIR/logging.sh"
+source "$BASH_COMMONS_INSTALL_DIR/assertions.sh"
+source "$BASH_COMMONS_INSTALL_DIR/aws.sh"
+source "$BASH_COMMONS_INSTALL_DIR/os.sh"
+source "$BASH_COMMONS_INSTALL_DIR/collections.sh"
+source "$BASH_COMMONS_INSTALL_DIR/strings.sh"
+source "$BASH_COMMONS_INSTALL_DIR/couchbase-common.sh"
+
+function print_usage {
+  echo
+  echo "Usage: couchbase-rally-point [options]"
+  echo
+  echo "This script can be used to automatically determine the 'rally point' for a Couchbase cluster. The rally point is the 'leader' that should be responsible for initializing the cluster and replication. This script has been tested with Ubuntu 16.04 and Amazon Linux 2."
+  echo
+  echo "Options:"
+  echo
+  echo -e "  --cluster-name\t\tName of the Couchbase cluster. Must be the name of an Auto Scaling Group (ASG) to automatically determine rally point. Default: name of this ASG."
+  echo -e "  --node-hostname\t\tThe hostname to use for this node. Default: look up the node's private hostname in EC2 metadata."
+  echo -e "  --use-public-hostname\t\tIf this flag is set to 'true', use the node's public hostname from EC2 metadata."
+  echo -e "  --rally-point-hostname\tManually specify the hostname of the rally point server. Default: automatically pick a rally point server in the ASG specified by --cluster-name."
+  echo -e "  --aws-region\t\t\tThe AWS region where the Couchbase cluster is deployed. Default: the AWS region in which this EC2 Instance is deployed."
+  echo -e "  --help\t\t\tShow this help text and exit."
+  echo
+  echo "Output:"
+  echo
+  echo "When you run this script, it will write to stdout the following values, separated by spaces: <CLUSTER_NAME> <NODE_HOSTNAME> <AWS_REGION> <RALLY_POINT_HOSTNAME>"
+  echo
+  echo "Where:"
+  echo
+  echo -e "  CLUSTER_NAME:\t\t\tThe value of --cluster-name, or if --cluster-name was not specified, the name of the current ASG."
+  echo -e "  NODE_HOSTNAME:\t\tThe value of --node-hostname, or if --node-hostname was not specified, the hostname of the current EC2 Instance."
+  echo -e "  AWS_REGION:\t\t\tThe value of --aws-region, or if --aws-region was not specified, the region in which this EC2 Instance is deployed."
+  echo -e "  RALLY_POINT_HOSTNAME:\t\tThe value of --rally-point-hostname, or if --rally-point-hostname was not specified, the hostname automatically founder for the rally point."
+  echo
+  echo "Example:"
+  echo
+  echo "  read cluster_name node_hostname aws_region rally_point_hostname < <(couchbase-rally-point --use-public-hostname)"
+  echo
+  echo "  if [[ \"\$node_hostname\" == \"\$rally_point_hostname\" ]]; then"
+  echo "    echo 'I am the rally point for cluster \$cluster_name in \$aws_region!'"
+  echo "  fi"
+  echo
+}
+
+function run {
+  local cluster_name
+  local node_hostname
+  local use_public_hostname="false"
+  local rally_point_hostname
+  local aws_region
+
+  while [[ $# > 0 ]]; do
+    local key="$1"
+
+    case "$key" in
+      --cluster-name)
+        cluster_name="$2"
+        shift
+        ;;
+      --node-hostname)
+        node_hostname="$2"
+        shift
+        ;;
+      --rally-point-hostname)
+        rally_point_hostname="$2"
+        shift
+        ;;
+      --use-public-hostname)
+        use_public_hostname="$2"
+        shift
+        ;;
+      --aws-region)
+        aws_region="$2"
+        shift
+        ;;
+      --help)
+        print_usage
+        exit
+        ;;
+      *)
+        log_error "Unrecognized argument: $key"
+        print_usage
+        exit 1
+        ;;
+    esac
+
+    shift
+  done
+
+  assert_is_installed "aws"
+  assert_is_installed "jq"
+
+  if [[ -z "$cluster_name" ]]; then
+    cluster_name=$(get_asg_name)
+    assert_not_empty_or_null "$cluster_name" "ASG name"
+    log_info "Set cluster name to the name of the current ASG, $cluster_name"
+  fi
+
+  if [[ -z "$node_hostname" ]]; then
+    node_hostname=$(get_hostname "$use_public_hostname")
+    assert_not_empty_or_null "$node_hostname" "Hostname"
+    log_info "Set node hostname to $node_hostname"
+  fi
+
+  if [[ -z "$aws_region" ]]; then
+    aws_region=$(get_instance_region)
+    assert_not_empty_or_null "$aws_region" "AWS region"
+    log_info "Set the AWS region to $aws_region"
+  fi
+
+  if [[ -z "$rally_point_hostname" ]]; then
+    rally_point_hostname=$(get_rally_point_hostname "$aws_region" "$cluster_name" "$use_public_hostname")
+    assert_not_empty_or_null "$rally_point_hostname" "Rally point hostname"
+    log_info "Set the rally point hostname to $rally_point_hostname"
+  fi
+
+  echo "$cluster_name" "$node_hostname" "$aws_region" "$rally_point_hostname"
+}
+
+run "$@"

@@ -126,7 +126,16 @@ function run {
 
   mount_volumes "$data_volume_device_name" "$data_volume_mount_point" "$index_volume_device_name" "$index_volume_mount_point" "$volume_owner"
   run_couchbase "$cluster_asg_name" "$cluster_username" "$cluster_password" "$cluster_port" "$data_volume_mount_point" "$index_volume_mount_point"
-  create_test_resources "$cluster_username" "$cluster_password" "$cluster_port" "$test_user_name" "$test_user_password" "$test_bucket_name"
+
+  local node_hostname
+  local rally_point_hostname
+  read _ node_hostname _ rally_point_hostname < <(/opt/couchbase/bash-commons/couchbase-rally-point --cluster-name "$cluster_asg_name" --use-public-hostname "true")
+
+  if [[ "$node_hostname" == "$rally_point_hostname" ]]; then
+    echo "This node is the rally point for this cluster"
+    create_test_resources "$cluster_username" "$cluster_password" "$cluster_port" "$test_user_name" "$test_user_password" "$test_bucket_name"
+  fi
+
   run_sync_gateway "$cluster_asg_name" "$cluster_port" "$sync_gateway_interface" "$sync_gateway_admin_interface" "$test_bucket_name" "$test_user_name" "$test_user_password"
 }
 

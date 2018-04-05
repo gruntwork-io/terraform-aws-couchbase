@@ -164,3 +164,17 @@ function get_hostnames_in_asg {
   local readonly hostname_param=$([[ "$use_public_hostnames" == "true" ]] && echo "PublicDnsName" || echo "PrivateDnsName")
   echo "$instances" | jq -r ".Reservations[].Instances[].$hostname_param"
 }
+
+# Get the hostname to use for this EC2 Instance. Use the public hostname if the first argument is true and the private
+# hostname otherwise.
+function get_hostname {
+  local readonly use_public_hostname="$1"
+
+  if [[ "$use_public_hostname" == "true" ]]; then
+    log_info "Using public hostname as instance address"
+    get_instance_public_hostname
+  else
+    log_info "Using private hostname as instance address"
+    get_instance_private_hostname
+  fi
+}
