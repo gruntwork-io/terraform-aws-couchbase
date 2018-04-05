@@ -2,9 +2,8 @@
 
 This folder shows an example of Terraform code that uses the 
 [couchbase-cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster) 
-module to deploy two [Couchbase](https://www.couchbase.com/) clusters in [AWS](https://aws.amazon.com/), each one in 
-a different region, with replication configured between them. Each cluster consists of one Auto Scaling Group (ASG) 
-that just runs Couchbase data nodes.
+module to deploy two [Couchbase](https://www.couchbase.com/) clusters in [AWS](https://aws.amazon.com/), a primary and
+a replica, each one in a different region, with the primary replicating one of its buckets to the replica.
 
 ![Couchbase multi-datacenter replication architecture](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/_docs/couchbase-multi-datacenter-replication-architecture.png?raw=true)
 
