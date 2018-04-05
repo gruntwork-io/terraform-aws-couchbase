@@ -32,7 +32,7 @@ module "couchbase_primary" {
   max_size      = 3
   instance_type = "t2.micro"
 
-  ami_id    = "${var.ami_id}"
+  ami_id    = "${var.ami_id_primary}"
   user_data = "${data.template_file.user_data_primary.rendered}"
 
   vpc_id     = "${data.aws_vpc.default_primary.id}"
@@ -53,7 +53,7 @@ module "couchbase_primary" {
   health_check_type = "ELB"
 
   providers = {
-    "aws" = "aws.primary"
+    aws = "aws.primary"
   }
 }
 
@@ -72,7 +72,7 @@ module "couchbase_replica" {
   max_size      = 3
   instance_type = "t2.micro"
 
-  ami_id    = "${var.ami_id}"
+  ami_id    = "${var.ami_id_replica}"
   user_data = "${data.template_file.user_data_replica.rendered}"
 
   vpc_id     = "${data.aws_vpc.default_replica.id}"
@@ -93,7 +93,7 @@ module "couchbase_replica" {
   health_check_type = "ELB"
 
   providers = {
-    "aws" = "aws.replica"
+    aws = "aws.replica"
   }
 }
 
@@ -154,7 +154,7 @@ module "load_balancer_primary" {
   allow_inbound_from_cidr_blocks = ["0.0.0.0/0"]
   internal                       = false
   providers = {
-    "aws" = "aws.primary"
+    aws = "aws.primary"
   }
 }
 
@@ -179,7 +179,7 @@ module "couchbase_target_group_primary" {
   enable_stickiness = true
 
   providers = {
-    "aws" = "aws.primary"
+    aws = "aws.primary"
   }
 }
 
@@ -209,7 +209,7 @@ module "load_balancer_replica" {
   allow_inbound_from_cidr_blocks = ["0.0.0.0/0"]
   internal                       = false
   providers = {
-    "aws" = "aws.replica"
+    aws = "aws.replica"
   }
 }
 
@@ -234,7 +234,7 @@ module "couchbase_target_group_replica" {
   enable_stickiness = true
 
   providers = {
-    "aws" = "aws.replica"
+    aws = "aws.replica"
   }
 }
 
@@ -261,7 +261,7 @@ module "couchbase_security_group_rules_primary" {
   memcached_port_cidr_blocks = ["0.0.0.0/0"]
   moxi_port_cidr_blocks      = ["0.0.0.0/0"]
   providers = {
-    "aws" = "aws.primary"
+    aws = "aws.primary"
   }
 }
 
@@ -288,7 +288,7 @@ module "couchbase_security_group_rules_replica" {
   memcached_port_cidr_blocks = ["0.0.0.0/0"]
   moxi_port_cidr_blocks      = ["0.0.0.0/0"]
   providers = {
-    "aws" = "aws.replica"
+    aws = "aws.replica"
   }
 }
 
@@ -306,7 +306,7 @@ module "iam_policies_primary" {
   iam_role_id = "${module.couchbase_primary.iam_role_id}"
 
   providers = {
-    "aws" = "aws.primary"
+    aws = "aws.primary"
   }
 }
 
@@ -324,7 +324,7 @@ module "iam_policies_replica" {
   iam_role_id = "${module.couchbase_replica.iam_role_id}"
 
   providers = {
-    "aws" = "aws.replica"
+    aws = "aws.replica"
   }
 }
 
@@ -338,17 +338,13 @@ module "iam_policies_replica" {
 data "aws_vpc" "default_primary" {
   default = true
 
-  providers = {
-    "aws" = "aws.primary"
-  }
+  provider = "aws.primary"
 }
 
 data "aws_subnet_ids" "default_primary" {
   vpc_id = "${data.aws_vpc.default_primary.id}"
 
-  providers = {
-    "aws" = "aws.primary"
-  }
+  provider = "aws.primary"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -361,15 +357,11 @@ data "aws_subnet_ids" "default_primary" {
 data "aws_vpc" "default_replica" {
   default = true
 
-  providers = {
-    "aws" = "aws.replica"
-  }
+  provider = "aws.replica"
 }
 
 data "aws_subnet_ids" "default_replica" {
   vpc_id = "${data.aws_vpc.default_replica.id}"
 
-  providers = {
-    "aws" = "aws.replica"
-  }
+  provider = "aws.replica"
 }

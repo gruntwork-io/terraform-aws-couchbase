@@ -11,8 +11,12 @@
 # You must provide a value for each of these parameters.
 # ---------------------------------------------------------------------------------------------------------------------
 
-variable "ami_id" {
-  description = "The ID of the AMI to run in the cluster. This should be an AMI built from the Packer template under examples/couchbase-ami/couchbase.json."
+variable "ami_id_primary" {
+  description = "The ID of the AMI to run in the cluster in var.aws_region_primary. This should be an AMI built from the Packer template under examples/couchbase-ami/couchbase.json."
+}
+
+variable "ami_id_replica" {
+  description = "The ID of the AMI to run in the cluster in var.aws_region_replica. This should be an AMI built from the Packer template under examples/couchbase-ami/couchbase.json."
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
