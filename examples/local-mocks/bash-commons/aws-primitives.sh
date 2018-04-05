@@ -6,6 +6,7 @@
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/strings.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/assertions.sh"
 
 function get_instance_private_ip {
   hostname -i
@@ -69,7 +70,9 @@ function describe_asg {
   local readonly asg_name="$1"
   local readonly aws_region="$2"
 
-  local readonly size=$(get_cluster_size "$asg_name" "$aws_region")
+  local size
+  size=$(get_cluster_size "$asg_name" "$aws_region")
+  assert_not_empty_or_null "$size" "size of ASG $asg_name in $aws_region"
 
   cat << EOF
 {
@@ -87,14 +90,14 @@ EOF
 }
 
 # Get the size of the cluster. This comes from env vars set in docker-compose.yml. Note that if we are requesting the
-# size of a cluster that isn't the one running in this Docker container, then we must instead be requesting the size of
-# the replica cluster, so we return that.
+# size of a cluster that isn't in the same region as this Docker container, then we must instead be requesting the size
+# of the replica cluster, so we return that.
 function get_cluster_size {
   local readonly asg_name="$1"
   local readonly aws_region="$2"
 
   # All the variables are env vars set in docker-compose.yml
-  if [[ "$asg_name" == "$cluster_asg_name" ]]; then
+  if [[ "$aws_region" == "$mock_aws_region" ]]; then
     echo -n "$cluster_size"
   else
     echo -n "$replica_cluster_size"
@@ -102,14 +105,14 @@ function get_cluster_size {
 }
 
 # Get the base name of the containers in the cluster. This comes from env vars set in docker-compose.yml. Note that if
-# we are requesting the containers in a different cluster than the one this container is in, then we must instead be
+# we are requesting the containers in a different region than the one this container is in, then we must instead be
 # requesting looking for containers in the replica cluster, so we return that.
 function get_container_basename {
   local readonly asg_name="$1"
   local readonly aws_region="$2"
 
   # All the variables are env vars set in docker-compose.yml
-  if [[ "$asg_name" == "$cluster_asg_name" ]]; then
+  if [[ "$aws_region" == "$mock_aws_region" ]]; then
     echo -n "$data_node_container_base_name"
   else
     echo -n "$replica_data_node_container_base_name"
@@ -122,8 +125,13 @@ function describe_instances_in_asg {
   local readonly asg_name="$1"
   local readonly aws_region="$2"
 
-  local readonly size=$(get_cluster_size "$asg_name" "$aws_region")
-  local readonly container_base_name=$(get_container_basename "$asg_name" "$aws_region")
+  local size
+  size=$(get_cluster_size "$asg_name" "$aws_region")
+  assert_not_empty_or_null "$size" "size of ASG $asg_name in $aws_region"
+
+  local container_base_name
+  container_base_name=$(get_container_basename "$asg_name" "$aws_region")
+  assert_not_empty_or_null "$container_base_name" "container base name for ASG $asg_name in $aws_region"
 
   # cluster_size and data_node_container_base_name are env vars set in docker-compose.yml
   local instances_json=()
@@ -157,7 +165,9 @@ function mock_instance_json {
   # (https://docs.docker.com/compose/networking/). We use getent (https://unix.stackexchange.com/a/20793/215969) to get
   # the IP addresses for these hostnames, as that's what the servers themselves will advertise (see the mock
   # get_instance_xxx_hostname methods above).
-  local readonly couchbase_hostname=$(getent hosts "$container_name" | awk '{ print $1 }')
+  local couchbase_hostname
+  couchbase_hostname=$(getent hosts "$container_name" | awk '{ print $1 }')
+  assert_not_empty_or_null "$couchbase_hostname" "hostname for container $container_name"
 
   cat << EOF
 {

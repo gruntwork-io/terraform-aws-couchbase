@@ -256,7 +256,7 @@ function get_rally_point_hostname {
 
   local hostname
   hostname=$(echo "$rally_point" | jq -r "$hostname_field")
-  assert_not_empty_or_null "$rally_point" "Get hostname from field $hostname_field for rally point in $asg_name: $rally_point"
+  assert_not_empty_or_null "$hostname" "Get hostname from field $hostname_field for rally point in $asg_name: $rally_point"
 
   echo -n "$hostname"
 }

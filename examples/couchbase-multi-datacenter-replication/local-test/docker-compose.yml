@@ -74,7 +74,7 @@ services:
 
   couchbase-data-west-0:
     <<: *couchbase_config
-    container_name: ${CONTAINER_BASE_NAME}-west-east-0
+    container_name: ${CONTAINER_BASE_NAME}-data-west-0
     environment: &default_env_west
       # The User Data script that will be executed on boot by entrypoint.sh
       USER_DATA_SCRIPT: /user-data/user-data-replica.sh
