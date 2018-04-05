@@ -5,6 +5,7 @@ set -e
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/logging.sh"
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/strings.sh"
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/assertions.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/aws.sh"
 
 readonly COUCHBASE_BASE_DIR="/opt/couchbase"
 readonly COUCHBASE_BIN_DIR="$COUCHBASE_BASE_DIR/bin"

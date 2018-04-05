@@ -2,13 +2,9 @@
 
 set -e
 
-readonly AWS_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$AWS_SCRIPT_DIR/logging.sh"
-source "$AWS_SCRIPT_DIR/aws-primitives.sh"
-source "$AWS_SCRIPT_DIR/assertions.sh"
-
-readonly AWS_MAX_RETRIES=60
-readonly AWS_SLEEP_BETWEEN_RETRIES_SEC=5
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/logging.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/aws-primitives.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/assertions.sh"
 
 # Get the name of the ASG this EC2 Instance is in
 function get_asg_name {
@@ -28,7 +24,10 @@ function get_instance_tag {
   local readonly instance_region="$2"
   local readonly tag_key="$3"
 
-  for (( i=0; i<"$AWS_MAX_RETRIES"; i++ )); do
+  local readonly max_retries=60
+  local readonly sleep_between_retries=5
+
+  for (( i=0; i<"$max_retries"; i++ )); do
     local tags
     tags=$(wait_for_instance_tags "$instance_id" "$instance_region")
     assert_not_empty_or_null "$tags" "tags for Instance $instance_id in $instance_region"
@@ -37,8 +36,8 @@ function get_instance_tag {
     tag_value=$(echo "$tags" | jq -r ".Tags[] | select(.Key == \"$tag_key\") | .Value")
 
     if is_empty_or_null "$tag_value"; then
-      log_warn "Instance $instance_id in $instance_region does not yet seem to have tag $tag_key. Will sleep for $AWS_SLEEP_BETWEEN_RETRIES_SEC seconds and check again."
-      sleep "$AWS_SLEEP_BETWEEN_RETRIES_SEC"
+      log_warn "Instance $instance_id in $instance_region does not yet seem to have tag $tag_key. Will sleep for $sleep_between_retries seconds and check again."
+      sleep "$sleep_between_retries"
     else
       log_info "Found value '$tag_value' for tag $tag_key for Instance $instance_id in $instance_region"
       echo -n "$tag_value"
@@ -46,7 +45,7 @@ function get_instance_tag {
     fi
   done
 
-  log_error "Could not find value for tag $tag_key for Instance $instance_id in $instance_region after $AWS_MAX_RETRIES retries."
+  log_error "Could not find value for tag $tag_key for Instance $instance_id in $instance_region after $max_retries retries."
   exit 1
 }
 
@@ -58,7 +57,10 @@ function wait_for_instance_tags {
 
   log_info "Looking up tags for Instance $instance_id in $instance_region"
 
-  for (( i=0; i<"$AWS_MAX_RETRIES"; i++ )); do
+  local readonly max_retries=60
+  local readonly sleep_between_retries=5
+
+  for (( i=0; i<"$max_retries"; i++ )); do
     local tags
     tags=$(get_instance_tags "$instance_id" "$instance_region")
 
@@ -70,12 +72,12 @@ function wait_for_instance_tags {
       echo -n "$tags"
       return
     else
-      log_warn "Tags for Instance $instance_id must not have propagated yet. Will sleep for $AWS_SLEEP_BETWEEN_RETRIES_SEC seconds and check again."
-      sleep "$AWS_SLEEP_BETWEEN_RETRIES_SEC"
+      log_warn "Tags for Instance $instance_id must not have propagated yet. Will sleep for $sleep_between_retries seconds and check again."
+      sleep "$sleep_between_retries"
     fi
   done
 
-  log_error "Could not find tags for Instance $instance_id in $instance_region after $AWS_MAX_RETRIES retries."
+  log_error "Could not find tags for Instance $instance_id in $instance_region after $max_retries retries."
   exit 1
 }
 
@@ -84,7 +86,10 @@ function get_asg_size {
   local readonly asg_name="$1"
   local readonly aws_region="$2"
 
-  for (( i=0; i<"$AWS_MAX_RETRIES"; i++ )); do
+  local readonly max_retries=60
+  local readonly sleep_between_retries=5
+
+  for (( i=0; i<"$max_retries"; i++ )); do
     log_info "Looking up the size of the Auto Scaling Group $asg_name in $aws_region"
 
     local asg_json
@@ -94,15 +99,15 @@ function get_asg_size {
     desired_capacity=$(echo "$asg_json" | jq -r '.AutoScalingGroups[0]?.DesiredCapacity')
 
     if is_empty_or_null "$desired_capacity"; then
-      log_warn "Could not find desired capacity for ASG $asg_name. Perhaps the ASG has not been created yet? Will sleep for $AWS_SLEEP_BETWEEN_RETRIES_SEC and check again. AWS response:\n$asg_json"
-      sleep "$AWS_SLEEP_BETWEEN_RETRIES_SEC"
+      log_warn "Could not find desired capacity for ASG $asg_name. Perhaps the ASG has not been created yet? Will sleep for $sleep_between_retries and check again. AWS response:\n$asg_json"
+      sleep "$sleep_between_retries"
     else
       echo -n "$desired_capacity"
       return
     fi
   done
 
-  log_error "Could not find size of ASG $asg_name after $AWS_MAX_RETRIES retries."
+  log_error "Could not find size of ASG $asg_name after $max_retries retries."
   exit 1
 }
 
@@ -116,8 +121,11 @@ function wait_for_instances_in_asg {
   local asg_size
   asg_size=$(get_asg_size "$asg_name" "$aws_region")
 
+  local readonly max_retries=60
+  local readonly sleep_between_retries=5
+
   log_info "Looking up Instances in ASG $asg_name in $aws_region"
-  for (( i=0; i<"$AWS_MAX_RETRIES"; i++ )); do
+  for (( i=0; i<"$max_retries"; i++ )); do
     local instances
     instances=$(describe_instances_in_asg "$asg_name" "$aws_region")
 
@@ -130,12 +138,12 @@ function wait_for_instances_in_asg {
       echo "$instances"
       return
     else
-      log_warn "Will sleep for $AWS_SLEEP_BETWEEN_RETRIES_SEC seconds and try again."
-      sleep "$AWS_SLEEP_BETWEEN_RETRIES_SEC"
+      log_warn "Will sleep for $sleep_between_retries seconds and try again."
+      sleep "$sleep_between_retries"
     fi
   done
 
-  log_error "Could not find all $asg_size Instances in ASG $asg_name in $aws_region after $AWS_MAX_RETRIES retries."
+  log_error "Could not find all $asg_size Instances in ASG $asg_name in $aws_region after $max_retries retries."
   exit 1
 }
 
