@@ -84,6 +84,7 @@ services:
       USER_DATA_ENV_cluster_asg_name: couchbase-west
       USER_DATA_ENV_cluster_port: 8091
       USER_DATA_ENV_cluster_size: 2
+      USER_DATA_ENV_replica_cluster_size: 2
       USER_DATA_ENV_mock_aws_region: us-west-1
       USER_DATA_ENV_mock_availability_zone: us-west-1a
       USER_DATA_ENV_data_node_container_base_name: ${CONTAINER_BASE_NAME}-data-west
