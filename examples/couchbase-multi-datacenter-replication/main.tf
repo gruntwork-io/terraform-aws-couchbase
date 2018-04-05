@@ -42,7 +42,7 @@ module "couchbase_primary" {
   # recommend you limit this to the IP address ranges of known, trusted servers inside your VPC.
   allowed_ssh_cidr_blocks = ["0.0.0.0/0"]
 
-  ssh_key_name = "${var.ssh_key_name}"
+  ssh_key_name = "${var.ssh_key_name_primary}"
 
   # To make it easy to test this example from your computer, we allow the Couchbase servers to have public IPs. In a
   # production deployment, you'll probably want to keep all the servers in private subnets with only private IPs.
@@ -82,7 +82,7 @@ module "couchbase_replica" {
   # recommend you limit this to the IP address ranges of known, trusted servers inside your VPC.
   allowed_ssh_cidr_blocks = ["0.0.0.0/0"]
 
-  ssh_key_name = "${var.ssh_key_name}"
+  ssh_key_name = "${var.ssh_key_name_replica}"
 
   # To make it easy to test this example from your computer, we allow the Couchbase servers to have public IPs. In a
   # production deployment, you'll probably want to keep all the servers in private subnets with only private IPs.

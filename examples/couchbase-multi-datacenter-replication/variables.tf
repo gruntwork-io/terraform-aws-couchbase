@@ -44,8 +44,13 @@ variable "cluster_name_replica" {
   default     = "couchbase-replica"
 }
 
-variable "ssh_key_name" {
-  description = "The name of an EC2 Key Pair that can be used to SSH to the EC2 Instances in this cluster. Set to an empty string to not associate a Key Pair."
+variable "ssh_key_name_primary" {
+  description = "The name of an EC2 Key Pair that can be used to SSH to the EC2 Instances in the primary Couchbase cluster. Must be a Key Pair in var.aws_region_primary. Set to an empty string to not associate a Key Pair."
+  default     = ""
+}
+
+variable "ssh_key_name_replica" {
+  description = "The name of an EC2 Key Pair that can be used to SSH to the EC2 Instances in the replica Couchbase cluster. Must be a Key Pair in var.aws_region_replica. Set to an empty string to not associate a Key Pair."
   default     = ""
 }
 
