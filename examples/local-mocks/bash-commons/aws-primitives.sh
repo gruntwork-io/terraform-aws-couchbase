@@ -69,13 +69,14 @@ function describe_asg {
   local readonly asg_name="$1"
   local readonly aws_region="$2"
 
-  # cluster_size is an env var set in docker-compose.yml
+  local readonly size=$(get_cluster_size "$asg_name" "$aws_region")
+
   cat << EOF
 {
   "AutoScalingGroups": [
     {
       "AutoScalingGroupARN": "arn:aws:autoscaling:$aws_region:123456789012:autoScalingGroup:930d940e-891e-4781-a11a-7b0acd480f03:autoScalingGroupName/$asg_name",
-      "DesiredCapacity": $cluster_size,
+      "DesiredCapacity": $size,
       "AutoScalingGroupName": "$asg_name",
       "LaunchConfigurationName": "$asg_name",
       "CreatedTime": "2013-08-19T20:53:25.584Z"
@@ -85,15 +86,49 @@ function describe_asg {
 EOF
 }
 
+# Get the size of the cluster. This comes from env vars set in docker-compose.yml. Note that if we are requesting the
+# size of a cluster that isn't the one running in this Docker container, then we must instead be requesting the size of
+# the replica cluster, so we return that.
+function get_cluster_size {
+  local readonly asg_name="$1"
+  local readonly aws_region="$2"
+
+  # All the variables are env vars set in docker-compose.yml
+  if [[ "$asg_name" == "$cluster_asg_name" ]]; then
+    echo -n "$cluster_size"
+  else
+    echo -n "$replica_cluster_size"
+  fi
+}
+
+# Get the base name of the containers in the cluster. This comes from env vars set in docker-compose.yml. Note that if
+# we are requesting the containers in a different cluster than the one this container is in, then we must instead be
+# requesting looking for containers in the replica cluster, so we return that.
+function get_container_basename {
+  local readonly asg_name="$1"
+  local readonly aws_region="$2"
+
+  # All the variables are env vars set in docker-compose.yml
+  if [[ "$asg_name" == "$cluster_asg_name" ]]; then
+    echo -n "$data_node_container_base_name"
+  else
+    echo -n "$replica_data_node_container_base_name"
+  fi
+
+}
+
 # This mock returns a hard-coded, simplified version of the aws ec2 describe-instances call.
 function describe_instances_in_asg {
   local readonly asg_name="$1"
   local readonly aws_region="$2"
 
+  local readonly size=$(get_cluster_size "$asg_name" "$aws_region")
+  local readonly container_base_name=$(get_container_basename "$asg_name" "$aws_region")
+
   # cluster_size and data_node_container_base_name are env vars set in docker-compose.yml
   local instances_json=()
-  for (( i=0; i<"$cluster_size"; i++ )); do
-    instances_json+=("$(mock_instance_json "$asg_name" "$data_node_container_base_name-$i" "2018-03-17T17:38:3$i.000Z" "i-0ace993b1700c004$i")")
+  for (( i=0; i<"$size"; i++ )); do
+    instances_json+=("$(mock_instance_json "$asg_name" "$container_base_name-$i" "2018-03-17T17:38:3$i.000Z" "i-0ace993b1700c004$i")")
   done
 
   local readonly instances=$(join "," "${instances_json[@]}")

@@ -40,21 +40,20 @@ services:
 
     environment: &default_env_east
       # The User Data script that will be executed on boot by entrypoint.sh
-      USER_DATA_SCRIPT: /user-data/user-data-east.sh
+      USER_DATA_SCRIPT: /user-data/user-data-primary.sh
 
       # Any environment variable starting with USER_DATA_ENV_ will be read in by entrypoint.sh and made available in
       # the User Data script, with the USER_DATA_ENV_ portion stripped off.
       USER_DATA_ENV_cluster_asg_name: couchbase-east
       USER_DATA_ENV_cluster_port: 8091
       USER_DATA_ENV_cluster_size: 2
+      USER_DATA_ENV_replica_cluster_size: 2
       USER_DATA_ENV_mock_aws_region: us-east-1
       USER_DATA_ENV_mock_availability_zone: us-east-1a
-      USER_DATA_ENV_data_volume_device_name: /dev/xvdf
-      USER_DATA_ENV_data_volume_mount_point: /couchbase-data
-      USER_DATA_ENV_volume_owner: couchbase
       USER_DATA_ENV_data_node_container_base_name: ${CONTAINER_BASE_NAME}-data-east
+      USER_DATA_ENV_replica_data_node_container_base_name: ${CONTAINER_BASE_NAME}-data-west
       USER_DATA_ENV_replication_dest_cluster_name: ${CONTAINER_BASE_NAME}-data-west
-      USER_DATA_ENV_replication_dest_cluster_hostname: ${CONTAINER_BASE_NAME}-data-west-0
+      USER_DATA_ENV_replication_dest_cluster_aws_region: us-west-1
 
     # Map each container to unique ports on the host. Note that you can talk to this container from your host OS via the
     # HTTP/REST APIs but NOT the Couchbase SDKs! The SDKs will try to connect to the internal node IPs, which can only
@@ -78,7 +77,7 @@ services:
     container_name: ${CONTAINER_BASE_NAME}-west-east-0
     environment: &default_env_west
       # The User Data script that will be executed on boot by entrypoint.sh
-      USER_DATA_SCRIPT: /user-data/user-data-west.sh
+      USER_DATA_SCRIPT: /user-data/user-data-replica.sh
 
       # Any environment variable starting with USER_DATA_ENV_ will be read in by entrypoint.sh and made available in
       # the User Data script, with the USER_DATA_ENV_ portion stripped off.
@@ -87,9 +86,6 @@ services:
       USER_DATA_ENV_cluster_size: 2
       USER_DATA_ENV_mock_aws_region: us-west-1
       USER_DATA_ENV_mock_availability_zone: us-west-1a
-      USER_DATA_ENV_data_volume_device_name: /dev/xvdf
-      USER_DATA_ENV_data_volume_mount_point: /couchbase-data
-      USER_DATA_ENV_volume_owner: couchbase
       USER_DATA_ENV_data_node_container_base_name: ${CONTAINER_BASE_NAME}-data-west
 
     # Map each container to unique ports on the host. Note that you can talk to this container from your host OS via the

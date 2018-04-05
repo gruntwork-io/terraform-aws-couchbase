@@ -6,25 +6,11 @@ set -e
 # From: https://alestic.com/2010/12/ec2-user-data-output/
 exec > >(tee /opt/couchbase/var/lib/couchbase/logs/mock-user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
-function mount_volumes {
-  local readonly data_volume_device_name="$1"
-  local readonly data_volume_mount_point="$2"
-  local readonly volume_owner="$3"
-
-  echo "Mounting EBS Volume for the data directory"
-
-  /opt/couchbase/bash-commons/mount-ebs-volume \
-    --device-name "$data_volume_device_name" \
-    --mount-point "$data_volume_mount_point" \
-    --owner "$volume_owner"
-}
-
 function run_couchbase {
   local readonly cluster_asg_name="$1"
   local readonly cluster_username="$2"
   local readonly cluster_password="$3"
   local readonly cluster_port="$4"
-  local readonly data_dir="$5"
 
   echo "Starting Couchbase data nodes"
 
@@ -33,7 +19,6 @@ function run_couchbase {
     --cluster-username "$cluster_username" \
     --cluster-password "$cluster_password" \
     --rest-port "$cluster_port" \
-    --data-dir "$data_dir" \
     --node-services "data" \
     --cluster-services "data" \
     --use-public-hostname \
@@ -81,10 +66,15 @@ function start_replication {
   local readonly cluster_port="$3"
   local readonly src_bucket_name="$4"
   local readonly dest_cluster_name="$5"
-  local readonly dest_cluster_hostname="$6"
-  local readonly dest_cluster_username="$7"
-  local readonly dest_cluster_password="$8"
+  local readonly dest_cluster_username="$6"
+  local readonly dest_cluster_password="$7"
+  local readonly replication_dest_cluster_aws_region="$8"
   local readonly dest_bucket_name="$9"
+
+  echo "Looking up hostname for Couchbase cluster $dest_cluster_name in $replication_dest_cluster_aws_region"
+
+  local dest_cluster_hostname
+  read _ _ _ dest_cluster_hostname < <(/opt/couchbase/bash-commons/couchbase-rally-point --cluster-name "$dest_cluster_name" --use-public-hostname "true" --aws-region "$replication_dest_cluster_aws_region" --node-hostname "ignore")
 
   echo "Starting replication from bucket $src_bucket_name in this cluster to bucket $dest_bucket_name in cluster $dest_cluster_name"
 
@@ -104,11 +94,8 @@ function start_replication {
 function run {
   local readonly cluster_asg_name="$1"
   local readonly cluster_port="$2"
-  local readonly data_volume_device_name="$3"
-  local readonly data_volume_mount_point="$4"
-  local readonly volume_owner="$5"
-  local readonly replication_dest_cluster_name="$6"
-  local readonly replication_dest_cluster_hostname="$7"
+  local readonly replication_dest_cluster_name="$3"
+  local readonly replication_dest_cluster_aws_region="$4"
 
   # To keep this example simple, we are hard-coding all credentials in this file in plain text. You should NOT do this
   # in production usage!!! Instead, you should use tools such as Vault, Keywhiz, or KMS to fetch the credentials at
@@ -116,8 +103,7 @@ function run {
   local readonly cluster_username="admin"
   local readonly cluster_password="password"
 
-  mount_volumes "$data_volume_device_name" "$data_volume_mount_point" "$volume_owner"
-  run_couchbase "$cluster_asg_name" "$cluster_username" "$cluster_password" "$cluster_port" "$data_volume_mount_point"
+  run_couchbase "$cluster_asg_name" "$cluster_username" "$cluster_password" "$cluster_port"
 
   local node_hostname
   local rally_point_hostname
@@ -137,7 +123,7 @@ function run {
     local readonly dest_bucket_name="test-bucket-replica"
 
     create_test_resources "$cluster_username" "$cluster_password" "$cluster_port" "$test_user_name" "$test_user_password" "$test_bucket_name"
-    start_replication "$cluster_username" "$cluster_password" "$cluster_port" "$test_bucket_name" "$replication_dest_cluster_name" "$replication_dest_cluster_hostname" "$dest_cluster_username" "$dest_cluster_password" "$dest_bucket_name"
+    start_replication "$cluster_username" "$cluster_password" "$cluster_port" "$test_bucket_name" "$replication_dest_cluster_name" "$dest_cluster_username" "$dest_cluster_password" "$replication_dest_cluster_aws_region" "$dest_bucket_name"
   fi
 }
 
@@ -145,9 +131,6 @@ function run {
 run \
   "${cluster_asg_name}" \
   "${cluster_port}" \
-  "${data_volume_device_name}" \
-  "${data_volume_mount_point}" \
-  "${volume_owner}" \
   "${replication_dest_cluster_name}" \
-  "${replication_dest_cluster_hostname}"
+  "${replication_dest_cluster_aws_region}"
 
