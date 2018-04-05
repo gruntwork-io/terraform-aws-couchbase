@@ -116,14 +116,20 @@ function update_swapiness {
   replace_or_append_in_file "^vm.swappiness.*=.*$" "vm.swapiness = $swapiness" "$SWAPINESS_CONFIG_FILE"
 }
 
-function install_run_couchbase_script {
+function install_couchbase_scripts {
   local readonly dest_dir="$1"
-  local readonly src="$SCRIPT_DIR/../run-couchbase-server/run-couchbase-server"
-  local readonly dest="$dest_dir/run-couchbase-server"
 
-  log_info "Copying $src to $dest"
-  sudo cp "$src" "$dest"
-  sudo chmod +x "$dest"
+  local readonly run_couchbase_src="$SCRIPT_DIR/../run-couchbase-server/run-couchbase-server"
+  local readonly run_couchbase_dest="$dest_dir/run-couchbase-server"
+  log_info "Copying $run_couchbase_src to $run_couchbase_dest"
+  sudo cp "$run_couchbase_src" "$run_couchbase_dest"
+  sudo chmod +x "$run_couchbase_dest"
+
+  local readonly run_replication_src="$SCRIPT_DIR/../run-replication/run-replication"
+  local readonly run_replication_dest="$dest_dir/run-replication"
+  log_info "Copying $run_replication_src to $run_replication_dest"
+  sudo cp "$run_replication_src" "$run_replication_dest"
+  sudo chmod +x "$run_replication_dest"
 }
 
 function install_bash_commons {
@@ -192,7 +198,7 @@ function install {
 
   update_swapiness "$swapiness"
   disable_transparent_huge_pages
-  install_run_couchbase_script "$DEFAULT_COUCHBASE_BIN_DIR"
+  install_couchbase_scripts "$DEFAULT_COUCHBASE_BIN_DIR"
   install_bash_commons "$BASH_COMMONS_INSTALL_DIR"
 
   log_info "Couchbase installed successfully!"
