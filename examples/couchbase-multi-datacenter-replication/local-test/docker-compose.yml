@@ -26,7 +26,7 @@ services:
       - ../../../modules/bash-commons:/opt/couchbase/bash-commons
       - ../../../modules/bash-commons:/opt/couchbase-sync-gateway/bash-commons
       - ../../../modules/run-couchbase-server/run-couchbase-server:/opt/couchbase/bin/run-couchbase-server
-      - ../../../modules/run-sync-gateway/run-sync-gateway:/opt/couchbase-sync-gateway/bin/run-sync-gateway
+      - ../../../modules/run-replication/run-replication:/opt/couchbase/bin/run-replication
 
       # Override scripts in bash-commons with mocks so we can run locally, without talking to AWS APIs
       - ../../local-mocks/bash-commons/aws-primitives.sh:/opt/couchbase/bash-commons/aws-primitives.sh
@@ -53,7 +53,8 @@ services:
       USER_DATA_ENV_data_volume_mount_point: /couchbase-data
       USER_DATA_ENV_volume_owner: couchbase
       USER_DATA_ENV_data_node_container_base_name: ${CONTAINER_BASE_NAME}-data-east
-      USER_DATA_ENV_data_ramsize: 1024
+      USER_DATA_ENV_replication_dest_cluster_name: ${CONTAINER_BASE_NAME}-data-west
+      USER_DATA_ENV_replication_dest_cluster_hostname: ${CONTAINER_BASE_NAME}-data-west-0
 
     # Map each container to unique ports on the host. Note that you can talk to this container from your host OS via the
     # HTTP/REST APIs but NOT the Couchbase SDKs! The SDKs will try to connect to the internal node IPs, which can only
@@ -90,7 +91,6 @@ services:
       USER_DATA_ENV_data_volume_mount_point: /couchbase-data
       USER_DATA_ENV_volume_owner: couchbase
       USER_DATA_ENV_data_node_container_base_name: ${CONTAINER_BASE_NAME}-data-west
-      USER_DATA_ENV_data_ramsize: 1024
 
     # Map each container to unique ports on the host. Note that you can talk to this container from your host OS via the
     # HTTP/REST APIs but NOT the Couchbase SDKs! The SDKs will try to connect to the internal node IPs, which can only
