@@ -23,6 +23,32 @@ function run_couchbase_cli {
   set -e
 }
 
+# Run the Couchbase CLI and retry until its stdout contains the expected message or max retries is exceeded.
+function run_couchbase_cli_with_retry {
+  local readonly cmd_description="$1"
+  local readonly expected_message="$2"
+  local readonly max_retries="$3"
+  local readonly sleep_between_retries_sec="$4"
+  shift 4
+  local readonly args=($@)
+
+  for (( i=0; i<"$max_retries"; i++ )); do
+    local out
+    out=$(run_couchbase_cli "${args[@]}")
+
+    if string_contains "$out" "$expected_message"; then
+      log_info "Success: $cmd_description."
+      return
+    else
+      log_warn "Failed to $cmd_description. Will sleep for $sleep_between_retries_sec seconds and try again. couchbase-cli output:\n$out"
+      sleep "$sleep_between_retries_sec"
+    fi
+  done
+
+  log_error "Failed to $cmd_description after $max_retries retries."
+  exit 1
+}
+
 # Returns true (0) if the Couchbase cluster has already been initialized and false otherwise.
 function cluster_is_initialized {
   local readonly cluster_url="$1"

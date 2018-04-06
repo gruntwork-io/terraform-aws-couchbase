@@ -6,6 +6,8 @@ set -e
 # From: https://alestic.com/2010/12/ec2-user-data-output/
 exec > >(tee /opt/couchbase/var/lib/couchbase/logs/mock-user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
+source "/opt/couchbase/bash-commons/couchbase-common.sh"
+
 function run_couchbase {
   local readonly cluster_asg_name="$1"
   local readonly cluster_username="$2"
@@ -33,31 +35,41 @@ function create_test_resources {
   local readonly user_password="$5"
   local readonly bucket_name="$6"
 
+  local readonly max_retries=120
+  local readonly sleep_between_retries_sec=5
+
   echo "Creating user $user_name"
 
-  /opt/couchbase/bin/couchbase-cli user-manage \
-    --cluster="127.0.0.1:$cluster_port" \
-    --username="$cluster_username" \
-    --password="$cluster_password" \
-    --set \
-    --rbac-username="$user_name" \
-    --rbac-password="$user_password" \
-    --rbac-name="$user_name" \
-    --roles="cluster_admin" \
-    --auth-domain="local"
+  run_couchbase_cli_with_retry \
+    "Create RBAC user $user_name" \
+    "SUCCESS: RBAC user set" \
+    "$max_retries" \
+    "$sleep_between_retries_sec" \
+    "user-manage" \
+    "--cluster=127.0.0.1:$cluster_port" \
+    "--username=$cluster_username" \
+    "--password=$cluster_password" \
+    "--set" \
+    "--rbac-username=$user_name" \
+    "--rbac-password=$user_password" \
+    "--rbac-name=$user_name" \
+    "--roles=cluster_admin" \
+    "--auth-domain=local"
 
   echo "Creating bucket $bucket_name"
 
-  # If the bucket already exists, just ignore the error, as it means one of the other nodes already created it
-  set +e
-  /opt/couchbase/bin/couchbase-cli  bucket-create \
-    --cluster="127.0.0.1:$cluster_port" \
-    --username="$user_name" \
-    --password="$user_password" \
-    --bucket="$bucket_name" \
-    --bucket-type="couchbase" \
-    --bucket-ramsize="100"
-  set -e
+  run_couchbase_cli_with_retry \
+    "Create bucket $bucket_name" \
+    "SUCCESS: Bucket created" \
+    "$max_retries" \
+    "$sleep_between_retries_sec" \
+    "bucket-create" \
+    "--cluster=127.0.0.1:$cluster_port" \
+    "--username=$user_name" \
+    "--password=$user_password" \
+    "--bucket=$bucket_name" \
+    "--bucket-type=couchbase" \
+    "--bucket-ramsize=100"
 }
 
 function start_replication {
