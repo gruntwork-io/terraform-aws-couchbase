@@ -286,12 +286,19 @@ func checkSyncGatewayWorking(t *testing.T, syncGatewayUrl string, logger *log.Lo
 	}
 }
 
-func testStageBuildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, couchbaseTerraformDir string, logger *log.Logger) {
-	resourceCollection := createBaseRandomResourceCollection(t)
+func buildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, resourceCollection *terratest.RandomResourceCollection, logger *log.Logger) string {
 	amiId, err := buildCouchbaseWithPacker(logger, fmt.Sprintf("%s-ami", osName), fmt.Sprintf("couchbase-%s", resourceCollection.UniqueId), resourceCollection.AwsRegion, couchbaseAmiDir)
 	if err != nil {
 		t.Fatalf("Failed to build Couchbase AMI: %v", err)
 	}
+
+	return amiId
+}
+
+func testStageBuildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, couchbaseTerraformDir string, logger *log.Logger) {
+	resourceCollection := createBaseRandomResourceCollection(t)
+
+	amiId := buildCouchbaseAmi(t, osName, couchbaseAmiDir, resourceCollection, logger)
 
 	test_structure.SaveAmiId(t, couchbaseTerraformDir, amiId, logger)
 	test_structure.SaveRandomResourceCollection(t, couchbaseTerraformDir, resourceCollection, logger)
@@ -319,8 +326,7 @@ func getClusterName(t *testing.T, clusterVarName string, terratestOptions *terra
 	return fmt.Sprintf("%v", clusterNameVal)
 }
 
-func testStageLogs(t *testing.T, couchbaseTerraformDir string, clusterVarName string, logger *log.Logger) {
-	resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseTerraformDir, logger)
+func testStageLogs(t *testing.T, couchbaseTerraformDir string, clusterVarName string, resourceCollection *terratest.RandomResourceCollection, logger *log.Logger) {
 	terratestOptions := test_structure.LoadTerratestOptions(t, couchbaseTerraformDir, logger)
 
 	clusterName := getClusterName(t, clusterVarName, terratestOptions)

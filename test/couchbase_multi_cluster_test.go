@@ -57,9 +57,11 @@ func testCouchbaseMultiCluster(t *testing.T, testName string, osName string) {
 	})
 
 	defer test_structure.RunTestStage("logs", logger, func() {
-		testStageLogs(t, couchbaseMultiClusterDir, dataNodeClusterVarName, logger)
-		testStageLogs(t, couchbaseMultiClusterDir, indexQuerySearchClusterVarName, logger)
-		testStageLogs(t, couchbaseMultiClusterDir, syncGatewayClusterVarName, logger)
+		resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseMultiClusterDir, logger)
+
+		testStageLogs(t, couchbaseMultiClusterDir, dataNodeClusterVarName, resourceCollection, logger)
+		testStageLogs(t, couchbaseMultiClusterDir, indexQuerySearchClusterVarName, resourceCollection, logger)
+		testStageLogs(t, couchbaseMultiClusterDir, syncGatewayClusterVarName, resourceCollection, logger)
 	})
 
 	test_structure.RunTestStage("validation", logger, func() {

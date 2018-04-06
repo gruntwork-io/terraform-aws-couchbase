@@ -54,7 +54,8 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 	})
 
 	defer test_structure.RunTestStage("logs", logger, func() {
-		testStageLogs(t, couchbaseSingleClusterDir, couchbaseClusterVarName, logger)
+		resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseSingleClusterDir, logger)
+		testStageLogs(t, couchbaseSingleClusterDir, couchbaseClusterVarName, resourceCollection, logger)
 	})
 
 	test_structure.RunTestStage("validation", logger, func() {
