@@ -16,7 +16,7 @@ import (
 )
 
 func checkCouchbaseConsoleIsRunning(t *testing.T, clusterUrl string, logger *log.Logger) {
-	maxRetries := 60
+	maxRetries := 180
 	sleepBetweenRetries := 5 * time.Second
 
 	err := http_helper.HttpGetWithRetryWithCustomValidation(clusterUrl, maxRetries, sleepBetweenRetries, logger, func(status int, body string) bool {
@@ -206,7 +206,7 @@ func writeToBucket(t *testing.T, clusterUrl string, bucketName string, key strin
 	}
 
 	description := fmt.Sprintf("Write to bucket params: %s", string(jsonBytes))
-	retries := 120
+	retries := 180
 	timeBetweenRetries := 5 * time.Second
 
 	// Buckets take a while to replicate, and until they do, you get vague errors such as "Unexpected server error",
@@ -236,7 +236,7 @@ func writeToBucket(t *testing.T, clusterUrl string, bucketName string, key strin
 // "Connect via SDK" on this page: https://developer.couchbase.com/documentation/server/current/install/docker-deploy-multi-node-cluster.html
 func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key string, logger *log.Logger) TestData {
 	description := fmt.Sprintf("Reading key %s from bucket %s", key, bucketName)
-	maxRetries := 120
+	maxRetries := 180
 	timeBetweenRetries := 5 * time.Second
 
 	// This is an undocumented API. I found it here: https://stackoverflow.com/a/37425574/483528. You can also find it
