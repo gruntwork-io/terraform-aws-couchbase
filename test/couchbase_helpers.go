@@ -121,6 +121,20 @@ func checkCouchbaseDataNodesWorking(t *testing.T, dataNodesUrl string, logger *l
 	assert.Equal(t, testValue, actualValue)
 }
 
+func checkReplicationIsWorking(t *testing.T, dataNodesUrlPrimary string, dataNodesUrlReplica string, bucketPrimary string, bucketReplica string, logger *log.Logger) {
+	uniqueId := util.UniqueId()
+	testKey := fmt.Sprintf("test-key-%s", uniqueId)
+	testValue := TestData{
+		Foo: fmt.Sprintf("test-value-%s", uniqueId),
+		Bar: 42,
+	}
+
+	writeToBucket(t, dataNodesUrlPrimary, bucketPrimary, testKey, testValue, logger)
+	actualValue := readFromBucket(t, dataNodesUrlReplica, bucketReplica, testKey, logger)
+
+	assert.Equal(t, testValue, actualValue)
+}
+
 // Create a Couchbase bucket. Note that we do NOT use any Couchbase SDK here because this test runs against a
 // Dockerized cluster, and the SDK does not work with Dockerized clusters, as it tries to use IPs that are only
 // accessible from inside a Docker container. Therefore, we just use the HTTP API directly. For more info, search for
