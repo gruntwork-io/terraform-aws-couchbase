@@ -6,6 +6,8 @@ set -e
 # From: https://alestic.com/2010/12/ec2-user-data-output/
 exec > >(tee /opt/couchbase/var/lib/couchbase/logs/mock-user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
+source "/opt/couchbase/bash-commons/couchbase-common.sh"
+
 function run_couchbase {
   local readonly cluster_asg_name="$1"
   local readonly cluster_username="$2"
