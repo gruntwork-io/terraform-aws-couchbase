@@ -51,7 +51,7 @@ function install_couchbase_on_ubuntu {
 
   log_info "Installing Couchbase dependencies"
   sudo DEBIAN_FRONTEND=noninteractive apt-get update
-  sudo apt-get install -y python-httplib2 openssl
+  sudo apt-get install -y python-httplib2
 
   log_info "Downloading Couchbase from $url to $filepath"
   curl --location --silent --fail --show-error -O "$url"
