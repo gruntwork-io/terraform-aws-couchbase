@@ -8,15 +8,8 @@ services:
     entrypoint: ["/entrypoint/entrypoint.sh"]
     container_name: ${CONTAINER_BASE_NAME}-0
 
-    # These are all settings required to make systemd happy
+    # Required to make systemd happy
     privileged: true
-    cap_add:
-      - SYS_ADMIN
-    security_opt:
-      - seccomp:unconfined
-    tmpfs:
-      - /run
-      - /run/lock
 
     volumes:
       # Used for systemd
