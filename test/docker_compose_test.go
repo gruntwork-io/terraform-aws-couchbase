@@ -10,6 +10,7 @@ import (
 	"github.com/gruntwork-io/terratest/shell"
 	"strconv"
 	"github.com/gruntwork-io/terratest/util"
+	"os"
 )
 
 func TestUnitCouchbaseInDocker(t *testing.T) {
@@ -23,14 +24,6 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 		couchbaseWebConsolePort int
 		syncGatewayWebConsolePort int
 	} {
-		// TODO: IMPORTANT NOTE FOR MAINTAINER
-		//
-		// It seems that running too many of these Docker tests in CircleCI causes the tests to randomly fail. This
-		// might be because with CircleCI 2.0 and the machine executor, you only get 2 CPUs and 8GB of RAM, and with
-		// all the tests running in parallel, Couchbase fails to boot in a reasonable period of time. So, the
-		// workaround is to run each Dockerized unit test in a separate CircleCI job. So if you add a test here,
-		// you need to add a job for it in .circleci/config.yml too!
-		//
 		{"TestUnitCouchbaseSingleClusterUbuntuInDocker","couchbase-single-cluster", "ubuntu", 2, 8091, 4984},
 		{"TestUnitCouchbaseMultiClusterAmazonLinuxInDocker", "couchbase-multi-cluster", "amazon-linux", 3,7091, 3984},
 	}
@@ -39,9 +32,8 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 		testCase := testCase // capture range variable; otherwise, only the very last test case will run!
 
 		t.Run(testCase.testName, func(t *testing.T) {
-			// Disable parallelism, as running more than one Docker test at a time in CircleCi, for some reason,
-			// causes them to fail.
-			//t.Parallel()
+			t.Parallel()
+			skipInCircleCi(t)
 			testCouchbaseInDockerBasic(t, testCase.testName, testCase.examplesFolderName, testCase.osName, testCase.clusterSize, testCase.couchbaseWebConsolePort, testCase.syncGatewayWebConsolePort)
 		})
 	}
@@ -54,14 +46,6 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 		couchbaseWebConsolePortEast int
 		couchbaseWebConsolePortWest int
 	} {
-		// TODO: IMPORTANT NOTE FOR MAINTAINER
-		//
-		// It seems that running too many of these Docker tests in CircleCI causes the tests to randomly fail. This
-		// might be because with CircleCI 2.0 and the machine executor, you only get 2 CPUs and 8GB of RAM, and with
-		// all the tests running in parallel, Couchbase fails to boot in a reasonable period of time. So, the
-		// workaround is to run each Dockerized unit test in a separate CircleCI job. So if you add a test here,
-		// you need to add a job for it in .circleci/config.yml too!
-		//
 		{"TestUnitCouchbaseMultiDataCenterUbuntuInDocker", "couchbase-multi-datacenter-replication", "ubuntu", 2,6091, 5091},
 	}
 
@@ -69,11 +53,16 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 		testCase := testCase // capture range variable; otherwise, only the very last test case will run!
 
 		t.Run(testCase.testName, func(t *testing.T) {
-			// Disable parallelism, as running more than one Docker test at a time in CircleCi, for some reason,
-			// causes them to fail.
-			//t.Parallel()
+			t.Parallel()
+			skipInCircleCi(t)
 			testCouchbaseInDockerReplication(t, testCase.testName, testCase.examplesFolderName, testCase.osName, testCase.clusterSize, testCase.couchbaseWebConsolePortEast, testCase.couchbaseWebConsolePortWest)
 		})
+	}
+}
+
+func skipInCircleCi(t *testing.T) {
+	if os.Getenv("CIRCLECI") != "" {
+		t.Skip("Skipping Docker unit tests in CircleCI, as for some crazy reason, Couchbase often fails to start in a Docker container when running in CircleCI. See https://github.com/gruntwork-io/terraform-aws-couchbase/pull/10 for details.")
 	}
 }
 
