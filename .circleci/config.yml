@@ -4,10 +4,34 @@ jobs:
     machine: true
     steps:
       - checkout
+
+      - restore_cache: &restore_dependencies
+          keys:
+            - v1-external-dep
+            - v1-dep-{{ checksum "test/Gopkg.lock" }}
+
+      - run: &configure_env_for_gruntwork_module
+          command: |
+            curl -Ls https://raw.githubusercontent.com/gruntwork-io/gruntwork-installer/master/bootstrap-gruntwork-installer.sh | bash /dev/stdin --version v0.0.21
+            gruntwork-install --module-name "gruntwork-module-circleci-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "v0.7.1"
+            configure-environment-for-gruntwork-module --circle-ci-2-machine-executor --go-src-path test --use-go-dep
+
+      - save_cache: &save_hashicorp_dependencies
+          key: v1-external-dep
+          paths:
+            - $HOME/terraform
+            - $HOME/packer
+
+      - save_cache: &save_go_dependencies
+          key: v1-dep-{{ checksum "test/Gopkg.lock" }}
+          paths:
+            - $HOME/.go_workspace/src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/test/vendor
+
       # Fail the build if the pre-commit hooks don't pass. Note: if you run "pre-commit install" locally in the roo repo
       # folder, these hooks will execute automatically every time before you commit, ensuring the build never fails at this step!
       - run:
           command: |
+            echo 'export PATH=$HOME/.local/bin:$HOME/terraform:$HOME/packer:$PATH' >> $BASH_ENV
             DEBIAN_FRONTEND=noninteractive sudo apt-get update && sudo apt-get install -y python-pip
             pip install pre-commit
             pre-commit install
@@ -19,38 +43,25 @@ jobs:
     machine: true
     steps:
       - checkout
-
-      # The weird way you have to set PATH in Circle 2.0
-      - run: echo 'export PATH=$HOME/.local/bin:$HOME/terraform:$HOME/packer:$PATH' >> $BASH_ENV
-
       - restore_cache:
-          keys:
-            - v1-external-dep
-            - v1-dep-{{ checksum "test/Gopkg.lock" }}
+          <<: *restore_dependencies
 
       - run:
-          command: |
-            curl -Ls https://raw.githubusercontent.com/gruntwork-io/gruntwork-installer/master/bootstrap-gruntwork-installer.sh | bash /dev/stdin --version v0.0.21
-            gruntwork-install --module-name "gruntwork-module-circleci-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "v0.7.1"
-            configure-environment-for-gruntwork-module --circle-ci-2-machine-executor --go-src-path test --use-go-dep
+          <<: *configure_env_for_gruntwork_module
 
       - save_cache:
-          key: v1-external-dep
-          paths:
-            - $HOME/terraform
-            - $HOME/packer
+          <<: *save_hashicorp_dependencies
+
       - save_cache:
-          key: v1-dep-{{ checksum "test/Gopkg.lock" }}
-          paths:
-            - $HOME/.go_workspace/src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/test/vendor
+          <<: *save_go_dependencies
 
       - run:
           command: |
             DEBIAN_FRONTEND=noninteractive sudo apt-get update && sudo apt-get install -y python-pip
             pip install awscli
 
-      # Run the tests
-      - run: run-go-tests --path test --timeout 90m --packages "./... -run TestIntegration"
+            echo 'export PATH=$HOME/.local/bin:$HOME/terraform:$HOME/packer:$PATH' >> $BASH_ENV
+            run-go-tests --path test --timeout 90m --packages "./... -run TestIntegration"
 
 workflows:
   version: 2
