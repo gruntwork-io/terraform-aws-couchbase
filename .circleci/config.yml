@@ -79,7 +79,7 @@ jobs:
           <<: *save_go_dependencies
       - run:
           <<: *configure_aws_cli_and_path
-      - run: run-go-tests --path test --timeout 90m --packages "./... -run TestUnitCouchbaseSingleClusterUbuntuInDocker"
+      - run: run-go-tests --path test --timeout 90m --packages "./... -run TestUnitCouchbaseInDocker/TestUnitCouchbaseSingleClusterUbuntuInDocker"
 
   unit_test_multi_cluster_amazon_linux:
     # We need to run Docker Compose with volumes, which isn't supported by CircleCI's Docker executor, so we have to use
@@ -97,7 +97,7 @@ jobs:
           <<: *save_go_dependencies
       - run:
           <<: *configure_aws_cli_and_path
-      - run: run-go-tests --path test --timeout 90m --packages "./... -run TestUnitCouchbaseMultiClusterAmazonLinuxInDocker"
+      - run: run-go-tests --path test --timeout 90m --packages "./... -run TestUnitCouchbaseInDocker/TestUnitCouchbaseMultiClusterAmazonLinuxInDocker"
 
   unit_test_multi_datacenter_ubuntu:
     # We need to run Docker Compose with volumes, which isn't supported by CircleCI's Docker executor, so we have to use
@@ -115,7 +115,7 @@ jobs:
           <<: *save_go_dependencies
       - run:
           <<: *configure_aws_cli_and_path
-      - run: run-go-tests --path test --timeout 90m --packages "./... -run TestUnitCouchbaseMultiDataCenterUbuntuInDocker"
+      - run: run-go-tests --path test --timeout 90m --packages "./... -run TestUnitCouchbaseInDocker/TestUnitCouchbaseMultiDataCenterUbuntuInDocker"
 
 workflows:
   version: 2
