@@ -65,4 +65,4 @@ workflows:
             tags:
               only: /.*/
       - integration_tests:
-          <<: *default_env_east
+          <<: *all_branches_and_tags
