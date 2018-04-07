@@ -8,43 +8,21 @@ exec > >(tee /opt/couchbase/var/lib/couchbase/logs/mock-user-data.log|logger -t 
 
 source "/opt/couchbase/bash-commons/couchbase-common.sh"
 
-function mount_volumes {
-  local readonly data_volume_device_name="$1"
-  local readonly data_volume_mount_point="$2"
-  local readonly index_volume_device_name="$3"
-  local readonly index_volume_mount_point="$4"
-  local readonly volume_owner="$5"
-
-  echo "Mounting EBS Volumes for data and index directories"
-
-  /opt/couchbase/bash-commons/mount-ebs-volume \
-    --device-name "$data_volume_device_name" \
-    --mount-point "$data_volume_mount_point" \
-    --owner "$volume_owner"
-
-  /opt/couchbase/bash-commons/mount-ebs-volume \
-    --device-name "$index_volume_device_name" \
-    --mount-point "$index_volume_mount_point" \
-    --owner "$volume_owner"
-}
-
 function run_couchbase {
   local readonly cluster_asg_name="$1"
   local readonly cluster_username="$2"
   local readonly cluster_password="$3"
   local readonly cluster_port="$4"
-  local readonly data_dir="$5"
-  local readonly index_dir="$6"
 
-  echo "Starting Couchbase"
+  echo "Starting Couchbase data nodes"
 
   /opt/couchbase/bin/run-couchbase-server \
     --cluster-name "$cluster_asg_name" \
     --cluster-username "$cluster_username" \
     --cluster-password "$cluster_password" \
     --rest-port "$cluster_port" \
-    --data-dir "$data_dir" \
-    --index-dir "$index_dir" \
+    --node-services "data" \
+    --cluster-services "data" \
     --use-public-hostname \
     --wait-for-all-nodes
 }
@@ -94,50 +72,50 @@ function create_test_resources {
     "--bucket-ramsize=100"
 }
 
-function run_sync_gateway {
-  local readonly cluster_asg_name="$1"
-  local readonly cluster_port="$2"
-  local readonly sync_gateway_interface="$3"
-  local readonly sync_gateway_admin_interface="$4"
-  local readonly bucket="$5"
-  local readonly username="$6"
-  local readonly password="$7"
+function start_replication {
+  local readonly cluster_username="$1"
+  local readonly cluster_password="$2"
+  local readonly cluster_port="$3"
+  local readonly src_bucket_name="$4"
+  local readonly dest_cluster_name="$5"
+  local readonly dest_cluster_username="$6"
+  local readonly dest_cluster_password="$7"
+  local readonly replication_dest_cluster_aws_region="$8"
+  local readonly dest_bucket_name="$9"
 
-  echo "Starting Sync Gateway"
+  echo "Looking up hostname for Couchbase cluster $dest_cluster_name in $replication_dest_cluster_aws_region"
 
-  /opt/couchbase-sync-gateway/bin/run-sync-gateway \
-    --auto-fill-asg "<SERVERS>=$cluster_asg_name:$cluster_port" \
-    --auto-fill "<INTERFACE>=$sync_gateway_interface" \
-    --auto-fill "<ADMIN_INTERFACE>=$sync_gateway_admin_interface" \
-    --auto-fill "<DB_NAME>=$cluster_asg_name" \
-    --auto-fill "<BUCKET_NAME>=$bucket" \
-    --auto-fill "<DB_USERNAME>=$username" \
-    --auto-fill "<DB_PASSWORD>=$password" \
-    --use-public-hostname
+  local dest_cluster_hostname
+  read _ _ _ dest_cluster_hostname < <(/opt/couchbase/bash-commons/couchbase-rally-point --cluster-name "$dest_cluster_name" --use-public-hostname "true" --aws-region "$replication_dest_cluster_aws_region" --node-hostname "ignore")
+
+  echo "Starting replication from bucket $src_bucket_name in this cluster to bucket $dest_bucket_name in cluster $dest_cluster_name"
+
+  /opt/couchbase/bin/run-replication \
+    --src-cluster-hostname "127.0.0.1:$cluster_port" \
+    --src-cluster-username "$cluster_username" \
+    --src-cluster-password "$cluster_password" \
+    --src-cluster-bucket-name "$src_bucket_name" \
+    --dest-cluster-name "$dest_cluster_name" \
+    --dest-cluster-hostname "$dest_cluster_hostname" \
+    --dest-cluster-username "$dest_cluster_username" \
+    --dest-cluster-password "$dest_cluster_password" \
+    --dest-cluster-bucket-name "$dest_bucket_name" \
+    --replicate-arg xdcr-replication-mode=capi
 }
 
 function run {
   local readonly cluster_asg_name="$1"
   local readonly cluster_port="$2"
-  local readonly sync_gateway_interface="$3"
-  local readonly sync_gateway_admin_interface="$4"
-  local readonly data_volume_device_name="$5"
-  local readonly data_volume_mount_point="$6"
-  local readonly index_volume_device_name="$7"
-  local readonly index_volume_mount_point="$8"
-  local readonly volume_owner="$9"
+  local readonly replication_dest_cluster_name="$3"
+  local readonly replication_dest_cluster_aws_region="$4"
 
   # To keep this example simple, we are hard-coding all credentials in this file in plain text. You should NOT do this
   # in production usage!!! Instead, you should use tools such as Vault, Keywhiz, or KMS to fetch the credentials at
   # runtime and only ever have the plaintext version in memory.
   local readonly cluster_username="admin"
   local readonly cluster_password="password"
-  local readonly test_user_name="test-user"
-  local readonly test_user_password="password"
-  local readonly test_bucket_name="test-bucket"
 
-  mount_volumes "$data_volume_device_name" "$data_volume_mount_point" "$index_volume_device_name" "$index_volume_mount_point" "$volume_owner"
-  run_couchbase "$cluster_asg_name" "$cluster_username" "$cluster_password" "$cluster_port" "$data_volume_mount_point" "$index_volume_mount_point"
+  run_couchbase "$cluster_asg_name" "$cluster_username" "$cluster_password" "$cluster_port"
 
   local node_hostname
   local rally_point_hostname
@@ -145,21 +123,26 @@ function run {
 
   if [[ "$node_hostname" == "$rally_point_hostname" ]]; then
     echo "This node is the rally point for this cluster"
-    create_test_resources "$cluster_username" "$cluster_password" "$cluster_port" "$test_user_name" "$test_user_password" "$test_bucket_name"
-  fi
 
-  run_sync_gateway "$cluster_asg_name" "$cluster_port" "$sync_gateway_interface" "$sync_gateway_admin_interface" "$test_bucket_name" "$test_user_name" "$test_user_password"
+    # To keep this example simple, we are hard-coding all credentials in this file in plain text. You should NOT do this
+    # in production usage!!! Instead, you should use tools such as Vault, Keywhiz, or KMS to fetch the credentials at
+    # runtime and only ever have the plaintext version in memory.
+    local readonly test_user_name="test-user"
+    local readonly test_user_password="password"
+    local readonly test_bucket_name="test-bucket"
+    local readonly dest_cluster_username="admin"
+    local readonly dest_cluster_password="password"
+    local readonly dest_bucket_name="test-bucket-replica"
+
+    create_test_resources "$cluster_username" "$cluster_password" "$cluster_port" "$test_user_name" "$test_user_password" "$test_bucket_name"
+    start_replication "$cluster_username" "$cluster_password" "$cluster_port" "$test_bucket_name" "$replication_dest_cluster_name" "$dest_cluster_username" "$dest_cluster_password" "$replication_dest_cluster_aws_region" "$dest_bucket_name"
+  fi
 }
 
 # The variables below are filled in via Terraform interpolation
 run \
   "${cluster_asg_name}" \
   "${cluster_port}" \
-  "${sync_gateway_interface}" \
-  "${sync_gateway_admin_interface}" \
-  "${data_volume_device_name}" \
-  "${data_volume_mount_point}" \
-  "${index_volume_device_name}" \
-  "${index_volume_mount_point}" \
-  "${volume_owner}"
+  "${replication_dest_cluster_name}" \
+  "${replication_dest_cluster_aws_region}"
 

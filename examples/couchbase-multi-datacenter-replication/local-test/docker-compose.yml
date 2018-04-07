@@ -3,10 +3,10 @@
 
 version: '3'
 services:
-  couchbase-0: &couchbase_config
+  couchbase-data-east-0: &couchbase_config
     image: gruntwork/couchbase-${OS_NAME}-test
     entrypoint: ["/entrypoint/entrypoint.sh"]
-    container_name: ${CONTAINER_BASE_NAME}-0
+    container_name: ${CONTAINER_BASE_NAME}-data-east-0
 
     # Required to make systemd happy
     privileged: true
@@ -19,7 +19,7 @@ services:
       - ../../../modules/bash-commons:/opt/couchbase/bash-commons
       - ../../../modules/bash-commons:/opt/couchbase-sync-gateway/bash-commons
       - ../../../modules/run-couchbase-server/run-couchbase-server:/opt/couchbase/bin/run-couchbase-server
-      - ../../../modules/run-sync-gateway/run-sync-gateway:/opt/couchbase-sync-gateway/bin/run-sync-gateway
+      - ../../../modules/run-replication/run-replication:/opt/couchbase/bin/run-replication
 
       # Override scripts in bash-commons with mocks so we can run locally, without talking to AWS APIs
       - ../../local-mocks/bash-commons/aws-primitives.sh:/opt/couchbase/bash-commons/aws-primitives.sh
@@ -31,25 +31,22 @@ services:
       - ../user-data:/user-data
       - ../../local-mocks/entrypoint:/entrypoint
 
-    environment:
+    environment: &default_env_east
       # The User Data script that will be executed on boot by entrypoint.sh
-      USER_DATA_SCRIPT: /user-data/user-data.sh
+      USER_DATA_SCRIPT: /user-data/user-data-primary.sh
 
       # Any environment variable starting with USER_DATA_ENV_ will be read in by entrypoint.sh and made available in
       # the User Data script, with the USER_DATA_ENV_ portion stripped off.
-      USER_DATA_ENV_cluster_asg_name: mock-couchbase-asg
+      USER_DATA_ENV_cluster_asg_name: couchbase-east
       USER_DATA_ENV_cluster_port: 8091
       USER_DATA_ENV_cluster_size: 2
-      USER_DATA_ENV_sync_gateway_interface: :4984
-      USER_DATA_ENV_sync_gateway_admin_interface: 127.0.0.1:4985
+      USER_DATA_ENV_replica_cluster_size: 2
       USER_DATA_ENV_mock_aws_region: us-east-1
       USER_DATA_ENV_mock_availability_zone: us-east-1a
-      USER_DATA_ENV_data_volume_device_name: /dev/xvdf
-      USER_DATA_ENV_data_volume_mount_point: /couchbase-data
-      USER_DATA_ENV_index_volume_device_name: /dev/xvdg
-      USER_DATA_ENV_index_volume_mount_point: /couchbase-index
-      USER_DATA_ENV_volume_owner: couchbase
-      USER_DATA_ENV_data_node_container_base_name: ${CONTAINER_BASE_NAME}
+      USER_DATA_ENV_data_node_container_base_name: ${CONTAINER_BASE_NAME}-data-east
+      USER_DATA_ENV_replica_data_node_container_base_name: ${CONTAINER_BASE_NAME}-data-west
+      USER_DATA_ENV_replication_dest_cluster_name: ${CONTAINER_BASE_NAME}-data-west
+      USER_DATA_ENV_replication_dest_cluster_aws_region: us-west-1
 
     # Map each container to unique ports on the host. Note that you can talk to this container from your host OS via the
     # HTTP/REST APIs but NOT the Couchbase SDKs! The SDKs will try to connect to the internal node IPs, which can only
@@ -57,13 +54,47 @@ services:
     # Couchbase doesn't allow all port numbers to be overridden, so the Erlang Port Mapper service clashes.
     # https://developer.couchbase.com/documentation/server/current/install/install-ports.html
     ports:
-      - "${WEB_CONSOLE_PORT}:8091"
-      - "${SYNC_GATEWAY_PORT}:4984"
+      - "${WEB_CONSOLE_EAST_PORT}:8091"
 
-  couchbase-1:
+  couchbase-data-east-1:
     <<: *couchbase_config
-    container_name: ${CONTAINER_BASE_NAME}-1
+    container_name: ${CONTAINER_BASE_NAME}-data-east-1
+    environment:
+      <<: *default_env_east
     ports:
       # Map these ports to any available port number on the host
       - "8091"
-      - "4984"
+
+  couchbase-data-west-0:
+    <<: *couchbase_config
+    container_name: ${CONTAINER_BASE_NAME}-data-west-0
+    environment: &default_env_west
+      # The User Data script that will be executed on boot by entrypoint.sh
+      USER_DATA_SCRIPT: /user-data/user-data-replica.sh
+
+      # Any environment variable starting with USER_DATA_ENV_ will be read in by entrypoint.sh and made available in
+      # the User Data script, with the USER_DATA_ENV_ portion stripped off.
+      USER_DATA_ENV_cluster_asg_name: couchbase-west
+      USER_DATA_ENV_cluster_port: 8091
+      USER_DATA_ENV_cluster_size: 2
+      USER_DATA_ENV_replica_cluster_size: 2
+      USER_DATA_ENV_mock_aws_region: us-west-1
+      USER_DATA_ENV_mock_availability_zone: us-west-1a
+      USER_DATA_ENV_data_node_container_base_name: ${CONTAINER_BASE_NAME}-data-west
+
+    # Map each container to unique ports on the host. Note that you can talk to this container from your host OS via the
+    # HTTP/REST APIs but NOT the Couchbase SDKs! The SDKs will try to connect to the internal node IPs, which can only
+    # be accessed from within a container. Host networking would work around this, but it doesn't work, because
+    # Couchbase doesn't allow all port numbers to be overridden, so the Erlang Port Mapper service clashes.
+    # https://developer.couchbase.com/documentation/server/current/install/install-ports.html
+    ports:
+      - "${WEB_CONSOLE_WEST_PORT}:8091"
+
+  couchbase-data-west-1:
+    <<: *couchbase_config
+    container_name: ${CONTAINER_BASE_NAME}-data-west-1
+    environment:
+      <<: *default_env_west
+    ports:
+      # Map these ports to any available port number on the host
+      - "8091"

@@ -16,7 +16,7 @@ import (
 )
 
 func checkCouchbaseConsoleIsRunning(t *testing.T, clusterUrl string, logger *log.Logger) {
-	maxRetries := 60
+	maxRetries := 180
 	sleepBetweenRetries := 5 * time.Second
 
 	err := http_helper.HttpGetWithRetryWithCustomValidation(clusterUrl, maxRetries, sleepBetweenRetries, logger, func(status int, body string) bool {
@@ -121,6 +121,20 @@ func checkCouchbaseDataNodesWorking(t *testing.T, dataNodesUrl string, logger *l
 	assert.Equal(t, testValue, actualValue)
 }
 
+func checkReplicationIsWorking(t *testing.T, dataNodesUrlPrimary string, dataNodesUrlReplica string, bucketPrimary string, bucketReplica string, logger *log.Logger) {
+	uniqueId := util.UniqueId()
+	testKey := fmt.Sprintf("test-key-%s", uniqueId)
+	testValue := TestData{
+		Foo: fmt.Sprintf("test-value-%s", uniqueId),
+		Bar: 42,
+	}
+
+	writeToBucket(t, dataNodesUrlPrimary, bucketPrimary, testKey, testValue, logger)
+	actualValue := readFromBucket(t, dataNodesUrlReplica, bucketReplica, testKey, logger)
+
+	assert.Equal(t, testValue, actualValue)
+}
+
 // Create a Couchbase bucket. Note that we do NOT use any Couchbase SDK here because this test runs against a
 // Dockerized cluster, and the SDK does not work with Dockerized clusters, as it tries to use IPs that are only
 // accessible from inside a Docker container. Therefore, we just use the HTTP API directly. For more info, search for
@@ -192,7 +206,7 @@ func writeToBucket(t *testing.T, clusterUrl string, bucketName string, key strin
 	}
 
 	description := fmt.Sprintf("Write to bucket params: %s", string(jsonBytes))
-	retries := 120
+	retries := 180
 	timeBetweenRetries := 5 * time.Second
 
 	// Buckets take a while to replicate, and until they do, you get vague errors such as "Unexpected server error",
@@ -222,7 +236,7 @@ func writeToBucket(t *testing.T, clusterUrl string, bucketName string, key strin
 // "Connect via SDK" on this page: https://developer.couchbase.com/documentation/server/current/install/docker-deploy-multi-node-cluster.html
 func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key string, logger *log.Logger) TestData {
 	description := fmt.Sprintf("Reading key %s from bucket %s", key, bucketName)
-	maxRetries := 120
+	maxRetries := 180
 	timeBetweenRetries := 5 * time.Second
 
 	// This is an undocumented API. I found it here: https://stackoverflow.com/a/37425574/483528. You can also find it
@@ -272,12 +286,19 @@ func checkSyncGatewayWorking(t *testing.T, syncGatewayUrl string, logger *log.Lo
 	}
 }
 
-func testStageBuildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, couchbaseTerraformDir string, logger *log.Logger) {
-	resourceCollection := createBaseRandomResourceCollection(t)
+func buildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, resourceCollection *terratest.RandomResourceCollection, logger *log.Logger) string {
 	amiId, err := buildCouchbaseWithPacker(logger, fmt.Sprintf("%s-ami", osName), fmt.Sprintf("couchbase-%s", resourceCollection.UniqueId), resourceCollection.AwsRegion, couchbaseAmiDir)
 	if err != nil {
 		t.Fatalf("Failed to build Couchbase AMI: %v", err)
 	}
+
+	return amiId
+}
+
+func testStageBuildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, couchbaseTerraformDir string, logger *log.Logger) {
+	resourceCollection := createBaseRandomResourceCollection(t)
+
+	amiId := buildCouchbaseAmi(t, osName, couchbaseAmiDir, resourceCollection, logger)
 
 	test_structure.SaveAmiId(t, couchbaseTerraformDir, amiId, logger)
 	test_structure.SaveRandomResourceCollection(t, couchbaseTerraformDir, resourceCollection, logger)
@@ -305,8 +326,7 @@ func getClusterName(t *testing.T, clusterVarName string, terratestOptions *terra
 	return fmt.Sprintf("%v", clusterNameVal)
 }
 
-func testStageLogs(t *testing.T, couchbaseTerraformDir string, clusterVarName string, logger *log.Logger) {
-	resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseTerraformDir, logger)
+func testStageLogs(t *testing.T, couchbaseTerraformDir string, clusterVarName string, resourceCollection *terratest.RandomResourceCollection, logger *log.Logger) {
 	terratestOptions := test_structure.LoadTerratestOptions(t, couchbaseTerraformDir, logger)
 
 	clusterName := getClusterName(t, clusterVarName, terratestOptions)

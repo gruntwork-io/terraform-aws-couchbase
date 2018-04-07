@@ -2,19 +2,16 @@
 
 set -e
 
-readonly EC2_INSTANCE_METADATA_URL="http://169.254.169.254/latest/meta-data"
-readonly EC2_INSTANCE_DYNAMIC_DATA_URL="http://169.254.169.254/latest/dynamic"
-
 # Look up the given path in the EC2 Instance metadata endpoint
 function lookup_path_in_instance_metadata {
   local readonly path="$1"
-  curl --silent --show-error --location "$EC2_INSTANCE_METADATA_URL/$path/"
+  curl --silent --show-error --location "http://169.254.169.254/latest/meta-data/$path/"
 }
 
 # Look up the given path in the EC2 Instance dynamic metadata endpoint
 function lookup_path_in_instance_dynamic_data {
   local readonly path="$1"
-  curl --silent --show-error --location "$EC2_INSTANCE_DYNAMIC_DATA_URL/$path/"
+  curl --silent --show-error --location "http://169.254.169.254/latest/dynamic/$path/"
 }
 
 # Get the private IP address for this EC2 Instance

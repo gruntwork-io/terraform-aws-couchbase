@@ -4,6 +4,8 @@ set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/logging.sh"
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/strings.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/assertions.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/aws.sh"
 
 readonly COUCHBASE_BASE_DIR="/opt/couchbase"
 readonly COUCHBASE_BIN_DIR="$COUCHBASE_BASE_DIR/bin"
@@ -19,6 +21,32 @@ function run_couchbase_cli {
   local out
   "$COUCHBASE_CLI" "${args[@]}"
   set -e
+}
+
+# Run the Couchbase CLI and retry until its stdout contains the expected message or max retries is exceeded.
+function run_couchbase_cli_with_retry {
+  local readonly cmd_description="$1"
+  local readonly expected_message="$2"
+  local readonly max_retries="$3"
+  local readonly sleep_between_retries_sec="$4"
+  shift 4
+  local readonly args=($@)
+
+  for (( i=0; i<"$max_retries"; i++ )); do
+    local out
+    out=$(run_couchbase_cli "${args[@]}")
+
+    if string_contains "$out" "$expected_message"; then
+      log_info "Success: $cmd_description."
+      return
+    else
+      log_warn "Failed to $cmd_description. Will sleep for $sleep_between_retries_sec seconds and try again. couchbase-cli output:\n$out"
+      sleep "$sleep_between_retries_sec"
+    fi
+  done
+
+  log_error "Failed to $cmd_description after $max_retries retries."
+  exit 1
 }
 
 # Returns true (0) if the Couchbase cluster has already been initialized and false otherwise.
@@ -158,4 +186,103 @@ function has_bucket {
   #
   # So all we do is grep for a line that exactly matches the name of the bucket we're looking for
   multiline_string_contains "$out" "^$bucket_name$"
+}
+
+# Wait until the specified cluster is initialized and not rebalancing
+function wait_for_couchbase_cluster {
+  local readonly cluster_url="$1"
+  local readonly cluster_username="$2"
+  local readonly cluster_password="$3"
+
+  local readonly retries=200
+  local readonly sleep_between_retries=5
+
+  for (( i=0; i<"$retries"; i++ )); do
+    if cluster_is_ready "$cluster_url" "$cluster_username" "$cluster_password"; then
+      log_info "Cluster $cluster_url is ready!"
+      return
+    else
+      log_warn "Cluster $cluster_url is not yet ready. Will sleep for $sleep_between_retries seconds and check again."
+      sleep "$sleep_between_retries"
+    fi
+  done
+
+  log_error "Cluster $cluster_url still not initialized after $retries retries."
+  exit 1
+}
+
+# Return true (0) if the cluster is initialized and not rebalancing and false (1) otherwise
+function cluster_is_ready {
+  local readonly cluster_url="$1"
+  local readonly cluster_username="$2"
+  local readonly cluster_password="$3"
+
+  if ! cluster_is_initialized "$cluster_url" "$cluster_username" "$cluster_password"; then
+    log_warn "Cluster $cluster_url is not yet initialized."
+    return 1
+  fi
+
+  if cluster_is_rebalancing "$cluster_url" "$cluster_username" "$cluster_password"; then
+    log_warn "Cluster $cluster_url is currently rebalancing."
+    return 1
+  fi
+
+  return 0
+}
+
+# Wait until the specified bucket exists in the specified cluster
+function wait_for_bucket {
+  local readonly cluster_url="$1"
+  local readonly cluster_username="$2"
+  local readonly cluster_password="$3"
+  local readonly bucket="$4"
+
+  local readonly retries=200
+  local readonly sleep_between_retries=5
+
+  for (( i=0; i<"$retries"; i++ )); do
+    if has_bucket "$cluster_url" "$cluster_username" "$cluster_password" "$bucket"; then
+      log_info "Bucket $bucket exists in cluster $cluster_url."
+      return
+    else
+      log_warn "Bucket $bucket does not yet exist in cluster $cluster_url. Will sleep for $sleep_between_retries seconds and check again."
+      sleep "$sleep_between_retries"
+    fi
+  done
+
+  log_error "Bucket $bucket still does not exist in cluster $cluster_url after $retries retries."
+  exit 1
+}
+
+
+# Identify the server to use as a "rally point." This is the "leader" of the cluster that can be used to initialize
+# the cluster and kick off replication. We use a simple technique to identify a unique rally point in each ASG: look
+# up all the Instances in the ASG and select the one with the oldest launch time. If there is a tie, pick the one with
+# the lowest Instance ID (alphabetically). This way, all servers will always select the same server as the rally point.
+# If the rally point server dies, all servers will then select the next oldest launch time / lowest Instance ID.
+function get_rally_point_hostname {
+  local readonly aws_region="$1"
+  local readonly asg_name="$2"
+  local readonly use_public_hostname="$3"
+
+  log_info "Looking up rally point for ASG $asg_name in $aws_region"
+
+  local instances
+  instances=$(wait_for_instances_in_asg "$asg_name" "$aws_region")
+  assert_not_empty_or_null "$instances" "Fetch list of Instances in ASG $asg_name"
+
+  local rally_point
+  rally_point=$(echo "$instances" | jq -r '[.Reservations[].Instances[]] | sort_by(.LaunchTime, .InstanceId) | .[0]')
+  assert_not_empty_or_null "$rally_point" "Select rally point server in ASG $asg_name"
+
+  local hostname_field=".PrivateDnsName"
+  if [[ "$use_public_hostname" == "true" ]]; then
+    hostname_field=".PublicDnsName"
+  fi
+
+  local hostname
+  hostname=$(echo "$rally_point" | jq -r "$hostname_field")
+  assert_not_empty_or_null "$hostname" "Get hostname from field $hostname_field for rally point in $asg_name: $rally_point"
+
+  echo -n "$hostname"
 }

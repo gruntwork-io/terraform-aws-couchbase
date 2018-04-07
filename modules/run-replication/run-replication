@@ -1,0 +1,301 @@
+#!/bin/bash
+
+set -e
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly BASH_COMMONS_INSTALL_DIR="$SCRIPT_DIR/../bash-commons"
+
+source "$BASH_COMMONS_INSTALL_DIR/logging.sh"
+source "$BASH_COMMONS_INSTALL_DIR/assertions.sh"
+source "$BASH_COMMONS_INSTALL_DIR/aws.sh"
+source "$BASH_COMMONS_INSTALL_DIR/os.sh"
+source "$BASH_COMMONS_INSTALL_DIR/collections.sh"
+source "$BASH_COMMONS_INSTALL_DIR/strings.sh"
+source "$BASH_COMMONS_INSTALL_DIR/couchbase-common.sh"
+
+readonly DEFAULT_ENCRYPTION_TYPE="none"
+readonly DEFAULT_REPLICATION_MODE="capi"
+readonly DEFAULT_SRC_CLUSTER_HOSTNAME="localhost"
+
+function print_usage {
+  echo
+  echo "Usage: run-replication [options]"
+  echo
+  echo "Kick off replication of a bucket between two Couchbase clusters. This will add the destination cluster as a remote endpoint using the couchbase-cli xdcr-setup command and start replication of the specified bucket using the couchbase-cli xdcr-replicate command. This script is idempotent, so you can run it multiple times with different buckets. This script has been tested with Ubuntu 16.04 and Amazon Linux 2."
+  echo
+  echo "Options:"
+  echo
+  echo -e "  --src-cluster-hostname\t\tThe hostname of the source Couchbase cluster. Default: $DEFAULT_SRC_CLUSTER_HOSTNAME."
+  echo -e "  --src-cluster-username\t\tThe username of the Couchbase cluster to replicate from."
+  echo -e "  --src-cluster-password\t\tThe password of the Couchbase cluster to replicate from."
+  echo -e "  --src-cluster-bucket-name\t\tThe name of the bucket to replicate from."
+  echo
+  echo -e "  --dest-cluster-name\t\t\tThe name of the Couchbase cluster to replicate to."
+  echo -e "  --dest-cluster-hostname\t\tThe hostname of the Couchbase cluster to replicate to."
+  echo -e "  --dest-cluster-username\t\tThe username of the Couchbase cluster to replicate to."
+  echo -e "  --dest-cluster-password\t\tThe password of the Couchbase cluster to replicate to."
+  echo -e "  --dest-cluster-bucket-name\t\tThe name of the bucket to replicate to."
+  echo
+  echo -e "  --setup-arg KEY=VALUE\t\t\tPass --KEY=VALUE through to the couchbase-cli xdcr-setup command. May be specified multiple times."
+  echo -e "  --replicate-arg KEY=VALUE\t\tPass --KEY=VALUE through to the couchbase-cli xdcr-replicate command. May be specified multiple times."
+  echo
+  echo -e "  --help\t\t\t\tShow this help text and exit."
+  echo
+  echo "Example:"
+  echo
+  echo "  run-replication \\"
+  echo "    --src-cluster-username admin \\"
+  echo "    --src-cluster-password password \\"
+  echo "    --src-cluster-bucket-name bucket \\"
+  echo "    --dest-cluster-name dest \\"
+  echo "    --dest-cluster-hostname 1.2.3.4 \\"
+  echo "    --dest-cluster-username admin \\"
+  echo "    --dest-cluster-password password \\"
+  echo "    --dest-cluster-bucket-name bucket-replica \\"
+  echo "    --setup-arg xdcr-encryption-type=half \\"
+  echo "    --replicate-arg enable-compression=1"
+}
+
+function create_replication_cluster_reference {
+  local readonly src_cluster_hostname="$1"
+  local readonly src_cluster_username="$2"
+  local readonly src_cluster_password="$3"
+  local readonly dest_cluster_name="$4"
+  local readonly dest_cluster_hostname="$5"
+  local readonly dest_cluster_username="$6"
+  local readonly dest_cluster_password="$7"
+  shift 7
+  local readonly setup_args=($@)
+
+  if replication_cluster_reference_exists "$src_cluster_hostname" "$src_cluster_username" "$src_cluster_password"; then
+    log_info "Remote cluster reference $dest_cluster_name already exists. Will not add it again."
+    return
+  fi
+
+  log_info "Adding cluster $dest_cluster_name at $dest_cluster_hostname as replication reference."
+
+  local args=()
+  args+=("xdcr-setup")
+  args+=("--create")
+  args+=("--cluster=$src_cluster_hostname")
+  args+=("--username=$src_cluster_username")
+  args+=("--password=$src_cluster_password")
+  args+=("--xdcr-cluster-name=$dest_cluster_name")
+  args+=("--xdcr-hostname=$dest_cluster_hostname")
+  args+=("--xdcr-username=$dest_cluster_username")
+  args+=("--xdcr-password=$dest_cluster_password")
+
+  local setup_arg
+  for setup_arg in "${setup_args[@]}"; do
+    args+=("--$setup_arg")
+  done
+
+  local out
+  out=$(run_couchbase_cli "${args[@]}")
+
+  if string_contains "$out" "SUCCESS: Cluster reference created"; then
+    log_info "Successfully added cluster $dest_cluster_name at $dest_cluster_hostname as replication reference."
+  else
+    log_error "Failed to add cluster $dest_cluster_name at $dest_cluster_hostname as replication reference. Log output:\n$out"
+    exit 1
+  fi
+}
+
+function replication_cluster_reference_exists {
+  local readonly src_cluster_hostname="$1"
+  local readonly src_cluster_username="$2"
+  local readonly src_cluster_password="$3"
+  local readonly dest_cluster_name="$4"
+
+  local args=()
+  args+=("xdcr-setup")
+  args+=("--list")
+  args+=("--cluster=$src_cluster_hostname")
+  args+=("--username=$src_cluster_username")
+  args+=("--password=$src_cluster_password")
+
+  local out
+  out=$(run_couchbase_cli "${args[@]}")
+
+  # The output for the xdcr-setup --list command is of the format:
+  #
+  # cluster name: west
+  #         uuid: 4d05078e4ff1004538f4ede372d74145
+  #    host name: 172.24.0.2:8091
+  #    user name: admin
+  #          uri: /pools/default/remoteClusters/west
+  #
+
+  multiline_string_contains "$out" "^cluster name: $dest_cluster_name$"
+}
+
+function setup_replication_for_bucket {
+  local readonly src_cluster_hostname="$1"
+  local readonly src_cluster_username="$2"
+  local readonly src_cluster_password="$3"
+  local readonly src_cluster_bucket_name="$4"
+  local readonly dest_cluster_name="$5"
+  local readonly dest_cluster_bucket_name="$6"
+  shift 6
+  local readonly replicate_args=($@)
+
+  if replication_for_bucket_exists "$src_cluster_hostname" "$src_cluster_username" "$src_cluster_password" "$src_cluster_bucket_name" "$dest_cluster_bucket_name"; then
+    log_info "Replication for bucket $src_cluster_bucket_name in this cluster to bucket $dest_cluster_bucket_name in cluster $dest_cluster_name already exists. Will not add it again."
+    return
+  fi
+
+  log_info "Adding replication from bucket $src_cluster_bucket_name in this cluster to bucket $dest_cluster_bucket_name in cluster $dest_cluster_name."
+
+  local args=()
+  args+=("xdcr-replicate")
+  args+=("--create")
+  args+=("--cluster=$src_cluster_hostname")
+  args+=("--username=$src_cluster_username")
+  args+=("--password=$src_cluster_password")
+  args+=("--xdcr-from-bucket=$src_cluster_bucket_name")
+  args+=("--xdcr-to-bucket=$dest_cluster_bucket_name")
+  args+=("--xdcr-cluster-name=$dest_cluster_name")
+
+  local replicate_arg
+  for replicate_arg in "${replicate_args[@]}"; do
+    args+=("--$replicate_arg")
+  done
+
+  local out
+  out=$(run_couchbase_cli "${args[@]}")
+
+  if string_contains "$out" "SUCCESS: XDCR replication created"; then
+    log_info "Successfully added replication from bucket $src_cluster_bucket_name in this cluster to bucket $dest_cluster_bucket_name in cluster $dest_cluster_name."
+  else
+    log_error "Failed to add replication from bucket $src_cluster_bucket_name in this cluster to bucket $dest_cluster_bucket_name in cluster $dest_cluster_name. Log output:\n$out"
+    exit 1
+  fi
+}
+
+function replication_for_bucket_exists {
+  local readonly src_cluster_hostname="$1"
+  local readonly src_cluster_username="$2"
+  local readonly src_cluster_password="$3"
+  local readonly src_bucket_name="$4"
+  local readonly dest_bucket_name="$5"
+
+  local args=()
+  args+=("xdcr-replicate")
+  args+=("--list")
+  args+=("--cluster=$src_cluster_hostname")
+  args+=("--username=$src_cluster_username")
+  args+=("--password=$src_cluster_password")
+
+  local out
+  out=$(run_couchbase_cli "${args[@]}")
+
+  # The output for the xdcr-replicate --list command is of the format:
+  #
+  # stream id: 4d05078e4ff1004538f4ede372d74145/abc/east-abc
+  #   status: running
+  #   source: abc
+  #   target: /remoteClusters/4d05078e4ff1004538f4ede372d74145/buckets/east-abc
+  #
+
+  multiline_string_contains "$out" "^\s*source: $src_bucket_name$" && multiline_string_contains "$out" "^\s*target: .*/$dest_bucket_name$"
+}
+
+
+function run {
+  local src_cluster_hostname="$DEFAULT_SRC_CLUSTER_HOSTNAME"
+  local src_cluster_username
+  local src_cluster_password
+  local src_cluster_bucket_name
+
+  local dest_cluster_name
+  local dest_cluster_hostname
+  local dest_cluster_username
+  local dest_cluster_password
+  local dest_cluster_bucket_name
+
+  local setup_args=()
+  local replicate_args=()
+
+  while [[ $# > 0 ]]; do
+    local key="$1"
+
+    case "$key" in
+      --src-cluster-hostname)
+        assert_not_empty "$key" "$2"
+        src_cluster_hostname="$2"
+        shift
+        ;;
+      --src-cluster-username)
+        src_cluster_username="$2"
+        shift
+        ;;
+      --src-cluster-password)
+        src_cluster_password="$2"
+        shift
+        ;;
+      --src-cluster-bucket-name)
+        src_cluster_bucket_name="$2"
+        shift
+        ;;
+      --dest-cluster-name)
+        dest_cluster_name="$2"
+        shift
+        ;;
+      --dest-cluster-hostname)
+        dest_cluster_hostname="$2"
+        shift
+        ;;
+      --dest-cluster-username)
+        dest_cluster_username="$2"
+        shift
+        ;;
+      --dest-cluster-password)
+        dest_cluster_password="$2"
+        shift
+        ;;
+      --dest-cluster-bucket-name)
+        dest_cluster_bucket_name="$2"
+        shift
+        ;;
+      --setup-arg)
+        setup_args+=("$2")
+        shift
+        ;;
+      --replicate-arg)
+        replicate_args+=("$2")
+        shift
+        ;;
+      --help)
+        print_usage
+        exit
+        ;;
+      *)
+        log_error "Unrecognized argument: $key"
+        print_usage
+        exit 1
+        ;;
+    esac
+
+    shift
+  done
+
+  assert_not_empty "--src-cluster-username" "$src_cluster_username"
+  assert_not_empty "--src-cluster-password" "$src_cluster_password"
+  assert_not_empty "--src-cluster-bucket-name" "$src_cluster_bucket_name"
+  assert_not_empty "--dest-cluster-name" "$dest_cluster_name"
+  assert_not_empty "--dest-cluster-hostname" "$dest_cluster_hostname"
+  assert_not_empty "--dest-cluster-username" "$dest_cluster_username"
+  assert_not_empty "--dest-cluster-password" "$dest_cluster_password"
+  assert_not_empty "--dest-cluster-bucket-name" "$dest_cluster_bucket_name"
+
+  wait_for_couchbase_cluster "$src_cluster_hostname" "$src_cluster_username" "$src_cluster_password"
+  wait_for_couchbase_cluster "$dest_cluster_hostname" "$dest_cluster_username" "$dest_cluster_password"
+
+  wait_for_bucket "$src_cluster_hostname" "$src_cluster_username" "$src_cluster_password" "$src_cluster_bucket_name"
+  wait_for_bucket "$dest_cluster_hostname" "$dest_cluster_username" "$dest_cluster_password" "$dest_cluster_bucket_name"
+
+  create_replication_cluster_reference "$src_cluster_hostname" "$src_cluster_username" "$src_cluster_password" "$dest_cluster_name" "$dest_cluster_hostname" "$dest_cluster_username" "$dest_cluster_password" "${setup_args[@]}"
+  setup_replication_for_bucket "$src_cluster_hostname" "$src_cluster_username" "$src_cluster_password" "$src_cluster_bucket_name" "$dest_cluster_name" "$dest_cluster_bucket_name" "${replicate_args[@]}"
+}
+
+run "$@"

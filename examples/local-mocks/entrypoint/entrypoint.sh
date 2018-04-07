@@ -9,6 +9,7 @@ readonly COUCHBASE_LOGS_DIR="/opt/couchbase/var/lib/couchbase/logs"
 readonly SYNC_GATEWAY_LOGS_DIR="/home/sync_gateway/logs"
 tail -f --retry \
   "$COUCHBASE_LOGS_DIR/couchdb.log" \
+  "$COUCHBASE_LOGS_DIR/error.log" \
   "$COUCHBASE_LOGS_DIR/mock-user-data.log" \
   "$SYNC_GATEWAY_LOGS_DIR/sync-gateway.log" \
   2>/dev/null &
