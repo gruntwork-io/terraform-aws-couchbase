@@ -55,13 +55,67 @@ jobs:
       - save_cache:
           <<: *save_go_dependencies
 
-      - run:
+      - run: &configure_aws_cli_and_path
           command: |
             DEBIAN_FRONTEND=noninteractive sudo apt-get update && sudo apt-get install -y python-pip
             pip install awscli
-
             echo 'export PATH=$HOME/.local/bin:$HOME/terraform:$HOME/packer:$PATH' >> $BASH_ENV
-            run-go-tests --path test --timeout 90m --packages "./... -run TestIntegration"
+
+      - run: run-go-tests --path test --timeout 90m --packages "./... -run TestIntegration"
+
+  unit_test_single_cluster_ubuntu:
+    # We need to run Docker Compose with volumes, which isn't supported by CircleCI's Docker executor, so we have to use
+    # the machine executor instead.
+    machine: true
+    steps:
+      - checkout
+      - restore_cache:
+          <<: *restore_dependencies
+      - run:
+          <<: *configure_env_for_gruntwork_module
+      - save_cache:
+          <<: *save_hashicorp_dependencies
+      - save_cache:
+          <<: *save_go_dependencies
+      - run:
+          <<: *configure_aws_cli_and_path
+      - run: run-go-tests --path test --timeout 90m --packages "./... -run TestUnitCouchbaseSingleClusterUbuntuInDocker"
+
+  unit_test_multi_cluster_amazon_linux:
+    # We need to run Docker Compose with volumes, which isn't supported by CircleCI's Docker executor, so we have to use
+    # the machine executor instead.
+    machine: true
+    steps:
+      - checkout
+      - restore_cache:
+          <<: *restore_dependencies
+      - run:
+          <<: *configure_env_for_gruntwork_module
+      - save_cache:
+          <<: *save_hashicorp_dependencies
+      - save_cache:
+          <<: *save_go_dependencies
+      - run:
+          <<: *configure_aws_cli_and_path
+      - run: run-go-tests --path test --timeout 90m --packages "./... -run TestUnitCouchbaseMultiClusterAmazonLinuxInDocker"
+
+  unit_test_multi_datacenter_ubuntu:
+    # We need to run Docker Compose with volumes, which isn't supported by CircleCI's Docker executor, so we have to use
+    # the machine executor instead.
+    machine: true
+    steps:
+      - checkout
+      - restore_cache:
+          <<: *restore_dependencies
+      - run:
+          <<: *configure_env_for_gruntwork_module
+      - save_cache:
+          <<: *save_hashicorp_dependencies
+      - save_cache:
+          <<: *save_go_dependencies
+      - run:
+          <<: *configure_aws_cli_and_path
+      - run: run-go-tests --path test --timeout 90m --packages "./... -run TestUnitCouchbaseMultiDataCenterUbuntuInDocker"
 
 workflows:
   version: 2
@@ -76,4 +130,10 @@ workflows:
             tags:
               only: /.*/
       - integration_tests:
+          <<: *all_branches_and_tags
+      - unit_test_single_cluster_ubuntu:
+          <<: *all_branches_and_tags
+      - unit_test_multi_cluster_amazon_linux:
+          <<: *all_branches_and_tags
+      - unit_test_multi_datacenter_ubuntu:
           <<: *all_branches_and_tags
