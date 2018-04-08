@@ -39,7 +39,7 @@ func createBaseTerratestOptions(t *testing.T, testName string, folder string, re
 	return terratestOptions
 }
 
-func buildCouchbaseWithPacker(logger *log.Logger, builderName string, baseAmiName string, awsRegion string, folderPath string) (string, error) {
+func buildCouchbaseWithPacker(logger *log.Logger, builderName string, baseAmiName string, awsRegion string, folderPath string, edition string) (string, error) {
 	templatePath := fmt.Sprintf("%s/couchbase.json", folderPath)
 
 	options := packer.PackerOptions{
@@ -48,6 +48,7 @@ func buildCouchbaseWithPacker(logger *log.Logger, builderName string, baseAmiNam
 		Vars: map[string]string{
 			"aws_region": awsRegion,
 			"base_ami_name": baseAmiName,
+			"edition": edition,
 		},
 	}
 

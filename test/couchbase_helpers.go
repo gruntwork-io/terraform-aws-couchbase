@@ -286,8 +286,8 @@ func checkSyncGatewayWorking(t *testing.T, syncGatewayUrl string, logger *log.Lo
 	}
 }
 
-func buildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, resourceCollection *terratest.RandomResourceCollection, logger *log.Logger) string {
-	amiId, err := buildCouchbaseWithPacker(logger, fmt.Sprintf("%s-ami", osName), fmt.Sprintf("couchbase-%s", resourceCollection.UniqueId), resourceCollection.AwsRegion, couchbaseAmiDir)
+func buildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, edition string, resourceCollection *terratest.RandomResourceCollection, logger *log.Logger) string {
+	amiId, err := buildCouchbaseWithPacker(logger, fmt.Sprintf("%s-ami", osName), fmt.Sprintf("couchbase-%s", resourceCollection.UniqueId), resourceCollection.AwsRegion, couchbaseAmiDir, edition)
 	if err != nil {
 		t.Fatalf("Failed to build Couchbase AMI: %v", err)
 	}
@@ -295,10 +295,10 @@ func buildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, reso
 	return amiId
 }
 
-func testStageBuildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, couchbaseTerraformDir string, logger *log.Logger) {
+func testStageBuildCouchbaseAmi(t *testing.T, osName string, edition string, couchbaseAmiDir string, couchbaseTerraformDir string, logger *log.Logger) {
 	resourceCollection := createBaseRandomResourceCollection(t)
 
-	amiId := buildCouchbaseAmi(t, osName, couchbaseAmiDir, resourceCollection, logger)
+	amiId := buildCouchbaseAmi(t, osName, couchbaseAmiDir, edition, resourceCollection, logger)
 
 	test_structure.SaveAmiId(t, couchbaseTerraformDir, amiId, logger)
 	test_structure.SaveRandomResourceCollection(t, couchbaseTerraformDir, resourceCollection, logger)

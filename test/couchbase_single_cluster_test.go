@@ -11,17 +11,27 @@ import (
 
 const couchbaseClusterVarName = "cluster_name"
 
-func TestIntegrationCouchbaseSingleClusterUbuntu(t *testing.T) {
+func TestIntegrationCouchbaseCommunitySingleClusterUbuntu(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseSingleClusterUbuntu", "ubuntu")
+	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseCommunitySingleClusterUbuntu", "ubuntu", "community")
 }
 
-func TestIntegrationCouchbaseSingleClusterAmazonLinux(t *testing.T) {
+func TestIntegrationCouchbaseCommunitySingleClusterAmazonLinux(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseSingleClusterAmazonLinux", "amazon-linux")
+	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseCommunitySingleClusterAmazonLinux", "amazon-linux", "community")
 }
 
-func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
+func TestIntegrationCouchbaseEnterpriseSingleClusterUbuntu(t *testing.T) {
+	t.Parallel()
+	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseEnterpriseSingleClusterUbuntu", "ubuntu", "enterprise")
+}
+
+func TestIntegrationCouchbaseEnterpriseSingleClusterAmazonLinux(t *testing.T) {
+	t.Parallel()
+	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseEnterpriseSingleClusterAmazonLinux", "amazon-linux", "enterprise")
+}
+
+func testCouchbaseSingleCluster(t *testing.T, testName string, osName string, edition string) {
 	logger := terralog.NewLogger(testName)
 
 	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName, logger)
@@ -29,8 +39,7 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 	couchbaseSingleClusterDir := filepath.Join(examplesFolder, "couchbase-single-cluster")
 
 	test_structure.RunTestStage("setup_ami", logger, func() {
-		testStageBuildCouchbaseAmi(t, osName, couchbaseAmiDir, couchbaseSingleClusterDir, logger)
-		
+		testStageBuildCouchbaseAmi(t, osName, edition, couchbaseAmiDir, couchbaseSingleClusterDir, logger)
 	})
 
 	test_structure.RunTestStage("setup_deploy", logger, func() {
