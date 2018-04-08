@@ -10,11 +10,22 @@ source "$BASH_COMMONS_DIR/assertions.sh"
 source "$BASH_COMMONS_DIR/strings.sh"
 source "$BASH_COMMONS_DIR/os.sh"
 
-readonly DEFAULT_COUCHBASE_VERSION="5.1.0"
-readonly DEFAULT_COUCHBASE_SHA256_CHECKSUM_UBUNTU_16_04="4d6a1f159577f283f6f980f6ab9161630eb2d8fd228429029de004b1be46ad76"
-readonly DEFAULT_COUCHBASE_SHA256_CHECKSUM_AMAZON_LINUX="6c87268118cd21a0083a99aee8164712b3536720c11e8fcd7fe55646c8c83c56"
-readonly DEFAULT_SWAPINESS="0"
+readonly ENTERPRISE_EDITION="enterprise"
+readonly COMMUNITY_EDITION="community"
+readonly DEFAULT_EDITION="$ENTERPRISE_EDITION"
 
+readonly DEFAULT_COUCHBASE_ENTERPRISE_VERSION="5.1.0"
+readonly DEFAULT_COUCHBASE_ENTERPRISE_SHA256_CHECKSUM_UBUNTU_16_04="4d6a1f159577f283f6f980f6ab9161630eb2d8fd228429029de004b1be46ad76"
+readonly DEFAULT_COUCHBASE_ENTERPRISE_SHA256_CHECKSUM_AMAZON_LINUX="6c87268118cd21a0083a99aee8164712b3536720c11e8fcd7fe55646c8c83c56"
+
+readonly DEFAULT_COUCHBASE_COMMUNITY_VERSION="5.0.1"
+readonly DEFAULT_COUCHBASE_COMMUNITY_MD5_CHECKSUM_UBUNTU_16_04="efd890ccaea2a83020c11746315a404f"
+readonly DEFAULT_COUCHBASE_COMMUNITY_MD5_CHECKSUM_AMAZON_LINUX="1c2bfda713f939911494b31727d7eb30"
+
+readonly SHA256_CHECKSUM_TYPE="sha256"
+readonly MD5_CHECKSUM_TYPE="md5"
+
+readonly DEFAULT_SWAPINESS="0"
 readonly SWAPINESS_CONFIG_FILE="/etc/sysctl.conf"
 readonly DISABLE_THP_BOOT_SCRIPT="/etc/init.d/disable-thp"
 
@@ -30,23 +41,26 @@ function print_usage {
   echo
   echo "Options:"
   echo
-  echo -e "  --version\t\tThe version of Couchbase to install. Default: $DEFAULT_COUCHBASE_VERSION."
-  echo -e "  --checksum\t\tThe SHA-256 checksum of the Couchbase package. Required if --version is specified. You can get it from the downloads page of the Couchbase website."
+  echo -e "  --edition\t\tThe edition of Couchbase to install. Must be one of: $ENTERPRISE_EDITION, $COMMUNITY_EDITION. Default: $DEFAULT_EDITION."
+  echo -e "  --version\t\tThe version of Couchbase to install. Default: $DEFAULT_COUCHBASE_ENTERPRISE_VERSION."
+  echo -e "  --checksum\t\tThe checksum of the Couchbase package. Required if --version is specified. You can get it from the downloads page of the Couchbase website."
+  echo -e "  --checksum-type\tThe type of checksum in --checksum. Required if --version is specified. Must be one of: $SHA256_CHECKSUM_TYPE, $MD5_CHECKSUM_TYPE."
   echo -e "  --swapiness\t\tThe OS swapiness setting to use. Couchbase recommends setting this to 0. Default: $DEFAULT_SWAPINESS."
   echo
   echo "Example:"
   echo
-  echo "  install-couchbase-server --version $DEFAULT_COUCHBASE_VERSION --checksum $DEFAULT_COUCHBASE_SHA256_CHECKSUM_UBUNTU_16_04"
+  echo "  install-couchbase-server --edition $DEFAULT_EDITION"
 }
 
 function install_couchbase_on_ubuntu {
-  local readonly version="$1"
-  local readonly checksum="$2"
+  local readonly edition="$1"
+  local readonly version="$2"
+  local readonly checksum="$3"
+  local readonly checksum_type="$4"
 
-  log_info "Installing Couchbase on Ubuntu"
+  log_info "Installing Couchbase $version ($edition edition) on Ubuntu"
 
-  # TODO: what about the community edition?
-  local readonly filepath="couchbase-server-enterprise_${version}-ubuntu16.04_amd64.deb"
+  local readonly filepath="couchbase-server-${edition}_${version}-ubuntu16.04_amd64.deb"
   local readonly url="https://packages.couchbase.com/releases/$version/$filepath"
 
   log_info "Installing Couchbase dependencies"
@@ -56,8 +70,7 @@ function install_couchbase_on_ubuntu {
   log_info "Downloading Couchbase from $url to $filepath"
   curl --location --silent --fail --show-error -O "$url"
 
-  log_info "Verifying checksum is $checksum"
-  echo "$checksum $filepath" | sha256sum -c
+  validate_checksum "$filepath" "$checksum" "$checksum_type"
 
   # Install Couchbase, but configure it to NOT start on boot. This allows the run-couchbase-server script to configure
   # Couchbase, including what ports to use, and THEN boot it up.
@@ -70,13 +83,14 @@ function install_couchbase_on_ubuntu {
 }
 
 function install_couchbase_on_amazon_linux {
-  local readonly version="$1"
-  local readonly checksum="$2"
+  local readonly edition="$1"
+  local readonly version="$2"
+  local readonly checksum="$3"
+  local readonly checksum_type="$4"
 
-  log_info "Installing Couchbase on Amazon Linux"
+  log_info "Installing Couchbase $version ($edition edition) on Amazon Linux"
 
-  # TODO: what about the community edition?
-  local readonly filepath="couchbase-server-enterprise-${version}-centos6.x86_64.rpm"
+  local readonly filepath="couchbase-server-${edition}-${version}-centos6.x86_64.rpm"
   local readonly url="https://packages.couchbase.com/releases/$version/$filepath"
 
   log_info "Installing Couchbase dependencies"
@@ -86,8 +100,7 @@ function install_couchbase_on_amazon_linux {
   log_info "Downloading Couchbase from $url to $filepath"
   curl --location --silent --fail --show-error -O "$url"
 
-  log_info "Verifying checksum is $checksum"
-  echo "$checksum $filepath" | sha256sum -c
+  validate_checksum "$filepath" "$checksum" "$checksum_type"
 
   # Install Couchbase, but configure it to NOT start on boot. This allows the run-couchbase-server script to configure
   # Couchbase, including what ports to use, and THEN boot it up.
@@ -141,14 +154,22 @@ function install_bash_commons {
 }
 
 function install {
-  local version="$DEFAULT_COUCHBASE_VERSION"
-  local checksum=$(is_amazon_linux && echo -n "$DEFAULT_COUCHBASE_SHA256_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_COUCHBASE_SHA256_CHECKSUM_UBUNTU_16_04")
+  local edition="$DEFAULT_EDITION"
+  local version
+  local checksum
+  local checksum_type
   local swapiness="$DEFAULT_SWAPINESS"
 
   while [[ $# > 0 ]]; do
     local key="$1"
 
     case "$key" in
+      --edition)
+        assert_not_empty "$key" "$2"
+        assert_value_in_list "$key" "$2" "$ENTERPRISE_EDITION" "$COMMUNITY_EDITION"
+        edition="$2"
+        shift
+        ;;
       --version)
         assert_not_empty "$key" "$2"
         version="$2"
@@ -157,6 +178,12 @@ function install {
       --checksum)
         assert_not_empty "$key" "$2"
         checksum="$2"
+        shift
+        ;;
+      --checksum-type)
+        assert_not_empty "$key" "$2"
+        assert_value_in_list "$key" "$2" "$SHA256_CHECKSUM_TYPE" "$MD5_CHECKSUM_TYPE"
+        checksum_type="$2"
         shift
         ;;
       --swapiness)
@@ -180,17 +207,29 @@ function install {
 
   assert_is_installed "curl"
 
-  if [[ ! -z "$version" && -z "$checksum" ]]; then
-    log_error "You must specify the --checksum parameter when specifying the --version parameter. You can find the checksums on the Couchbase downloads page."
+  if [[ ! -z "$version" && (-z "$checksum" || -z "$checksum_type") ]]; then
+    log_error "You must specify the --checksum and --checksum-type parameters when specifying the --version parameter. You can find the checksums on the Couchbase downloads page."
     exit 1
+  fi
+
+  if [[ -z "$version" ]]; then
+    if [[ "$edition" == "$COMMUNITY_EDITION" ]]; then
+      version="$DEFAULT_COUCHBASE_COMMUNITY_VERSION"
+      checksum=$(is_amazon_linux && echo -n "$DEFAULT_COUCHBASE_COMMUNITY_MD5_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_COUCHBASE_COMMUNITY_MD5_CHECKSUM_UBUNTU_16_04")
+      checksum_type="$MD5_CHECKSUM_TYPE"
+    else
+      version="$DEFAULT_COUCHBASE_ENTERPRISE_VERSION"
+      checksum=$(is_amazon_linux && echo -n "$DEFAULT_COUCHBASE_ENTERPRISE_SHA256_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_COUCHBASE_ENTERPRISE_SHA256_CHECKSUM_UBUNTU_16_04")
+      checksum_type="$SHA256_CHECKSUM_TYPE"
+    fi
   fi
 
   log_info "Starting Couchbase install..."
 
   if is_ubuntu "16.04"; then
-    install_couchbase_on_ubuntu "$version" "$checksum"
+    install_couchbase_on_ubuntu "$edition" "$version" "$checksum" "$checksum_type"
   elif is_amazon_linux "2"; then
-    install_couchbase_on_amazon_linux "$version" "$checksum"
+    install_couchbase_on_amazon_linux "$edition" "$version" "$checksum" "$checksum_type"
   else
     log_error "This script only supports Ubuntu 16.04 and Amazon Linux 2."
     exit 1

@@ -2,6 +2,7 @@
   "min_packer_version": "0.12.0",
   "variables": {
     "aws_region": "us-east-1",
+    "edition": "enterprise",
     "base_ami_name": "couchbase",
     "root_folder_path": "{{template_dir}}/../../../terraform-aws-couchbase/"
   },
@@ -96,8 +97,8 @@
   },{
     "type": "shell",
     "inline": [
-      "/tmp/terraform-aws-couchbase/modules/install-couchbase-server/install-couchbase-server",
-      "/tmp/terraform-aws-couchbase/modules/install-sync-gateway/install-sync-gateway --config /tmp/terraform-aws-couchbase/examples/couchbase-ami/sync_gateway.json"
+      "/tmp/terraform-aws-couchbase/modules/install-couchbase-server/install-couchbase-server --edition {{user `edition`}}",
+      "/tmp/terraform-aws-couchbase/modules/install-sync-gateway/install-sync-gateway --edition {{user `edition`}} --config /tmp/terraform-aws-couchbase/examples/couchbase-ami/sync_gateway.json"
     ]
   }],
   "post-processors": [{
