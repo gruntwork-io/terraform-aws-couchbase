@@ -130,8 +130,8 @@ function node_is_active_in_cluster {
   multiline_string_contains "$cluster_status" "$node_url healthy active"
 }
 
-# Returns true (0) if the cluster is currently rebalancing and false (1) otherwise
-function cluster_is_rebalancing {
+# Returns true (0) if the cluster is balanced and false (1) otherwise
+function cluster_is_balanced {
   local readonly cluster_url="$1"
   local readonly cluster_username="$2"
   local readonly cluster_password="$3"
@@ -150,7 +150,7 @@ function cluster_is_rebalancing {
   local status
   status=$(echo "$out" | jq -r '.status')
 
-  [[ "$status" == "running" ]]
+  [[ "$status" != "running" ]]
 }
 
 # Return true (0) if the given bucket exists in the given cluster and false (0) otherwise
@@ -222,7 +222,7 @@ function cluster_is_ready {
     return 1
   fi
 
-  if cluster_is_rebalancing "$cluster_url" "$cluster_username" "$cluster_password"; then
+  if ! cluster_is_balanced "$cluster_url" "$cluster_username" "$cluster_password"; then
     log_warn "Cluster $cluster_url is currently rebalancing."
     return 1
   fi
