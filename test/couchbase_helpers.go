@@ -19,12 +19,13 @@ func checkCouchbaseConsoleIsRunning(t *testing.T, clusterUrl string, logger *log
 	maxRetries := 180
 	sleepBetweenRetries := 5 * time.Second
 
-	err := http_helper.HttpGetWithRetryWithCustomValidation(clusterUrl, maxRetries, sleepBetweenRetries, logger, func(status int, body string) bool {
+	webConsoleUrl := fmt.Sprintf("%s/ui/index.html", clusterUrl)
+	err := http_helper.HttpGetWithRetryWithCustomValidation(webConsoleUrl, maxRetries, sleepBetweenRetries, logger, func(status int, body string) bool {
 		return status == 200 && strings.Contains(body, "Couchbase Console")
 	})
 
 	if err != nil {
-		t.Fatalf("Failed to connect to Couchbase at %s: %v", clusterUrl, err)
+		t.Fatalf("Failed to connect to Couchbase at %s: %v", webConsoleUrl, err)
 	}
 }
 
