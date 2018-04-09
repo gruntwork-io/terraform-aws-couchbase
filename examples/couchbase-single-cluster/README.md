@@ -7,9 +7,8 @@ consists of one Auto Scaling Group (ASG) that runs all Couchbase services and Sy
 
 ![Couchbase single-cluster architecture](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/_docs/couchbase-single-cluster-architecture.png?raw=true)
 
-We've also deployed two Load Balancers using the [load-balancer 
-module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/load-balancer), one for Couchbase, 
-one for Sync Gateway.
+This example also deploys a Load Balancer in front of the Couchbase cluster using the [load-balancer
+module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/load-balancer).
 
 You will need to create an [Amazon Machine Image (AMI)](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) 
 that has Couchbase installed, which you can do using the [couchbase-ami 
