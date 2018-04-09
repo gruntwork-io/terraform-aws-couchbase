@@ -42,7 +42,7 @@ To deploy a Couchbase Cluster:
 
 Check out [How do you connect to the Couchbase 
 cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster#how-do-you-connect-to-the-couchbase-cluster)
-documentation.
+documentation. Note that this module uses SSL, so make sure to use `https://` instead of `http://` for all URLs!
 
 Note that booting up and rebalancing a Couchbase cluster can take 5 - 10 minutes, depending on the number and types of 
 instances. 
