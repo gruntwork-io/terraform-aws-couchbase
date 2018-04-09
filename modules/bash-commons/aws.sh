@@ -134,7 +134,7 @@ function wait_for_instances_in_asg {
 
     log_info "Found $count_instances / $asg_size Instances in ASG $asg_name in $aws_region."
 
-    if [[ "$count_instances" -eq "$asg_size" ]]; then
+    if [[ "$count_instances" -ge "$asg_size" ]]; then
       echo "$instances"
       return
     else
