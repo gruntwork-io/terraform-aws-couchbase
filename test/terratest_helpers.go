@@ -21,6 +21,13 @@ const passwordForTest = "password"
 func createBaseRandomResourceCollection(t * testing.T) *terratest.RandomResourceCollection {
 	resourceCollectionOptions := terratest.NewRandomResourceCollectionOptions()
 
+	// Exclude regions where we don't have ACM certs for testing
+	resourceCollectionOptions.ForbiddenRegions = []string{
+		"ap-northeast-2",
+		"ap-southeast-1",
+		"eu-central-1",
+	}
+
 	randomResourceCollection, err := terratest.CreateRandomResourceCollection(resourceCollectionOptions)
 	if err != nil {
 		t.Fatalf("Failed to create Random Resource Collection: %s", err.Error())
@@ -39,7 +46,7 @@ func createBaseTerratestOptions(t *testing.T, testName string, folder string, re
 	return terratestOptions
 }
 
-func buildCouchbaseWithPacker(logger *log.Logger, builderName string, baseAmiName string, awsRegion string, folderPath string) (string, error) {
+func buildCouchbaseWithPacker(logger *log.Logger, builderName string, baseAmiName string, awsRegion string, folderPath string, edition string) (string, error) {
 	templatePath := fmt.Sprintf("%s/couchbase.json", folderPath)
 
 	options := packer.PackerOptions{
@@ -48,6 +55,7 @@ func buildCouchbaseWithPacker(logger *log.Logger, builderName string, baseAmiNam
 		Vars: map[string]string{
 			"aws_region": awsRegion,
 			"base_ami_name": baseAmiName,
+			"edition": edition,
 		},
 	}
 

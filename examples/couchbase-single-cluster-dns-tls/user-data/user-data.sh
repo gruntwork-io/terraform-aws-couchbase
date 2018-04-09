@@ -45,7 +45,6 @@ function run_couchbase {
     --rest-port "$cluster_port" \
     --data-dir "$data_dir" \
     --index-dir "$index_dir" \
-    --use-public-hostname \
     --wait-for-all-nodes
 }
 
@@ -112,8 +111,7 @@ function run_sync_gateway {
     --auto-fill "<DB_NAME>=$cluster_asg_name" \
     --auto-fill "<BUCKET_NAME>=$bucket" \
     --auto-fill "<DB_USERNAME>=$username" \
-    --auto-fill "<DB_PASSWORD>=$password" \
-    --use-public-hostname
+    --auto-fill "<DB_PASSWORD>=$password"
 }
 
 function run {
@@ -141,7 +139,7 @@ function run {
 
   local node_hostname
   local rally_point_hostname
-  read _ node_hostname _ rally_point_hostname < <(/opt/couchbase/bash-commons/couchbase-rally-point --cluster-name "$cluster_asg_name" --use-public-hostname "true")
+  read _ node_hostname _ rally_point_hostname < <(/opt/couchbase/bash-commons/couchbase-rally-point --cluster-name "$cluster_asg_name" --use-public-hostname "false")
 
   if [[ "$node_hostname" == "$rally_point_hostname" ]]; then
     echo "This node is the rally point for this cluster"

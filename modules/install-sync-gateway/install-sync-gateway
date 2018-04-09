@@ -11,9 +11,20 @@ source "$BASH_COMMONS_DIR/assertions.sh"
 source "$BASH_COMMONS_DIR/strings.sh"
 source "$BASH_COMMONS_DIR/os.sh"
 
-readonly DEFAULT_SYNC_GATEWAY_VERSION="2.0.0-beta2"
-readonly DEFAULT_SYNC_GATEWAY_MD5_CHECKSUM_UBUNTU_16_04="3c606a52305310a1e72f6308f68237b8"
-readonly DEFAULT_SYNC_GATEWAY_MD5_CHECKSUM_AMAZON_LINUX="62d233a00d9b50fd6e1278324cfd673d"
+readonly ENTERPRISE_EDITION="enterprise"
+readonly COMMUNITY_EDITION="community"
+readonly DEFAULT_EDITION="$ENTERPRISE_EDITION"
+
+readonly DEFAULT_SYNC_GATEWAY_ENTERPRISE_VERSION="2.0.0-beta2"
+readonly DEFAULT_SYNC_GATEWAY_ENTERPRISE_MD5_CHECKSUM_UBUNTU_16_04="3c606a52305310a1e72f6308f68237b8"
+readonly DEFAULT_SYNC_GATEWAY_ENTERPRISE_MD5_CHECKSUM_AMAZON_LINUX="62d233a00d9b50fd6e1278324cfd673d"
+
+readonly DEFAULT_SYNC_GATEWAY_COMMUNITY_VERSION="2.0.0-beta2"
+readonly DEFAULT_SYNC_GATEWAY_COMMUNITY_MD5_CHECKSUM_UBUNTU_16_04="ee5ffa2bd2abbefde0781d1cb05569e3"
+readonly DEFAULT_SYNC_GATEWAY_COMMUNITY_MD5_CHECKSUM_AMAZON_LINUX="f911d2b1bbd07e1d305325cb09c27c2a"
+
+readonly SHA256_CHECKSUM_TYPE="sha256"
+readonly MD5_CHECKSUM_TYPE="md5"
 
 readonly DEFAULT_SYNC_GATEWAY_DIR="/opt/couchbase-sync-gateway"
 readonly DEFAULT_SYNC_GATEWAY_BIN_DIR="$DEFAULT_SYNC_GATEWAY_DIR/bin"
@@ -35,30 +46,32 @@ function print_usage {
   echo
   echo "Options:"
   echo
-  echo -e "  --version\tThe version of Sync Gateway to install. Default: $DEFAULT_SYNC_GATEWAY_VERSION."
-  echo -e "  --checksum\tThe MD5 checksum of the Sync Gateway package. Required if --version is specified. You can get it from the downloads page of the Couchbase website."
-  echo -e "  --config\tConfigure Sync Gateway to use the specified JSON config file."
+  echo -e "  --edition\t\tThe edition of Sync Gateway to install. Must be one of: $ENTERPRISE_EDITION, $COMMUNITY_EDITION. Default: $DEFAULT_EDITION."
+  echo -e "  --version\t\tThe version of Sync Gateway to install. Default: $DEFAULT_SYNC_GATEWAY_ENTERPRISE_VERSION."
+  echo -e "  --checksum\t\tThe checksum of the Sync Gateway package. Required if --version is specified. You can get it from the downloads page of the Couchbase website."
+  echo -e "  --checksum-type\tThe type of checksum in --checksum. Required if --version is specified. Must be one of: $SHA256_CHECKSUM_TYPE, $MD5_CHECKSUM_TYPE."
+  echo -e "  --config\t\tConfigure Sync Gateway to use the specified JSON config file."
   echo
   echo "Example:"
   echo
-  echo "  install-sync-gateway --version $DEFAULT_SYNC_GATEWAY_VERSION --checksum $DEFAULT_SYNC_GATEWAY_MD5_CHECKSUM_UBUNTU_16_04 --config my-custom-config.json"
+  echo "  install-sync-gateway --edition $ENTERPRISE_EDITION --config my-custom-config.json"
 }
 
 function install_sync_gateway_on_ubuntu {
-  local readonly version="$1"
-  local readonly checksum="$2"
+  local readonly edition="$1"
+  local readonly version="$2"
+  local readonly checksum="$3"
+  local readonly checksum_type="$4"
 
-  log_info "Installing Sync Gateway on Ubuntu"
+  log_info "Installing Sync Gateway $version ($edition edition) on Ubuntu"
 
-  # TODO: what about the community edition?
-  local readonly filepath="couchbase-sync-gateway-enterprise_${version}_x86_64.deb"
+  local readonly filepath="couchbase-sync-gateway-${edition}_${version}_x86_64.deb"
   local readonly url="https://packages.couchbase.com/releases/couchbase-sync-gateway/$version/$filepath"
 
   log_info "Downloading Sync Gateway from $url to $filepath"
   curl --location --silent --fail --show-error -O "$url"
 
-  log_info "Verifying checksum is $checksum"
-  echo "$checksum $filepath" | md5sum -c
+  validate_checksum "$filepath" "$checksum" "$checksum_type"
 
   # Install Sync Gateway, but configure it to NOT start on boot. This allows the run-sync-gateway script to configure
   # Sync Gateway, including what ports to use, and THEN boot it up.
@@ -72,20 +85,20 @@ function install_sync_gateway_on_ubuntu {
 }
 
 function install_sync_gateway_on_amazon_linux {
-  local readonly version="$1"
-  local readonly checksum="$2"
+  local readonly edition="$1"
+  local readonly version="$2"
+  local readonly checksum="$3"
+  local readonly checksum_type="$4"
 
-  log_info "Installing Couchbase on Amazon Linux"
+  log_info "Installing Couchbase $version ($edition edition) on Amazon Linux"
 
-  # TODO: what about the community edition?
-  local readonly filepath="couchbase-sync-gateway-enterprise_${version}_x86_64.rpm"
+  local readonly filepath="couchbase-sync-gateway-${edition}_${version}_x86_64.rpm"
   local readonly url="https://packages.couchbase.com/releases/couchbase-sync-gateway/$version/$filepath"
 
   log_info "Downloading Sync Gateway from $url to $filepath"
   curl --location --silent --fail --show-error -O "$url"
 
-  log_info "Verifying checksum is $checksum"
-  echo "$checksum $filepath" | md5sum -c
+  validate_checksum "$filepath" "$checksum" "$checksum_type"
 
   # Install Sync Gateway, but configure it to NOT start on boot. This allows the run-sync-gateway script to configure
   # Sync Gateway, including what ports to use, and THEN boot it up.
@@ -166,14 +179,22 @@ function install_bash_commons {
 }
 
 function install {
-  local version="$DEFAULT_SYNC_GATEWAY_VERSION"
-  local checksum=$(is_amazon_linux && echo -n "$DEFAULT_SYNC_GATEWAY_MD5_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_SYNC_GATEWAY_MD5_CHECKSUM_UBUNTU_16_04")
+  local edition="$DEFAULT_EDITION"
+  local version
+  local checksum
+  local checksum_type
   local config
 
   while [[ $# > 0 ]]; do
     local key="$1"
 
     case "$key" in
+      --edition)
+        assert_not_empty "$key" "$2"
+        assert_value_in_list "$key" "$2" "$ENTERPRISE_EDITION" "$COMMUNITY_EDITION"
+        edition="$2"
+        shift
+        ;;
       --version)
         assert_not_empty "$key" "$2"
         version="$2"
@@ -182,6 +203,12 @@ function install {
       --checksum)
         assert_not_empty "$key" "$2"
         checksum="$2"
+        shift
+        ;;
+      --checksum-type)
+        assert_not_empty "$key" "$2"
+        assert_value_in_list "$key" "$2" "$SHA256_CHECKSUM_TYPE" "$MD5_CHECKSUM_TYPE"
+        checksum_type="$2"
         shift
         ;;
       --config)
@@ -210,12 +237,24 @@ function install {
     exit 1
   fi
 
+  if [[ -z "$version" ]]; then
+    if [[ "$edition" == "$COMMUNITY_EDITION" ]]; then
+      version="$DEFAULT_SYNC_GATEWAY_COMMUNITY_VERSION"
+      checksum=$(is_amazon_linux && echo -n "$DEFAULT_SYNC_GATEWAY_COMMUNITY_MD5_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_SYNC_GATEWAY_COMMUNITY_MD5_CHECKSUM_UBUNTU_16_04")
+      checksum_type="$MD5_CHECKSUM_TYPE"
+    else
+      version="$DEFAULT_SYNC_GATEWAY_ENTERPRISE_VERSION"
+      checksum=$(is_amazon_linux && echo -n "$DEFAULT_SYNC_GATEWAY_ENTERPRISE_MD5_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_SYNC_GATEWAY_ENTERPRISE_MD5_CHECKSUM_UBUNTU_16_04")
+      checksum_type="$MD5_CHECKSUM_TYPE"
+    fi
+  fi
+
   log_info "Starting Sync Gateway install..."
 
   if is_ubuntu "16.04"; then
-    install_sync_gateway_on_ubuntu "$version" "$checksum"
+    install_sync_gateway_on_ubuntu "$edition" "$version" "$checksum" "$checksum_type"
   elif is_amazon_linux "2"; then
-    install_sync_gateway_on_amazon_linux "$version" "$checksum"
+    install_sync_gateway_on_amazon_linux "$edition" "$version" "$checksum" "$checksum_type"
   else
     log_error "This script only supports Ubuntu 16.04 and Amazon Linux 2."
     exit 1

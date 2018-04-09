@@ -3,25 +3,33 @@ package test
 import (
 	"testing"
 	"path/filepath"
-	"github.com/gruntwork-io/terratest"
 	terralog "github.com/gruntwork-io/terratest/log"
-	"fmt"
 	"github.com/gruntwork-io/terratest/test-structure"
 )
 
 const couchbaseClusterVarName = "cluster_name"
 
-func TestIntegrationCouchbaseSingleClusterUbuntu(t *testing.T) {
+func TestIntegrationCouchbaseCommunitySingleClusterUbuntu(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseSingleClusterUbuntu", "ubuntu")
+	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseCommunitySingleClusterUbuntu", "ubuntu", "community")
 }
 
-func TestIntegrationCouchbaseSingleClusterAmazonLinux(t *testing.T) {
+func TestIntegrationCouchbaseCommunitySingleClusterAmazonLinux(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseSingleClusterAmazonLinux", "amazon-linux")
+	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseCommunitySingleClusterAmazonLinux", "amazon-linux", "community")
 }
 
-func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
+func TestIntegrationCouchbaseEnterpriseSingleClusterUbuntu(t *testing.T) {
+	t.Parallel()
+	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseEnterpriseSingleClusterUbuntu", "ubuntu", "enterprise")
+}
+
+func TestIntegrationCouchbaseEnterpriseSingleClusterAmazonLinux(t *testing.T) {
+	t.Parallel()
+	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseEnterpriseSingleClusterAmazonLinux", "amazon-linux", "enterprise")
+}
+
+func testCouchbaseSingleCluster(t *testing.T, testName string, osName string, edition string) {
 	logger := terralog.NewLogger(testName)
 
 	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName, logger)
@@ -29,8 +37,7 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 	couchbaseSingleClusterDir := filepath.Join(examplesFolder, "couchbase-single-cluster")
 
 	test_structure.RunTestStage("setup_ami", logger, func() {
-		testStageBuildCouchbaseAmi(t, osName, couchbaseAmiDir, couchbaseSingleClusterDir, logger)
-		
+		testStageBuildCouchbaseAmi(t, osName, edition, couchbaseAmiDir, couchbaseSingleClusterDir, logger)
 	})
 
 	test_structure.RunTestStage("setup_deploy", logger, func() {
@@ -59,24 +66,6 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string) {
 	})
 
 	test_structure.RunTestStage("validation", logger, func() {
-		terratestOptions := test_structure.LoadTerratestOptions(t, couchbaseSingleClusterDir, logger)
-		clusterName := getClusterName(t, couchbaseClusterVarName, terratestOptions)
-
-		couchbaseServerUrl, err := terratest.OutputRequired(terratestOptions, "couchbase_web_console_url")
-		if err != nil {
-			t.Fatal(err)
-		}
-		couchbaseServerUrl = fmt.Sprintf("http://%s:%s@%s", usernameForTest, passwordForTest, couchbaseServerUrl)
-
-		syncGatewayUrl, err := terratest.OutputRequired(terratestOptions, "sync_gateway_url")
-		if err != nil {
-			t.Fatal(err)
-		}
-		syncGatewayUrl = fmt.Sprintf("http://%s/%s", syncGatewayUrl, clusterName)
-
-		checkCouchbaseConsoleIsRunning(t, couchbaseServerUrl, logger)
-		checkCouchbaseClusterIsInitialized(t, couchbaseServerUrl, 3, logger)
-		checkCouchbaseDataNodesWorking(t, couchbaseServerUrl, logger)
-		checkSyncGatewayWorking(t, syncGatewayUrl, logger)
+		validateSingleClusterWorks(t, couchbaseSingleClusterDir, couchbaseClusterVarName, "http", logger)
 	})
 }

@@ -17,17 +17,17 @@ const replicaName = "replica"
 const clusterNamePrimaryVarName = "cluster_name_primary"
 const clusterNameReplicaVarName = "cluster_name_replica"
 
-func TestIntegrationCouchbaseMultiDataCenterReplicationUbuntu(t *testing.T) {
+func TestIntegrationCouchbaseEnterpriseMultiDataCenterReplicationUbuntu(t *testing.T) {
 	t.Parallel()
-	testCouchbaseMultiDataCenterReplication(t, "TestIntegrationCouchbaseMultiDataCenterReplicationUbuntu", "ubuntu")
+	testCouchbaseMultiDataCenterReplication(t, "TestIntegrationCouchbaseEnterpriseMultiDataCenterReplicationUbuntu", "ubuntu", "enterprise")
 }
 
-func TestIntegrationCouchbaseMultiDataCenterReplicationAmazonLinux(t *testing.T) {
+func TestIntegrationCouchbaseEnterpriseMultiDataCenterReplicationAmazonLinux(t *testing.T) {
 	t.Parallel()
-	testCouchbaseMultiDataCenterReplication(t, "TestIntegrationCouchbaseMultiDataCenterReplicationAmazonLinux", "amazon-linux")
+	testCouchbaseMultiDataCenterReplication(t, "TestIntegrationCouchbaseEnterpriseMultiDataCenterReplicationAmazonLinux", "amazon-linux", "enterprise")
 }
 
-func testCouchbaseMultiDataCenterReplication(t *testing.T, testName string, osName string) {
+func testCouchbaseMultiDataCenterReplication(t *testing.T, testName string, osName string, edition string) {
 	logger := terralog.NewLogger(testName)
 
 	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName, logger)
@@ -47,12 +47,12 @@ func testCouchbaseMultiDataCenterReplication(t *testing.T, testName string, osNa
 		go func() {
 			defer waitForPackerBuilds.Done()
 
-			amiIdPrimary = buildCouchbaseAmi(t, osName, couchbaseAmiDir, resourceCollectionPrimary, logger)
+			amiIdPrimary = buildCouchbaseAmi(t, osName, couchbaseAmiDir, edition, resourceCollectionPrimary, logger)
 		}()
 
 		go func() {
 			defer waitForPackerBuilds.Done()
-			amiIdReplica = buildCouchbaseAmi(t, osName, couchbaseAmiDir, resourceCollectionReplica, logger)
+			amiIdReplica = buildCouchbaseAmi(t, osName, couchbaseAmiDir, edition, resourceCollectionReplica, logger)
 		}()
 
 		waitForPackerBuilds.Wait()

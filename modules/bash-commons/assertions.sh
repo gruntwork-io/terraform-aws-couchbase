@@ -3,6 +3,7 @@
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/logging.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/collections.sh"
 
 # Check that the given binary is available on the PATH. If it's not, exit with an error.
 function assert_is_installed {
@@ -48,6 +49,19 @@ function assert_not_empty_or_null {
 
   if is_empty_or_null "$response"; then
     log_error "Got empty response for $description"
+    exit 1
+  fi
+}
+
+# Check that the given value is one of the values from the given list. If not, exit with an error.
+function assert_value_in_list {
+  local readonly arg_name="$1"
+  local readonly arg_value="$2"
+  shift 2
+  local readonly list=($@)
+
+  if ! array_contains "$arg_value" "${list[@]}"; then
+    log_error "'$arg_value' is not a valid value for $arg_name. Must be one of: [${list[@]}]."
     exit 1
   fi
 }

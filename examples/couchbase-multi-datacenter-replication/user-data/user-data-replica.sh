@@ -53,7 +53,7 @@ function create_test_resources {
     "--rbac-username=$user_name" \
     "--rbac-password=$user_password" \
     "--rbac-name=$user_name" \
-    "--roles=cluster_admin" \
+    "--roles=admin" \
     "--auth-domain=local"
 
   echo "Creating bucket $bucket_name"

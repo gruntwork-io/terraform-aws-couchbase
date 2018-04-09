@@ -19,12 +19,13 @@ func checkCouchbaseConsoleIsRunning(t *testing.T, clusterUrl string, logger *log
 	maxRetries := 180
 	sleepBetweenRetries := 5 * time.Second
 
-	err := http_helper.HttpGetWithRetryWithCustomValidation(clusterUrl, maxRetries, sleepBetweenRetries, logger, func(status int, body string) bool {
+	webConsoleUrl := fmt.Sprintf("%s/ui/index.html", clusterUrl)
+	err := http_helper.HttpGetWithRetryWithCustomValidation(webConsoleUrl, maxRetries, sleepBetweenRetries, logger, func(status int, body string) bool {
 		return status == 200 && strings.Contains(body, "Couchbase Console")
 	})
 
 	if err != nil {
-		t.Fatalf("Failed to connect to Couchbase at %s: %v", clusterUrl, err)
+		t.Fatalf("Failed to connect to Couchbase at %s: %v", webConsoleUrl, err)
 	}
 }
 
@@ -286,8 +287,8 @@ func checkSyncGatewayWorking(t *testing.T, syncGatewayUrl string, logger *log.Lo
 	}
 }
 
-func buildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, resourceCollection *terratest.RandomResourceCollection, logger *log.Logger) string {
-	amiId, err := buildCouchbaseWithPacker(logger, fmt.Sprintf("%s-ami", osName), fmt.Sprintf("couchbase-%s", resourceCollection.UniqueId), resourceCollection.AwsRegion, couchbaseAmiDir)
+func buildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, edition string, resourceCollection *terratest.RandomResourceCollection, logger *log.Logger) string {
+	amiId, err := buildCouchbaseWithPacker(logger, fmt.Sprintf("%s-ami", osName), fmt.Sprintf("couchbase-%s", resourceCollection.UniqueId), resourceCollection.AwsRegion, couchbaseAmiDir, edition)
 	if err != nil {
 		t.Fatalf("Failed to build Couchbase AMI: %v", err)
 	}
@@ -295,10 +296,10 @@ func buildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, reso
 	return amiId
 }
 
-func testStageBuildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, couchbaseTerraformDir string, logger *log.Logger) {
+func testStageBuildCouchbaseAmi(t *testing.T, osName string, edition string, couchbaseAmiDir string, couchbaseTerraformDir string, logger *log.Logger) {
 	resourceCollection := createBaseRandomResourceCollection(t)
 
-	amiId := buildCouchbaseAmi(t, osName, couchbaseAmiDir, resourceCollection, logger)
+	amiId := buildCouchbaseAmi(t, osName, couchbaseAmiDir, edition, resourceCollection, logger)
 
 	test_structure.SaveAmiId(t, couchbaseTerraformDir, amiId, logger)
 	test_structure.SaveRandomResourceCollection(t, couchbaseTerraformDir, resourceCollection, logger)
@@ -345,4 +346,26 @@ func testStageLogs(t *testing.T, couchbaseTerraformDir string, clusterVarName st
 // Format a unique name for the Couchbase cluster. Note that Couchbase DB names must be lower case.
 func formatCouchbaseClusterName(baseName string, resourceCollection *terratest.RandomResourceCollection) string {
 	return strings.ToLower(fmt.Sprintf("%s-%s", baseName, resourceCollection.UniqueId))
+}
+
+func validateSingleClusterWorks(t *testing.T, terraformFolder string, couchbaseClusterVarName string, loadBalancerProtocol string, logger *log.Logger) {
+	terratestOptions := test_structure.LoadTerratestOptions(t, terraformFolder, logger)
+	clusterName := getClusterName(t, couchbaseClusterVarName, terratestOptions)
+
+	couchbaseServerUrl, err := terratest.OutputRequired(terratestOptions, "couchbase_web_console_url")
+	if err != nil {
+		t.Fatal(err)
+	}
+	couchbaseServerUrl = fmt.Sprintf("%s://%s:%s@%s", loadBalancerProtocol, usernameForTest, passwordForTest, couchbaseServerUrl)
+
+	syncGatewayUrl, err := terratest.OutputRequired(terratestOptions, "sync_gateway_url")
+	if err != nil {
+		t.Fatal(err)
+	}
+	syncGatewayUrl = fmt.Sprintf("%s://%s/%s", loadBalancerProtocol, syncGatewayUrl, clusterName)
+
+	checkCouchbaseConsoleIsRunning(t, couchbaseServerUrl, logger)
+	checkCouchbaseClusterIsInitialized(t, couchbaseServerUrl, 3, logger)
+	checkCouchbaseDataNodesWorking(t, couchbaseServerUrl, logger)
+	checkSyncGatewayWorking(t, syncGatewayUrl, logger)
 }

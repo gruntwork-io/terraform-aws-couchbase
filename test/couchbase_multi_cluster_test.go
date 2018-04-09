@@ -13,17 +13,17 @@ const dataNodeClusterVarName = "couchbase_data_node_cluster_name"
 const indexQuerySearchClusterVarName = "couchbase_index_query_search_node_cluster_name"
 const syncGatewayClusterVarName = "sync_gateway_cluster_name"
 
-func TestIntegrationCouchbaseMultiClusterUbuntu(t *testing.T) {
+func TestIntegrationCouchbaseEnterpriseMultiClusterUbuntu(t *testing.T) {
 	t.Parallel()
-	testCouchbaseMultiCluster(t, "TestIntegrationCouchbaseMultiClusterUbuntu", "ubuntu")
+	testCouchbaseMultiCluster(t, "TestIntegrationCouchbaseEnterpriseMultiClusterUbuntu", "ubuntu", "enterprise")
 }
 
-func TestIntegrationCouchbaseMultiClusterAmazonLinux(t *testing.T) {
+func TestIntegrationCouchbaseEnterpriseMultiClusterAmazonLinux(t *testing.T) {
 	t.Parallel()
-	testCouchbaseMultiCluster(t, "TestIntegrationCouchbaseMultiClusterAmazonLinux", "amazon-linux")
+	testCouchbaseMultiCluster(t, "TestIntegrationCouchbaseEnterpriseMultiClusterAmazonLinux", "amazon-linux", "enterprise")
 }
 
-func testCouchbaseMultiCluster(t *testing.T, testName string, osName string) {
+func testCouchbaseMultiCluster(t *testing.T, testName string, osName string, edition string) {
 	logger := terralog.NewLogger(testName)
 
 	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName, logger)
@@ -31,7 +31,7 @@ func testCouchbaseMultiCluster(t *testing.T, testName string, osName string) {
 	couchbaseMultiClusterDir := filepath.Join(examplesFolder, "couchbase-multi-cluster")
 
 	test_structure.RunTestStage("setup_ami", logger, func() {
-		testStageBuildCouchbaseAmi(t, osName, couchbaseAmiDir, couchbaseMultiClusterDir, logger)
+		testStageBuildCouchbaseAmi(t, osName, edition, couchbaseAmiDir, couchbaseMultiClusterDir, logger)
 	})
 
 	test_structure.RunTestStage("setup_deploy", logger, func() {

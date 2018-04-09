@@ -98,7 +98,7 @@ resource "aws_security_group_rule" "allow_http_inbound_from_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "allow_http_inbound_from_security_groups" {
-  count                    = "${length(var.http_listener_ports) * length(var.allow_inbound_from_security_groups)}"
+  count                    = "${length(var.http_listener_ports) * var.num_inbound_security_groups}"
   type                     = "ingress"
   from_port                = "${element(var.http_listener_ports, count.index)}"
   to_port                  = "${element(var.http_listener_ports, count.index)}"
@@ -118,13 +118,19 @@ resource "aws_security_group_rule" "allow_https_inbound_from_cidr_blocks" {
 }
 
 resource "aws_security_group_rule" "allow_https_inbound_from_security_groups" {
-  count                    = "${length(var.https_listener_ports_and_certs) * length(var.num_inbound_security_groups)}"
-  type                     = "ingress"
-  from_port                = "${lookup(var.https_listener_ports_and_certs[count.index], "port")}"
-  to_port                  = "${lookup(var.https_listener_ports_and_certs[count.index], "port")}"
-  protocol                 = "tcp"
-  security_group_id        = "${aws_security_group.sg.id}"
-  source_security_group_id = "${element(var.allow_inbound_from_security_groups, count.index)}"
+  count             = "${length(var.https_listener_ports_and_certs) * var.num_inbound_security_groups}"
+  type              = "ingress"
+  from_port         = "${lookup(var.https_listener_ports_and_certs[count.index], "port")}"
+  to_port           = "${lookup(var.https_listener_ports_and_certs[count.index], "port")}"
+  protocol          = "tcp"
+  security_group_id = "${aws_security_group.sg.id}"
+
+  # The split/join workaround below should NOT be necessary, but without it, if var.https_listener_ports_and_certs
+  # contains any data sources, and var.allow_inbound_from_security_groups is empty, we get a "element() may not be
+  # used with an empty list" error. The count param is supposed to support interpolating data sources, but perhaps
+  # because we have a map involved, it does not, so we have to use this ugly workaround for now. For more info, see:
+  # https://github.com/hashicorp/terraform/issues/17812
+  source_security_group_id = "${element(split(",", var.num_inbound_security_groups == 0 ? "fake-id-for-workaround" : join(",", var.allow_inbound_from_security_groups)), count.index)}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

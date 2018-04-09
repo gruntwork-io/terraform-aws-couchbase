@@ -20,12 +20,13 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 		testName string
 		examplesFolderName string
 		osName string
+		edition string
 		clusterSize int
 		couchbaseWebConsolePort int
 		syncGatewayWebConsolePort int
 	} {
-		{"TestUnitCouchbaseSingleClusterUbuntuInDocker","couchbase-single-cluster", "ubuntu", 2, 8091, 4984},
-		{"TestUnitCouchbaseMultiClusterAmazonLinuxInDocker", "couchbase-multi-cluster", "amazon-linux", 3,7091, 3984},
+		{"TestUnitCouchbaseCommunitySingleClusterUbuntuInDocker","couchbase-single-cluster", "ubuntu", "community", 2, 8091, 4984},
+		{"TestUnitCouchbaseEnterpriseMultiClusterAmazonLinuxInDocker", "couchbase-multi-cluster", "amazon-linux", "enterprise", 3,7091, 3984},
 	}
 
 	for _, testCase := range basicTestCases {
@@ -34,7 +35,7 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 		t.Run(testCase.testName, func(t *testing.T) {
 			t.Parallel()
 			skipInCircleCi(t)
-			testCouchbaseInDockerBasic(t, testCase.testName, testCase.examplesFolderName, testCase.osName, testCase.clusterSize, testCase.couchbaseWebConsolePort, testCase.syncGatewayWebConsolePort)
+			testCouchbaseInDockerBasic(t, testCase.testName, testCase.examplesFolderName, testCase.osName, testCase.edition, testCase.clusterSize, testCase.couchbaseWebConsolePort, testCase.syncGatewayWebConsolePort)
 		})
 	}
 
@@ -42,11 +43,12 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 		testName string
 		examplesFolderName string
 		osName string
+		edition string
 		clusterSize int
 		couchbaseWebConsolePortEast int
 		couchbaseWebConsolePortWest int
 	} {
-		{"TestUnitCouchbaseMultiDataCenterUbuntuInDocker", "couchbase-multi-datacenter-replication", "ubuntu", 2,6091, 5091},
+		{"TestUnitCouchbaseEnterpriseMultiDataCenterUbuntuInDocker", "couchbase-multi-datacenter-replication", "ubuntu", "enterprise", 2,6091, 5091},
 	}
 
 	for _, testCase := range replicationTestCases {
@@ -55,7 +57,7 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 		t.Run(testCase.testName, func(t *testing.T) {
 			t.Parallel()
 			skipInCircleCi(t)
-			testCouchbaseInDockerReplication(t, testCase.testName, testCase.examplesFolderName, testCase.osName, testCase.clusterSize, testCase.couchbaseWebConsolePortEast, testCase.couchbaseWebConsolePortWest)
+			testCouchbaseInDockerReplication(t, testCase.testName, testCase.examplesFolderName, testCase.osName, testCase.edition, testCase.clusterSize, testCase.couchbaseWebConsolePortEast, testCase.couchbaseWebConsolePortWest)
 		})
 	}
 }
@@ -66,7 +68,7 @@ func skipInCircleCi(t *testing.T) {
 	}
 }
 
-func testCouchbaseInDockerBasic(t *testing.T, testName string, examplesFolderName string, osName string, clusterSize int, couchbaseWebConsolePort int, syncGatewayWebConsolePort int) {
+func testCouchbaseInDockerBasic(t *testing.T, testName string, examplesFolderName string, osName string, edition string, clusterSize int, couchbaseWebConsolePort int, syncGatewayWebConsolePort int) {
 	logger := terralog.NewLogger(testName)
 
 	uniqueId := util.UniqueId()
@@ -82,7 +84,7 @@ func testCouchbaseInDockerBasic(t *testing.T, testName string, examplesFolderNam
 	couchbaseSingleClusterDockerDir := filepath.Join(tmpExamplesDir, examplesFolderName, "local-test")
 
 	test_structure.RunTestStage("setup_image", logger, func() {
-		buildCouchbaseWithPacker(logger, fmt.Sprintf("%s-docker", osName), "couchbase","us-east-1", couchbaseAmiDir)
+		buildCouchbaseWithPacker(logger, fmt.Sprintf("%s-docker", osName), "couchbase","us-east-1", couchbaseAmiDir, edition)
 	})
 
 	test_structure.RunTestStage("setup_docker", logger, func() {
@@ -107,7 +109,7 @@ func testCouchbaseInDockerBasic(t *testing.T, testName string, examplesFolderNam
 	})
 }
 
-func testCouchbaseInDockerReplication(t *testing.T, testName string, examplesFolderName string, osName string, clusterSize int, couchbaseWebConsolePortEast int, couchbaseWebConsolePortWest int) {
+func testCouchbaseInDockerReplication(t *testing.T, testName string, examplesFolderName string, osName string, edition string, clusterSize int, couchbaseWebConsolePortEast int, couchbaseWebConsolePortWest int) {
 	logger := terralog.NewLogger(testName)
 
 	uniqueId := util.UniqueId()
@@ -123,7 +125,7 @@ func testCouchbaseInDockerReplication(t *testing.T, testName string, examplesFol
 	couchbaseSingleClusterDockerDir := filepath.Join(tmpExamplesDir, examplesFolderName, "local-test")
 
 	test_structure.RunTestStage("setup_image", logger, func() {
-		buildCouchbaseWithPacker(logger, fmt.Sprintf("%s-docker", osName), "couchbase","us-east-1", couchbaseAmiDir)
+		buildCouchbaseWithPacker(logger, fmt.Sprintf("%s-docker", osName), "couchbase","us-east-1", couchbaseAmiDir, edition)
 	})
 
 	test_structure.RunTestStage("setup_docker", logger, func() {

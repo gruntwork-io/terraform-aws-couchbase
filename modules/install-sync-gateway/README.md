@@ -54,13 +54,15 @@ This script can be used to install Couchbase Sync Gateway and its dependencies. 
 
 Options:
 
-  --version	The version of Sync Gateway to install. Default: 1.5.1.
-  --checksum	The MD5 checksum of the Sync Gateway package. Required if --version is specified. You can get it from the downloads page of the Couchbase website.
-  --config	Configure Sync Gateway to use the specified JSON config file.
+  --edition		The edition of Sync Gateway to install. Must be one of: enterprise, community. Default: enterprise.
+  --version		The version of Sync Gateway to install. Default: 2.0.0-beta2.
+  --checksum		The checksum of the Sync Gateway package. Required if --version is specified. You can get it from the downloads page of the Couchbase website.
+  --checksum-type	The type of checksum in --checksum. Required if --version is specified. Must be one of: sha256, md5.
+  --config		Configure Sync Gateway to use the specified JSON config file.
 
 Example:
 
-  install-sync-gateway --version 1.5.1 --checksum 363186920c2f504368172311b649d09a --config my-custom-config.json
+  install-sync-gateway --edition enterprise --config my-custom-config.json
 ```
 
 
