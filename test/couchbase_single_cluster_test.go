@@ -13,25 +13,25 @@ const couchbaseClusterVarName = "cluster_name"
 
 func TestIntegrationCouchbaseCommunitySingleClusterUbuntu(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseCommunitySingleClusterUbuntu", "ubuntu", "community")
+	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseCommunitySingleClusterUbuntu", "ubuntu", "community", "http")
 }
 
 func TestIntegrationCouchbaseCommunitySingleClusterAmazonLinux(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseCommunitySingleClusterAmazonLinux", "amazon-linux", "community")
+	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseCommunitySingleClusterAmazonLinux", "amazon-linux", "community", "http")
 }
 
 func TestIntegrationCouchbaseEnterpriseSingleClusterUbuntu(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseEnterpriseSingleClusterUbuntu", "ubuntu", "enterprise")
+	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseEnterpriseSingleClusterUbuntu", "ubuntu", "enterprise", "http")
 }
 
 func TestIntegrationCouchbaseEnterpriseSingleClusterAmazonLinux(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseEnterpriseSingleClusterAmazonLinux", "amazon-linux", "enterprise")
+	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseEnterpriseSingleClusterAmazonLinux", "amazon-linux", "enterprise", "http")
 }
 
-func testCouchbaseSingleCluster(t *testing.T, testName string, osName string, edition string) {
+func testCouchbaseSingleCluster(t *testing.T, testName string, osName string, edition string, loadBalancerProtocol string) {
 	logger := terralog.NewLogger(testName)
 
 	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName, logger)
@@ -75,13 +75,13 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string, ed
 		if err != nil {
 			t.Fatal(err)
 		}
-		couchbaseServerUrl = fmt.Sprintf("http://%s:%s@%s", usernameForTest, passwordForTest, couchbaseServerUrl)
+		couchbaseServerUrl = fmt.Sprintf("%s://%s:%s@%s", loadBalancerProtocol, usernameForTest, passwordForTest, couchbaseServerUrl)
 
 		syncGatewayUrl, err := terratest.OutputRequired(terratestOptions, "sync_gateway_url")
 		if err != nil {
 			t.Fatal(err)
 		}
-		syncGatewayUrl = fmt.Sprintf("http://%s/%s", syncGatewayUrl, clusterName)
+		syncGatewayUrl = fmt.Sprintf("%s://%s/%s", loadBalancerProtocol, syncGatewayUrl, clusterName)
 
 		checkCouchbaseConsoleIsRunning(t, couchbaseServerUrl, logger)
 		checkCouchbaseClusterIsInitialized(t, couchbaseServerUrl, 3, logger)
