@@ -21,6 +21,13 @@ const passwordForTest = "password"
 func createBaseRandomResourceCollection(t * testing.T) *terratest.RandomResourceCollection {
 	resourceCollectionOptions := terratest.NewRandomResourceCollectionOptions()
 
+	// Exclude regions where we don't have ACM certs for testing
+	resourceCollectionOptions.ForbiddenRegions = []string{
+		"ap-northeast-2",
+		"ap-southeast-1",
+		"eu-central-1",
+	}
+
 	randomResourceCollection, err := terratest.CreateRandomResourceCollection(resourceCollectionOptions)
 	if err != nil {
 		t.Fatalf("Failed to create Random Resource Collection: %s", err.Error())

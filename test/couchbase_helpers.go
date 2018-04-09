@@ -346,3 +346,25 @@ func testStageLogs(t *testing.T, couchbaseTerraformDir string, clusterVarName st
 func formatCouchbaseClusterName(baseName string, resourceCollection *terratest.RandomResourceCollection) string {
 	return strings.ToLower(fmt.Sprintf("%s-%s", baseName, resourceCollection.UniqueId))
 }
+
+func validateSingleClusterWorks(t *testing.T, terraformFolder string, couchbaseClusterVarName string, loadBalancerProtocol string, logger *log.Logger) {
+	terratestOptions := test_structure.LoadTerratestOptions(t, terraformFolder, logger)
+	clusterName := getClusterName(t, couchbaseClusterVarName, terratestOptions)
+
+	couchbaseServerUrl, err := terratest.OutputRequired(terratestOptions, "couchbase_web_console_url")
+	if err != nil {
+		t.Fatal(err)
+	}
+	couchbaseServerUrl = fmt.Sprintf("%s://%s:%s@%s", loadBalancerProtocol, usernameForTest, passwordForTest, couchbaseServerUrl)
+
+	syncGatewayUrl, err := terratest.OutputRequired(terratestOptions, "sync_gateway_url")
+	if err != nil {
+		t.Fatal(err)
+	}
+	syncGatewayUrl = fmt.Sprintf("%s://%s/%s", loadBalancerProtocol, syncGatewayUrl, clusterName)
+
+	checkCouchbaseConsoleIsRunning(t, couchbaseServerUrl, logger)
+	checkCouchbaseClusterIsInitialized(t, couchbaseServerUrl, 3, logger)
+	checkCouchbaseDataNodesWorking(t, couchbaseServerUrl, logger)
+	checkSyncGatewayWorking(t, syncGatewayUrl, logger)
+}
