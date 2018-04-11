@@ -2,10 +2,10 @@
 
 set -e
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/logging.sh"
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/aws-primitives.sh"
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/strings.sh"
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/assertions.sh"
+source "/opt/gruntwork/bash-commons/log.sh"
+source "/opt/gruntwork/bash-commons/aws.sh"
+source "/opt/gruntwork/bash-commons/string.sh"
+source "/opt/gruntwork/bash-commons/assert.sh"
 
 readonly MAX_VOLUME_ATTACHED_RETRIES=10
 readonly SLEEP_SEC_BETWEEN_VOLUME_ATTACH_RETRIES=10
@@ -95,9 +95,9 @@ function attach_volume_from_list {
   local ebs_volumes=""
   local ebs_volumes_unattached_in_az=""
 
-  aws_region=$(get_instance_region)
-  availability_zone=$(get_ec2_instance_availability_zone)
-  instance_id=$(get_ec2_instance_id)
+  aws_region=$(aws_get_instance_region)
+  availability_zone=$(aws_get_ec2_instance_availability_zone)
+  instance_id=$(aws_get_ec2_instance_id)
 
   log_info "Searching for EBS volumes with ids: $volume_ids"
   ebs_volumes=$(describe_volumes "$aws_region" "$volume_ids")
@@ -121,7 +121,7 @@ function attach_volume_with_same_tag {
   log_info "Looking for EBS volume with same value for tag $tag_key as this Instance"
 
   local aws_region
-  aws_region=$(get_instance_region)
+  aws_region=$(aws_get_instance_region)
 
   local ebs_volume_id
   ebs_volume_id=$(find_ebs_volume_with_same_tag "$aws_region" "$tag_key")
@@ -146,7 +146,7 @@ function find_ebs_volume_with_same_tag {
   fi
 
   local availability_zone
-  availability_zone=$(get_ec2_instance_availability_zone)
+  availability_zone=$(aws_get_ec2_instance_availability_zone)
 
   for (( i=0; i<"$MAX_RETRIES"; i++ )); do
     set +e
@@ -174,7 +174,7 @@ function get_value_for_tag {
   local readonly tag_key="$2"
 
   local instance_id
-  instance_id=$(get_ec2_instance_id)
+  instance_id=$(aws_get_ec2_instance_id)
 
   # It can take a while for tags to propagate, especially with ASGs, so retry a few times
   for (( i=0; i<"$MAX_RETRIES"; i++ )); do
@@ -295,7 +295,7 @@ function try_to_attach_volume {
 # Formats the device name for the way the linux lsblk utility expects it
 function format_name_for_lsblk {
   local readonly device_name="$1"
-  strip_prefix "$device_name" "/dev/"
+  string_strip_prefix "$device_name" "/dev/"
 }
 
 function device_already_formatted {

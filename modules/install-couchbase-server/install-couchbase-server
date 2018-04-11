@@ -3,12 +3,18 @@
 set -e
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly BASH_COMMONS_DIR="$SCRIPT_DIR/../bash-commons"
+readonly BASH_COMMONS_DIR="/opt/gruntwork/bash-commons"
 
-source "$BASH_COMMONS_DIR/logging.sh"
-source "$BASH_COMMONS_DIR/assertions.sh"
-source "$BASH_COMMONS_DIR/strings.sh"
+if [[ ! -d "$BASH_COMMONS_DIR" ]]; then
+  echo "ERROR: this script requires that bash-commons is installed in $BASH_COMMONS_DIR. See https://github.com/gruntwork-io/bash-commons for more info."
+  exit 1
+fi
+
+source "$BASH_COMMONS_DIR/log.sh"
+source "$BASH_COMMONS_DIR/assert.sh"
+source "$BASH_COMMONS_DIR/string.sh"
 source "$BASH_COMMONS_DIR/os.sh"
+source "$BASH_COMMONS_DIR/file.sh"
 
 readonly ENTERPRISE_EDITION="enterprise"
 readonly COMMUNITY_EDITION="community"
@@ -31,7 +37,9 @@ readonly DISABLE_THP_BOOT_SCRIPT="/etc/init.d/disable-thp"
 
 readonly DEFAULT_COUCHBASE_DIR="/opt/couchbase"
 readonly DEFAULT_COUCHBASE_BIN_DIR="$DEFAULT_COUCHBASE_DIR/bin"
-readonly BASH_COMMONS_INSTALL_DIR="$DEFAULT_COUCHBASE_DIR/bash-commons"
+
+readonly COUCHBASE_COMMONS_SRC_DIR="$SCRIPT_DIR/../couchbase-commons"
+readonly COUCHBASE_COMMONS_INSTALL_DIR="/opt/couchbase-commons"
 
 function print_usage {
   echo
@@ -70,7 +78,7 @@ function install_couchbase_on_ubuntu {
   log_info "Downloading Couchbase from $url to $filepath"
   curl --location --silent --fail --show-error -O "$url"
 
-  validate_checksum "$filepath" "$checksum" "$checksum_type"
+  os_validate_checksum "$filepath" "$checksum" "$checksum_type"
 
   # Install Couchbase, but configure it to NOT start on boot. This allows the run-couchbase-server script to configure
   # Couchbase, including what ports to use, and THEN boot it up.
@@ -100,7 +108,7 @@ function install_couchbase_on_amazon_linux {
   log_info "Downloading Couchbase from $url to $filepath"
   curl --location --silent --fail --show-error -O "$url"
 
-  validate_checksum "$filepath" "$checksum" "$checksum_type"
+  os_validate_checksum "$filepath" "$checksum" "$checksum_type"
 
   # Install Couchbase, but configure it to NOT start on boot. This allows the run-couchbase-server script to configure
   # Couchbase, including what ports to use, and THEN boot it up.
@@ -126,7 +134,7 @@ function update_swapiness {
 
   log_info "Updating OS swapiness settings to $swapiness in $SWAPINESS_CONFIG_FILE"
 
-  replace_or_append_in_file "^vm.swappiness.*=.*$" "vm.swapiness = $swapiness" "$SWAPINESS_CONFIG_FILE"
+  file_replace_or_append_text "^vm.swappiness.*=.*$" "vm.swapiness = $swapiness" "$SWAPINESS_CONFIG_FILE"
 }
 
 function install_couchbase_scripts {
@@ -145,9 +153,9 @@ function install_couchbase_scripts {
   sudo chmod +x "$run_replication_dest"
 }
 
-function install_bash_commons {
-  local readonly dest_dir="$1"
-  local readonly src_dir="$BASH_COMMONS_DIR"
+function install_couchbase_commons {
+  local readonly src_dir="$1"
+  local readonly dest_dir="$2"
 
   log_info "Copying $src_dir to $dest_dir"
   sudo cp -r "$src_dir" "$dest_dir"
@@ -215,20 +223,20 @@ function install {
   if [[ -z "$version" ]]; then
     if [[ "$edition" == "$COMMUNITY_EDITION" ]]; then
       version="$DEFAULT_COUCHBASE_COMMUNITY_VERSION"
-      checksum=$(is_amazon_linux && echo -n "$DEFAULT_COUCHBASE_COMMUNITY_MD5_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_COUCHBASE_COMMUNITY_MD5_CHECKSUM_UBUNTU_16_04")
+      checksum=$(os_is_amazon_linux && echo -n "$DEFAULT_COUCHBASE_COMMUNITY_MD5_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_COUCHBASE_COMMUNITY_MD5_CHECKSUM_UBUNTU_16_04")
       checksum_type="$MD5_CHECKSUM_TYPE"
     else
       version="$DEFAULT_COUCHBASE_ENTERPRISE_VERSION"
-      checksum=$(is_amazon_linux && echo -n "$DEFAULT_COUCHBASE_ENTERPRISE_SHA256_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_COUCHBASE_ENTERPRISE_SHA256_CHECKSUM_UBUNTU_16_04")
+      checksum=$(os_is_amazon_linux && echo -n "$DEFAULT_COUCHBASE_ENTERPRISE_SHA256_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_COUCHBASE_ENTERPRISE_SHA256_CHECKSUM_UBUNTU_16_04")
       checksum_type="$SHA256_CHECKSUM_TYPE"
     fi
   fi
 
   log_info "Starting Couchbase install..."
 
-  if is_ubuntu "16.04"; then
+  if os_is_ubuntu "16.04"; then
     install_couchbase_on_ubuntu "$edition" "$version" "$checksum" "$checksum_type"
-  elif is_amazon_linux "2"; then
+  elif os_is_amazon_linux "2"; then
     install_couchbase_on_amazon_linux "$edition" "$version" "$checksum" "$checksum_type"
   else
     log_error "This script only supports Ubuntu 16.04 and Amazon Linux 2."
@@ -238,7 +246,7 @@ function install {
   update_swapiness "$swapiness"
   disable_transparent_huge_pages
   install_couchbase_scripts "$DEFAULT_COUCHBASE_BIN_DIR"
-  install_bash_commons "$BASH_COMMONS_INSTALL_DIR"
+  install_couchbase_commons "$COUCHBASE_COMMONS_SRC_DIR" "$COUCHBASE_COMMONS_INSTALL_DIR"
 
   log_info "Couchbase installed successfully!"
 }

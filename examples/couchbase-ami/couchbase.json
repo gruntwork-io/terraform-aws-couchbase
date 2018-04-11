@@ -68,14 +68,24 @@
   "provisioners": [{
     "type": "shell",
     "pause_before": "5s",
-    "inline": ["yum install -y shadow-utils initscripts"],
+    "inline": [
+      "yum install -y shadow-utils initscripts git"
+    ],
     "only": ["amazon-linux-docker"]
+  },{
+    "type": "shell",
+    "pause_before": "5s",
+    "inline": [
+      "DEBIAN_FRONTEND=noninteractive apt-get update",
+      "apt-get install -y git"
+    ],
+    "only": ["ubuntu-docker"]
   },{
     "type": "shell",
     "pause_before": "30s",
     "inline": [
       "sudo yum update -y",
-      "sudo yum install -y jq"
+      "sudo yum install -y jq git"
     ],
     "only": ["amazon-linux-ami"]
   },{
@@ -83,13 +93,20 @@
     "pause_before": "30s",
     "inline": [
       "DEBIAN_FRONTEND=noninteractive sudo apt-get update",
-      "sudo apt-get install -y jq curl python-pip",
+      "sudo apt-get install -y jq curl git python-pip",
       "sudo -H pip install --upgrade awscli"
     ],
     "only": ["ubuntu-ami"]
   },{
     "type": "shell",
     "inline": ["mkdir -p /tmp/terraform-aws-couchbase"]
+  },{
+    "type": "shell",
+    "inline": [
+      "sudo mkdir -p /opt/gruntwork",
+      "git clone --branch v0.0.1 https://github.com/gruntwork-io/bash-commons.git /tmp/bash-commons",
+      "sudo cp -r /tmp/bash-commons/modules/bash-commons/src /opt/gruntwork/bash-commons"
+    ]
   },{
     "type": "file",
     "source": "{{user `root_folder_path`}}",

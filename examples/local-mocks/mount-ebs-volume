@@ -5,8 +5,8 @@
 
 set -e
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/logging.sh"
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/assertions.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/log.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/assert.sh"
 
 function run {
   local mount_point

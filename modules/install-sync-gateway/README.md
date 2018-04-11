@@ -18,6 +18,9 @@ There is a good chance it will work on other flavors of Debian, CentOS, and RHEL
 
 ## Quick start
 
+This module depends on [bash-commons](https://github.com/gruntwork-io/bash-commons), so you must install that project
+first as documented in its README.
+
 To install Sync Gateway, use `git` to clone this repository at a specific tag (see the [releases 
 page](https://github.com/gruntwork-io/terraform-aws-couchbase/releases) for all available tags) and run the 
 `install-sync-gateway` script:

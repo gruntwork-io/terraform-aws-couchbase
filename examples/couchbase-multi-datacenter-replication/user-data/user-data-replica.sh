@@ -6,7 +6,7 @@ set -e
 # From: https://alestic.com/2010/12/ec2-user-data-output/
 exec > >(tee /opt/couchbase/var/lib/couchbase/logs/mock-user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
-source "/opt/couchbase/bash-commons/couchbase-common.sh"
+source "/opt/couchbase-commons/couchbase-common.sh"
 
 function run_couchbase {
   local readonly cluster_asg_name="$1"
@@ -86,7 +86,7 @@ function run {
 
   local node_hostname
   local rally_point_hostname
-  read _ node_hostname _ rally_point_hostname < <(/opt/couchbase/bash-commons/couchbase-rally-point --cluster-name "$cluster_asg_name" --use-public-hostname "true")
+  read _ node_hostname _ rally_point_hostname < <(/opt/couchbase-commons/couchbase-rally-point --cluster-name "$cluster_asg_name" --use-public-hostname "true")
 
   if [[ "$node_hostname" == "$rally_point_hostname" ]]; then
     echo "This node is the rally point for this cluster"

@@ -3,15 +3,14 @@
 set -e
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly BASH_COMMONS_INSTALL_DIR="$SCRIPT_DIR/../bash-commons"
 
-source "$BASH_COMMONS_INSTALL_DIR/logging.sh"
-source "$BASH_COMMONS_INSTALL_DIR/assertions.sh"
-source "$BASH_COMMONS_INSTALL_DIR/aws.sh"
-source "$BASH_COMMONS_INSTALL_DIR/os.sh"
-source "$BASH_COMMONS_INSTALL_DIR/collections.sh"
-source "$BASH_COMMONS_INSTALL_DIR/strings.sh"
-source "$BASH_COMMONS_INSTALL_DIR/couchbase-common.sh"
+source "/opt/gruntwork/bash-commons/log.sh"
+source "/opt/gruntwork/bash-commons/assert.sh"
+source "/opt/gruntwork/bash-commons/aws-wrapper.sh"
+source "/opt/gruntwork/bash-commons/os.sh"
+source "/opt/gruntwork/bash-commons/string.sh"
+source "/opt/gruntwork/bash-commons/file.sh"
+source "/opt/couchbase-commons/couchbase-common.sh"
 
 readonly DEFAULT_DATA_DIR="$COUCHBASE_BASE_DIR/var/lib/couchbase/data"
 
@@ -404,7 +403,7 @@ function calculate_memory_settings_automatically {
   log_info "Calculating memory settings automatically..."
 
   local total_memory_mb
-  total_memory_mb=$(get_available_memory_mb)
+  total_memory_mb=$(os_get_available_memory_mb)
 
   # It took some digging through the Couchbase source code, but the maximum quota they will allow you to use is 80% of
   # the total available memory on the server. In practice, it seems like 65% is a safer target, so we should divide
@@ -470,12 +469,12 @@ function configure_couchbase_ports {
   #
   # https://developer.couchbase.com/documentation/server/current/install/install-ports.html
 
-  replace_or_append_in_file "^{rest_port.*}\.$" "{rest_port, $rest_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
-  replace_or_append_in_file "^{query_port.*}\.$" "{query_port, $query_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
-  replace_or_append_in_file "^{fts_http_port.*}\.$" "{fts_http_port, $fts_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
-  replace_or_append_in_file "^{memcached_port.*}\.$" "{memcached_port, $memcached_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
-  replace_or_append_in_file "^{xdcr_rest_port.*}\.$" "{xdcr_rest_port, $xdcr_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
-  replace_or_append_in_file "^port.*=.*$" "port = $capi_port" "$COUCHBASE_CAPI_CONFIG_PATH"
+  file_replace_or_append_text "^{rest_port.*}\.$" "{rest_port, $rest_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
+  file_replace_or_append_text "^{query_port.*}\.$" "{query_port, $query_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
+  file_replace_or_append_text "^{fts_http_port.*}\.$" "{fts_http_port, $fts_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
+  file_replace_or_append_text "^{memcached_port.*}\.$" "{memcached_port, $memcached_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
+  file_replace_or_append_text "^{xdcr_rest_port.*}\.$" "{xdcr_rest_port, $xdcr_port}." "$COUCHBASE_STATIC_CONFIG_PATH"
+  file_replace_or_append_text "^port.*=.*$" "port = $capi_port" "$COUCHBASE_CAPI_CONFIG_PATH"
 }
 
 function configure_couchbase_server {
@@ -524,7 +523,7 @@ function wait_for_all_nodes_to_be_active_in_cluster {
   local readonly rest_port="$7"
 
   local hostnames
-  hostnames=($(get_hostnames_in_asg "$asg_name" "$aws_region" "$use_public_ips"))
+  hostnames=($(aws_wrapper_get_hostnames_in_asg "$asg_name" "$aws_region" "$use_public_ips"))
   assert_not_empty_or_null "$hostnames" "Hostnames in ASG $asg_name in $aws_region"
 
   log_info "Waiting for all nodes in the cluster to be in active state..."
@@ -732,7 +731,7 @@ function run {
   log_info "Starting configuration of Couchbase server..."
 
   local readonly rally_point_args=(--cluster-name "$cluster_name" --node-hostname "$node_hostname" --use-public-hostname "$use_public_hostname" --rally-point-hostname "$rally_point_hostname")
-  read cluster_name node_hostname aws_region rally_point_hostname < <("$BASH_COMMONS_INSTALL_DIR/couchbase-rally-point" "${rally_point_args[@]}")
+  read cluster_name node_hostname aws_region rally_point_hostname < <("/opt/couchbase-commons/couchbase-rally-point" "${rally_point_args[@]}")
 
   assert_not_empty_or_null "$cluster_name" "cluster name"
   assert_not_empty_or_null "$node_hostname" "node hostname"

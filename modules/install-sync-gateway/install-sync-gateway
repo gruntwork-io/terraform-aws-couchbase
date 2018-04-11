@@ -2,13 +2,17 @@
 
 set -e
 
-
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly BASH_COMMONS_DIR="$SCRIPT_DIR/../bash-commons"
+readonly BASH_COMMONS_DIR="/opt/gruntwork/bash-commons"
 
-source "$BASH_COMMONS_DIR/logging.sh"
-source "$BASH_COMMONS_DIR/assertions.sh"
-source "$BASH_COMMONS_DIR/strings.sh"
+if [[ ! -d "$BASH_COMMONS_DIR" ]]; then
+  echo "ERROR: this script requires that bash-commons is installed in $BASH_COMMONS_DIR. See https://github.com/gruntwork-io/bash-commons for more info."
+  exit 1
+fi
+
+source "$BASH_COMMONS_DIR/log.sh"
+source "$BASH_COMMONS_DIR/assert.sh"
+source "$BASH_COMMONS_DIR/string.sh"
 source "$BASH_COMMONS_DIR/os.sh"
 
 readonly ENTERPRISE_EDITION="enterprise"
@@ -29,7 +33,9 @@ readonly MD5_CHECKSUM_TYPE="md5"
 readonly DEFAULT_SYNC_GATEWAY_DIR="/opt/couchbase-sync-gateway"
 readonly DEFAULT_SYNC_GATEWAY_BIN_DIR="$DEFAULT_SYNC_GATEWAY_DIR/bin"
 readonly DEFAULT_SYNC_GATEWAY_BINARY_PATH="$DEFAULT_SYNC_GATEWAY_BIN_DIR/sync_gateway"
-readonly BASH_COMMONS_INSTALL_DIR="$DEFAULT_SYNC_GATEWAY_DIR/bash-commons"
+
+readonly COUCHBASE_COMMONS_SRC_DIR="$SCRIPT_DIR/../couchbase-commons"
+readonly COUCHBASE_COMMONS_INSTALL_DIR="/opt/couchbase-commons"
 
 readonly DEFAULT_SYNC_GATEWAY_HOME="/home/sync_gateway"
 readonly DEFAULT_SYNC_GATEWAY_CONFIG_PATH="$DEFAULT_SYNC_GATEWAY_HOME/sync_gateway.json"
@@ -71,7 +77,7 @@ function install_sync_gateway_on_ubuntu {
   log_info "Downloading Sync Gateway from $url to $filepath"
   curl --location --silent --fail --show-error -O "$url"
 
-  validate_checksum "$filepath" "$checksum" "$checksum_type"
+  os_validate_checksum "$filepath" "$checksum" "$checksum_type"
 
   # Install Sync Gateway, but configure it to NOT start on boot. This allows the run-sync-gateway script to configure
   # Sync Gateway, including what ports to use, and THEN boot it up.
@@ -98,7 +104,7 @@ function install_sync_gateway_on_amazon_linux {
   log_info "Downloading Sync Gateway from $url to $filepath"
   curl --location --silent --fail --show-error -O "$url"
 
-  validate_checksum "$filepath" "$checksum" "$checksum_type"
+  os_validate_checksum "$filepath" "$checksum" "$checksum_type"
 
   # Install Sync Gateway, but configure it to NOT start on boot. This allows the run-sync-gateway script to configure
   # Sync Gateway, including what ports to use, and THEN boot it up.
@@ -171,8 +177,8 @@ function install_run_sync_gateway_script {
 }
 
 function install_bash_commons {
-  local readonly dest_dir="$1"
-  local readonly src_dir="$BASH_COMMONS_DIR"
+  local readonly src_dir="$1"
+  local readonly dest_dir="$2"
 
   log_info "Copying $src_dir to $dest_dir"
   sudo cp -r "$src_dir" "$dest_dir"
@@ -240,20 +246,20 @@ function install {
   if [[ -z "$version" ]]; then
     if [[ "$edition" == "$COMMUNITY_EDITION" ]]; then
       version="$DEFAULT_SYNC_GATEWAY_COMMUNITY_VERSION"
-      checksum=$(is_amazon_linux && echo -n "$DEFAULT_SYNC_GATEWAY_COMMUNITY_MD5_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_SYNC_GATEWAY_COMMUNITY_MD5_CHECKSUM_UBUNTU_16_04")
+      checksum=$(os_is_amazon_linux && echo -n "$DEFAULT_SYNC_GATEWAY_COMMUNITY_MD5_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_SYNC_GATEWAY_COMMUNITY_MD5_CHECKSUM_UBUNTU_16_04")
       checksum_type="$MD5_CHECKSUM_TYPE"
     else
       version="$DEFAULT_SYNC_GATEWAY_ENTERPRISE_VERSION"
-      checksum=$(is_amazon_linux && echo -n "$DEFAULT_SYNC_GATEWAY_ENTERPRISE_MD5_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_SYNC_GATEWAY_ENTERPRISE_MD5_CHECKSUM_UBUNTU_16_04")
+      checksum=$(os_is_amazon_linux && echo -n "$DEFAULT_SYNC_GATEWAY_ENTERPRISE_MD5_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_SYNC_GATEWAY_ENTERPRISE_MD5_CHECKSUM_UBUNTU_16_04")
       checksum_type="$MD5_CHECKSUM_TYPE"
     fi
   fi
 
   log_info "Starting Sync Gateway install..."
 
-  if is_ubuntu "16.04"; then
+  if os_is_ubuntu "16.04"; then
     install_sync_gateway_on_ubuntu "$edition" "$version" "$checksum" "$checksum_type"
-  elif is_amazon_linux "2"; then
+  elif os_is_amazon_linux "2"; then
     install_sync_gateway_on_amazon_linux "$edition" "$version" "$checksum" "$checksum_type"
   else
     log_error "This script only supports Ubuntu 16.04 and Amazon Linux 2."
@@ -262,7 +268,7 @@ function install {
 
   install_config "$config"
   install_run_sync_gateway_script "$DEFAULT_SYNC_GATEWAY_BIN_DIR"
-  install_bash_commons "$BASH_COMMONS_INSTALL_DIR"
+  install_bash_commons "$COUCHBASE_COMMONS_SRC_DIR" "$COUCHBASE_COMMONS_INSTALL_DIR"
 
   log_info "Sync Gateway installed successfully!"
 }
