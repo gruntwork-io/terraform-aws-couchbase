@@ -21,7 +21,7 @@ services:
       - ../../../modules/run-replication/run-replication:/opt/couchbase/bin/run-replication
 
       # Override scripts with mocks so we can run locally, without talking to AWS APIs
-      - ../../local-mocks/aws.sh:/opt/grunwork/bash-commons/aws.sh
+      - ../../local-mocks/aws.sh:/opt/gruntwork/bash-commons/aws.sh
       - ../../local-mocks/mount-ebs-volume:/opt/couchbase-commons/mount-ebs-volume
 
       # Mount the mock scripts we use to run Couchbase during Docker container boot
