@@ -11,7 +11,7 @@ source "/opt/gruntwork/bash-commons/os.sh"
 source "/opt/gruntwork/bash-commons/file.sh"
 source "/opt/gruntwork/bash-commons/string.sh"
 source "/opt/gruntwork/bash-commons/array.sh"
-source "/opt/gruntwork/couchbase-commons/couchbase-common.sh"
+source "/opt/couchbase-commons/couchbase-common.sh"
 
 readonly SYNC_GATEWAY_BASE_DIR="/opt/couchbase-sync-gateway"
 readonly SYNC_GATEWAY_BIN_DIR="$SYNC_GATEWAY_BASE_DIR/bin"
