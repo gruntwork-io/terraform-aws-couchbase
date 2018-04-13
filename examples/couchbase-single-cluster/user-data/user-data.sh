@@ -7,6 +7,7 @@ set -e
 exec > >(tee /opt/couchbase/var/lib/couchbase/logs/mock-user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
 source "/opt/couchbase-commons/couchbase-common.sh"
+source "/opt/couchbase-commons/mount-volume"
 
 function mount_volumes {
   local readonly data_volume_device_name="$1"
@@ -16,16 +17,8 @@ function mount_volumes {
   local readonly volume_owner="$5"
 
   echo "Mounting EBS Volumes for data and index directories"
-
-  /opt/couchbase-commons/mount-ebs-volume \
-    --device-name "$data_volume_device_name" \
-    --mount-point "$data_volume_mount_point" \
-    --owner "$volume_owner"
-
-  /opt/couchbase-commons/mount-ebs-volume \
-    --device-name "$index_volume_device_name" \
-    --mount-point "$index_volume_mount_point" \
-    --owner "$volume_owner"
+  mount_volume "$data_volume_device_name" "$data_volume_mount_point" "$volume_owner"
+  mount_volume "$index_volume_device_name" "$index_volume_mount_point" "$volume_owner"
 }
 
 function run_couchbase {

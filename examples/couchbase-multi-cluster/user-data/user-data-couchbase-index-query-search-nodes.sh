@@ -6,17 +6,15 @@ set -e
 # From: https://alestic.com/2010/12/ec2-user-data-output/
 exec > >(tee /opt/couchbase/var/lib/couchbase/logs/mock-user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
+source "/opt/couchbase-commons/mount-volume"
+
 function mount_volumes {
   local readonly index_volume_device_name="$1"
   local readonly index_volume_mount_point="$2"
   local readonly volume_owner="$3"
 
   echo "Mounting EBS Volume for the index directory"
-
-  /opt/couchbase-commons/mount-ebs-volume \
-    --device-name "$index_volume_device_name" \
-    --mount-point "$index_volume_mount_point" \
-    --owner "$volume_owner"
+  mount_volume "$index_volume_device_name" "$index_volume_mount_point" "$volume_owner"
 }
 
 function run_couchbase {
