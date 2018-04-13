@@ -1,10 +1,8 @@
 # Couchbase Server Install Script
 
-This folder contains a script for installing Couchbase server and its dependencies. Use this script along with the
-[run-couchbase-server script](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/run-couchbase-server) 
-to create a Couchbase [Amazon Machine Image 
-(AMI)](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) that can be deployed in 
-[AWS](https://aws.amazon.com/) across an Auto Scaling Group using the [couchbase-cluster 
+This folder contains a script for installing Couchbase server and its dependencies. Use this script to create a
+Couchbase [Amazon Machine Image (AMI)](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) that can be
+deployed in [AWS](https://aws.amazon.com/) across an Auto Scaling Group using the [couchbase-cluster
 module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster).
 
 This script has been tested on the following operating systems:
@@ -17,6 +15,9 @@ There is a good chance it will work on other flavors of Debian, CentOS, and RHEL
 
 
 ## Quick start
+
+This module depends on [bash-commons](https://github.com/gruntwork-io/bash-commons), so you must install that project
+first as documented in its README.
 
 To install Couchbase, use `git` to clone this repository at a specific tag (see the [releases 
 page](https://github.com/gruntwork-io/terraform-aws-couchbase/releases) for all available tags) and run the 

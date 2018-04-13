@@ -5,42 +5,43 @@
 
 set -e
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/strings.sh"
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/assertions.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/string.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/assert.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/array.sh"
 
-function get_instance_private_ip {
+function aws_get_instance_private_ip {
   hostname -i
 }
 
-function get_instance_public_ip {
+function aws_get_instance_public_ip {
   hostname -i
 }
 
-function get_instance_private_hostname {
+function aws_get_instance_private_hostname {
   hostname -i
 }
 
-function get_instance_public_hostname {
+function aws_get_instance_public_hostname {
   hostname -i
 }
 
-function get_instance_region {
+function aws_get_instance_region {
   # This variable is set in docker-compose.yml
   echo "$mock_aws_region"
 }
 
-function get_ec2_instance_availability_zone {
+function aws_get_ec2_instance_availability_zone {
   # This variable is set in docker-compose.yml
   echo "$mock_availability_zone"
 }
 
 # Return the container ID of the current Docker container. Per https://stackoverflow.com/a/25729598/2308858
-function get_instance_id {
+function aws_get_instance_id {
   cat /proc/1/cgroup | grep 'docker/' | tail -1 | sed 's/^.*\///'
 }
 
 # This mock returns a hard-coded, simplified version of the aws ec2 describe-tags call.
-function get_instance_tags {
+function aws_get_instance_tags {
   local readonly instance_id="$1"
   local readonly instance_region="$2"
 
@@ -66,7 +67,7 @@ EOF
 }
 
 # This mock returns a hard-coded, simplified version of the aws autoscaling describe-auto-scaling-groups call.
-function describe_asg {
+function aws_describe_asg {
   local readonly asg_name="$1"
   local readonly aws_region="$2"
 
@@ -121,7 +122,7 @@ function get_container_basename {
 }
 
 # This mock returns a hard-coded, simplified version of the aws ec2 describe-instances call.
-function describe_instances_in_asg {
+function aws_describe_instances_in_asg {
   local readonly asg_name="$1"
   local readonly aws_region="$2"
 
@@ -139,7 +140,7 @@ function describe_instances_in_asg {
     instances_json+=("$(mock_instance_json "$asg_name" "$container_base_name-$i" "2018-03-17T17:38:3$i.000Z" "i-0ace993b1700c004$i")")
   done
 
-  local readonly instances=$(join "," "${instances_json[@]}")
+  local readonly instances=$(array_join "," "${instances_json[@]}")
 
   cat << EOF
 {

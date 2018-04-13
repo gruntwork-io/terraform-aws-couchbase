@@ -3,15 +3,15 @@
 set -e
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly BASH_COMMONS_INSTALL_DIR="$SCRIPT_DIR/../bash-commons"
 
-source "$BASH_COMMONS_INSTALL_DIR/logging.sh"
-source "$BASH_COMMONS_INSTALL_DIR/assertions.sh"
-source "$BASH_COMMONS_INSTALL_DIR/aws.sh"
-source "$BASH_COMMONS_INSTALL_DIR/os.sh"
-source "$BASH_COMMONS_INSTALL_DIR/collections.sh"
-source "$BASH_COMMONS_INSTALL_DIR/strings.sh"
-source "$BASH_COMMONS_INSTALL_DIR/couchbase-common.sh"
+source "/opt/gruntwork/bash-commons/log.sh"
+source "/opt/gruntwork/bash-commons/assert.sh"
+source "/opt/gruntwork/bash-commons/aws-wrapper.sh"
+source "/opt/gruntwork/bash-commons/os.sh"
+source "/opt/gruntwork/bash-commons/file.sh"
+source "/opt/gruntwork/bash-commons/string.sh"
+source "/opt/gruntwork/bash-commons/array.sh"
+source "/opt/couchbase-commons/couchbase-common.sh"
 
 readonly SYNC_GATEWAY_BASE_DIR="/opt/couchbase-sync-gateway"
 readonly SYNC_GATEWAY_BIN_DIR="$SYNC_GATEWAY_BASE_DIR/bin"
@@ -66,7 +66,7 @@ function get_hostnames {
     hostnames_with_ports+=("$hostname$port_param")
   done
 
-  join "," "${hostnames_with_ports[@]}"
+  array_join "," "${hostnames_with_ports[@]}"
 }
 
 function update_config_path {
@@ -74,7 +74,7 @@ function update_config_path {
   local readonly systemd_unit_path="$2"
 
   log_info "Setting Sync Gateway systemd unit $systemd_unit_path config path to $config_path"
-  replace_or_append_in_file "^Environment=\"CONFIG=.*\"$" "Environment=\"CONFIG=$config_path\"" "$systemd_unit_path"
+  file_replace_or_append_text "^Environment=\"CONFIG=.*\"$" "Environment=\"CONFIG=$config_path\"" "$systemd_unit_path"
 }
 
 function update_config_path_in_initd {
@@ -82,7 +82,7 @@ function update_config_path_in_initd {
   local readonly initd_unit_path="$2"
 
   log_info "Setting Sync Gateway init.d unit $initd_unit_path config path to $config_path"
-  replace_or_append_in_file "^CONFIG=.*$" "CONFIG=$config_path" "$initd_unit_path"
+  file_replace_or_append_text "^CONFIG=.*$" "CONFIG=$config_path" "$initd_unit_path"
 }
 
 function auto_fill_config {
@@ -113,7 +113,7 @@ function auto_fill_config_asg {
   fi
 
   local aws_region
-  aws_region=$(get_instance_region)
+  aws_region=$(aws_get_instance_region)
   assert_not_empty_or_null "$aws_region" "AWS region"
 
   local param
@@ -127,11 +127,11 @@ function auto_fill_param {
   local readonly param="$2"
 
   # The param is of the format KEY=VALUE.
-  local readonly placeholder_name="$(strip_suffix "$param" "=*")"
-  local readonly placeholder_value="$(strip_prefix "$param" "*=")"
+  local readonly placeholder_name="$(string_strip_suffix "$param" "=*")"
+  local readonly placeholder_value="$(string_strip_prefix "$param" "*=")"
 
   log_info "Replacing the '$placeholder_name' placeholder in $config with $placeholder_value"
-  replace_text_in_file "$placeholder_name" "$placeholder_value" "$config"
+  file_replace_text "$placeholder_name" "$placeholder_value" "$config"
 }
 
 function auto_fill_asg_param {
@@ -141,17 +141,17 @@ function auto_fill_asg_param {
   local readonly aws_region="$4"
 
   # The param is of the format KEY=ASG_NAME:PORT (note that :PORT is optional).
-  local readonly placeholder_name="$(strip_suffix "$param" "=*")"
-  local asg_name="$(strip_prefix "$param" "*=")"
+  local readonly placeholder_name="$(string_strip_suffix "$param" "=*")"
+  local asg_name="$(string_strip_prefix "$param" "*=")"
   local port=""
 
   if string_contains "$asg_name" ":"; then
-    port="$(strip_prefix "$asg_name" "*:")"
-    asg_name="$(strip_suffix "$asg_name" ":*")"
+    port="$(string_strip_prefix "$asg_name" "*:")"
+    asg_name="$(string_strip_suffix "$asg_name" ":*")"
   fi
 
   local instances
-  instances=$(wait_for_instances_in_asg "$asg_name" "$aws_region")
+  instances=$(aws_wrapper_wait_for_instances_in_asg "$asg_name" "$aws_region")
   assert_not_empty_or_null "$instances" "Get info about Instances in ASG $asg_name in $aws_region"
 
   local hostnames
@@ -162,7 +162,7 @@ function auto_fill_asg_param {
   local readonly placeholder_value="http://$hostnames"
 
   log_info "Replacing the '$placeholder_name' placeholder in $config with $placeholder_value"
-  replace_text_in_file "$placeholder_name" "$placeholder_value" "$config"
+  file_replace_text "$placeholder_name" "$placeholder_value" "$config"
 }
 
 function start_sync_gateway {

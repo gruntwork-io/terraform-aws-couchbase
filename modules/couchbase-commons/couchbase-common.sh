@@ -2,10 +2,10 @@
 
 set -e
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/logging.sh"
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/strings.sh"
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/assertions.sh"
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/aws.sh"
+source "/opt/gruntwork/bash-commons/log.sh"
+source "/opt/gruntwork/bash-commons/string.sh"
+source "/opt/gruntwork/bash-commons/assert.sh"
+source "/opt/gruntwork/bash-commons/aws-wrapper.sh"
 
 readonly COUCHBASE_BASE_DIR="/opt/couchbase"
 readonly COUCHBASE_BIN_DIR="$COUCHBASE_BASE_DIR/bin"
@@ -113,7 +113,7 @@ function node_is_added_to_cluster {
   local cluster_status
   cluster_status=$(get_cluster_status "$cluster_url" "$cluster_username" "$cluster_password")
 
-  multiline_string_contains "$cluster_status" "$node_url healthy"
+  string_multiline_contains "$cluster_status" "$node_url healthy"
 }
 
 # Returns true if the node with the given hostname has already been added (via the server-add command) to the Couchbase
@@ -127,7 +127,7 @@ function node_is_active_in_cluster {
   local cluster_status
   cluster_status=$(get_cluster_status "$cluster_url" "$cluster_username" "$cluster_password")
 
-  multiline_string_contains "$cluster_status" "$node_url healthy active"
+  string_multiline_contains "$cluster_status" "$node_url healthy active"
 }
 
 # Returns true (0) if the cluster is balanced and false (1) otherwise
@@ -185,7 +185,7 @@ function has_bucket {
   #  ramUsed: 27230952
   #
   # So all we do is grep for a line that exactly matches the name of the bucket we're looking for
-  multiline_string_contains "$out" "^$bucket_name$"
+  string_multiline_contains "$out" "^$bucket_name$"
 }
 
 # Wait until the specified cluster is initialized and not rebalancing
@@ -268,7 +268,7 @@ function get_rally_point_hostname {
   log_info "Looking up rally point for ASG $asg_name in $aws_region"
 
   local instances
-  instances=$(wait_for_instances_in_asg "$asg_name" "$aws_region")
+  instances=$(aws_wrapper_wait_for_instances_in_asg "$asg_name" "$aws_region")
   assert_not_empty_or_null "$instances" "Fetch list of Instances in ASG $asg_name"
 
   local rally_point

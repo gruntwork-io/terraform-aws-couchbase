@@ -3,15 +3,13 @@
 set -e
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly BASH_COMMONS_INSTALL_DIR="$SCRIPT_DIR/../bash-commons"
 
-source "$BASH_COMMONS_INSTALL_DIR/logging.sh"
-source "$BASH_COMMONS_INSTALL_DIR/assertions.sh"
-source "$BASH_COMMONS_INSTALL_DIR/aws.sh"
-source "$BASH_COMMONS_INSTALL_DIR/os.sh"
-source "$BASH_COMMONS_INSTALL_DIR/collections.sh"
-source "$BASH_COMMONS_INSTALL_DIR/strings.sh"
-source "$BASH_COMMONS_INSTALL_DIR/couchbase-common.sh"
+source "/opt/gruntwork/bash-commons/log.sh"
+source "/opt/gruntwork/bash-commons/assert.sh"
+source "/opt/gruntwork/bash-commons/aws-wrapper.sh"
+source "/opt/gruntwork/bash-commons/os.sh"
+source "/opt/gruntwork/bash-commons/string.sh"
+source "$SCRIPT_DIR/couchbase-common.sh"
 
 function print_usage {
   echo
@@ -98,19 +96,19 @@ function run {
   assert_is_installed "jq"
 
   if [[ -z "$cluster_name" ]]; then
-    cluster_name=$(get_asg_name)
+    cluster_name=$(aws_wrapper_get_asg_name)
     assert_not_empty_or_null "$cluster_name" "ASG name"
     log_info "Set cluster name to the name of the current ASG, $cluster_name"
   fi
 
   if [[ -z "$node_hostname" ]]; then
-    node_hostname=$(get_hostname "$use_public_hostname")
+    node_hostname=$(aws_wrapper_get_hostname "$use_public_hostname")
     assert_not_empty_or_null "$node_hostname" "Hostname"
     log_info "Set node hostname to $node_hostname"
   fi
 
   if [[ -z "$aws_region" ]]; then
-    aws_region=$(get_instance_region)
+    aws_region=$(aws_get_instance_region)
     assert_not_empty_or_null "$aws_region" "AWS region"
     log_info "Set the AWS region to $aws_region"
   fi

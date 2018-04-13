@@ -16,20 +16,17 @@ services:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
 
       # Mount these scripts so we get hot reload
-      - ../../../modules/bash-commons:/opt/couchbase/bash-commons
-      - ../../../modules/bash-commons:/opt/couchbase-sync-gateway/bash-commons
+      - ../../../modules/couchbase-commons:/opt/couchbase-commons
       - ../../../modules/run-couchbase-server/run-couchbase-server:/opt/couchbase/bin/run-couchbase-server
       - ../../../modules/run-replication/run-replication:/opt/couchbase/bin/run-replication
 
-      # Override scripts in bash-commons with mocks so we can run locally, without talking to AWS APIs
-      - ../../local-mocks/bash-commons/aws-primitives.sh:/opt/couchbase/bash-commons/aws-primitives.sh
-      - ../../local-mocks/bash-commons/mount-ebs-volume:/opt/couchbase/bash-commons/mount-ebs-volume
-      - ../../local-mocks/bash-commons/aws-primitives.sh:/opt/couchbase-sync-gateway/bash-commons/aws-primitives.sh
-      - ../../local-mocks/bash-commons/mount-ebs-volume:/opt/couchbase-sync-gateway/bash-commons/mount-ebs-volume
+      # Override scripts with mocks so we can run locally, without talking to AWS APIs
+      - ../../local-mocks/aws.sh:/opt/gruntwork/bash-commons/aws.sh
+      - ../../local-mocks/mount-ebs-volume:/opt/couchbase-commons/mount-ebs-volume
 
       # Mount the mock scripts we use to run Couchbase during Docker container boot
       - ../user-data:/user-data
-      - ../../local-mocks/entrypoint:/entrypoint
+      - ../../local-mocks/entrypoint.sh:/entrypoint/entrypoint.sh
 
     environment: &default_env_east
       # The User Data script that will be executed on boot by entrypoint.sh

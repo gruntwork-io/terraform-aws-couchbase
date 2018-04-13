@@ -3,15 +3,13 @@
 set -e
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly BASH_COMMONS_INSTALL_DIR="$SCRIPT_DIR/../bash-commons"
 
-source "$BASH_COMMONS_INSTALL_DIR/logging.sh"
-source "$BASH_COMMONS_INSTALL_DIR/assertions.sh"
-source "$BASH_COMMONS_INSTALL_DIR/aws.sh"
-source "$BASH_COMMONS_INSTALL_DIR/os.sh"
-source "$BASH_COMMONS_INSTALL_DIR/collections.sh"
-source "$BASH_COMMONS_INSTALL_DIR/strings.sh"
-source "$BASH_COMMONS_INSTALL_DIR/couchbase-common.sh"
+source "/opt/gruntwork/bash-commons/log.sh"
+source "/opt/gruntwork/bash-commons/assert.sh"
+source "/opt/gruntwork/bash-commons/aws-wrapper.sh"
+source "/opt/gruntwork/bash-commons/os.sh"
+source "/opt/gruntwork/bash-commons/string.sh"
+source "/opt/couchbase-commons/couchbase-common.sh"
 
 readonly DEFAULT_ENCRYPTION_TYPE="none"
 readonly DEFAULT_REPLICATION_MODE="capi"
@@ -126,7 +124,7 @@ function replication_cluster_reference_exists {
   #          uri: /pools/default/remoteClusters/west
   #
 
-  multiline_string_contains "$out" "^cluster name: $dest_cluster_name$"
+  string_multiline_contains "$out" "^cluster name: $dest_cluster_name$"
 }
 
 function setup_replication_for_bucket {
@@ -197,7 +195,7 @@ function replication_for_bucket_exists {
   #   target: /remoteClusters/4d05078e4ff1004538f4ede372d74145/buckets/east-abc
   #
 
-  multiline_string_contains "$out" "^\s*source: $src_bucket_name$" && multiline_string_contains "$out" "^\s*target: .*/$dest_bucket_name$"
+  string_multiline_contains "$out" "^\s*source: $src_bucket_name$" && string_multiline_contains "$out" "^\s*target: .*/$dest_bucket_name$"
 }
 
 

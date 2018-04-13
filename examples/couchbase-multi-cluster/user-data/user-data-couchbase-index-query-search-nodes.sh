@@ -13,7 +13,7 @@ function mount_volumes {
 
   echo "Mounting EBS Volume for the index directory"
 
-  /opt/couchbase/bash-commons/mount-ebs-volume \
+  /opt/couchbase-commons/mount-ebs-volume \
     --device-name "$index_volume_device_name" \
     --mount-point "$index_volume_mount_point" \
     --owner "$volume_owner"
