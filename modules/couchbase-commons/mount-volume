@@ -3,6 +3,8 @@
 
 set -e
 
+source "/opt/gruntwork/bash-commons/log.sh"
+
 # This method is used to configure a new EBS volume. It formats the specified device name using ext4 and mounts it at
 # the given mount point, with the given OS user as owner.
 function mount_volume {
