@@ -7,7 +7,7 @@ set -e
 exec > >(tee /opt/couchbase/var/lib/couchbase/logs/mock-user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
 source "/opt/couchbase-commons/couchbase-common.sh"
-source "/opt/couchbase-commons/mount-volume"
+source "/opt/couchbase-commons/mount-volume.sh"
 
 function mount_volumes {
   local readonly data_volume_device_name="$1"

@@ -22,7 +22,7 @@ services:
 
       # Override scripts with mocks so we can run locally, without talking to AWS APIs
       - ../../local-mocks/aws.sh:/opt/gruntwork/bash-commons/aws.sh
-      - ../../local-mocks/mount-volume:/opt/couchbase-commons/mount-volume
+      - ../../local-mocks/mount-volume.sh:/opt/couchbase-commons/mount-volume.sh
 
       # Mount the scripts we use to run Couchbase during Docker container boot
       - ../user-data:/user-data
