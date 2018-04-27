@@ -247,8 +247,8 @@ function add_server_to_cluster {
   server_add_args+=("--server-add-password=$cluster_password")
   server_add_args+=("--services=$node_services")
 
-  local readonly server_add_max_retries=5
-  local readonly sleep_between_server_add_retries_sec=15
+  local readonly server_add_max_retries=120
+  local readonly sleep_between_server_add_retries_sec=5
 
   for (( i=0; i<"$server_add_max_retries"; i++ )); do
     if node_is_added_to_cluster "$cluster_url" "$cluster_username" "$cluster_password" "$node_url"; then
@@ -293,8 +293,8 @@ function rebalance_cluster {
   rebalance_args+=("--password=$cluster_password")
   rebalance_args+=("--no-progress-bar")
 
-  local readonly rebalance_max_retries=15
-  local readonly sleep_between_rebalance_retries_sec=15
+  local readonly rebalance_max_retries=20
+  local readonly sleep_between_rebalance_retries_sec=30
 
   for (( i=0; i<"$rebalance_max_retries"; i++ )); do
     if node_is_active_in_cluster "$cluster_url" "$cluster_username" "$cluster_password" "$node_url"; then
