@@ -2,54 +2,41 @@ package test
 
 import (
 	"testing"
-	"github.com/gruntwork-io/terratest"
 	"fmt"
-	"github.com/gruntwork-io/terratest/packer"
-	"log"
 	"time"
 	"net/http"
 	"net/url"
 	"io/ioutil"
 	"strings"
 	"os"
+	"github.com/gruntwork-io/terratest/modules/logger"
+	"github.com/gruntwork-io/terratest/modules/packer"
+	"github.com/gruntwork-io/terratest/modules/aws"
 )
 
 // The username and password we use in all the examples, mocks, and tests
 const usernameForTest = "admin"
 const passwordForTest = "password"
 
-func createBaseRandomResourceCollection(t * testing.T) *terratest.RandomResourceCollection {
-	resourceCollectionOptions := terratest.NewRandomResourceCollectionOptions()
+const savedAwsRegion = "AwsRegion"
+const savedUniqueId = "UniqueId"
 
-	// Exclude regions where we don't have ACM certs for testing
-	resourceCollectionOptions.ForbiddenRegions = []string{
+func getRandomAwsRegion(t *testing.T) string {
+	// Exclude regions where Gruntwork's accounts don't have ACM certs for testing
+	excludedRegions := []string{
 		"ap-northeast-2",
 		"ap-southeast-1",
 		"eu-central-1",
+		"us-west-2",
 	}
 
-	randomResourceCollection, err := terratest.CreateRandomResourceCollection(resourceCollectionOptions)
-	if err != nil {
-		t.Fatalf("Failed to create Random Resource Collection: %s", err.Error())
-	}
-
-	return randomResourceCollection
+	return aws.GetRandomRegion(t, nil, excludedRegions)
 }
 
-func createBaseTerratestOptions(t *testing.T, testName string, folder string, resourceCollection *terratest.RandomResourceCollection) *terratest.TerratestOptions {
-	terratestOptions := terratest.NewTerratestOptions()
-
-	terratestOptions.UniqueId = resourceCollection.UniqueId
-	terratestOptions.TemplatePath = folder
-	terratestOptions.TestName = testName
-
-	return terratestOptions
-}
-
-func buildCouchbaseWithPacker(logger *log.Logger, builderName string, baseAmiName string, awsRegion string, folderPath string, edition string) (string, error) {
+func buildCouchbaseWithPacker(t *testing.T, builderName string, baseAmiName string, awsRegion string, folderPath string, edition string) string {
 	templatePath := fmt.Sprintf("%s/couchbase.json", folderPath)
 
-	options := packer.PackerOptions{
+	options := &packer.Options{
 		Template: templatePath,
 		Only: builderName,
 		Vars: map[string]string{
@@ -66,22 +53,15 @@ func buildCouchbaseWithPacker(logger *log.Logger, builderName string, baseAmiNam
 	// issues leads to very strange issues that sometimes cause the Packer build to fail:
 	// https://github.com/hashicorp/packer/issues/6103
 	if os.Getenv("CIRCLECI") != "" {
-		logger.Printf("Overriding root folder path for Packer build to /home/circleci/project/")
+		logger.Logf(t, "Overriding root folder path for Packer build to /home/circleci/project/")
 		options.Vars["root_folder_path"] = "/home/circleci/project/"
 	}
 
-	return packer.BuildAmi(options, logger)
+	return packer.BuildAmi(t, options)
 }
 
-func deploy(t *testing.T, terratestOptions *terratest.TerratestOptions) {
-	_, err := terratest.Apply(terratestOptions)
-	if err != nil {
-		t.Fatalf("Failed to apply templates: %s", err.Error())
-	}
-}
-
-func HttpPostForm(t *testing.T, postUrl string, postParams url.Values, logger *log.Logger) (int, string, error) {
-	logger.Printf("Making an HTTP POST call to URL %s with body %v", postUrl, postParams)
+func HttpPostForm(t *testing.T, postUrl string, postParams url.Values) (int, string, error) {
+	logger.Logf(t, "Making an HTTP POST call to URL %s with body %v", postUrl, postParams)
 
 	client := http.Client{
 		// By default, Go does not impose a timeout, so an HTTP connection attempt can hang for a LONG time.

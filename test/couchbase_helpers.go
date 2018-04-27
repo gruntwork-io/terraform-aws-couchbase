@@ -2,31 +2,27 @@ package test
 
 import (
 	"fmt"
-	"github.com/gruntwork-io/terratest/http"
 	"time"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"log"
 	"strings"
-	"github.com/gruntwork-io/terratest/util"
 	"encoding/json"
-	"github.com/gruntwork-io/terratest"
-	"github.com/gruntwork-io/terratest/test-structure"
-	"github.com/gruntwork-io/terratest/aws"
+	"github.com/gruntwork-io/terratest/modules/http-helper"
+	"github.com/gruntwork-io/terratest/modules/aws"
+	"github.com/gruntwork-io/terratest/modules/logger"
+	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/gruntwork-io/terratest/modules/retry"
+	"github.com/gruntwork-io/terratest/modules/terraform"
 )
 
-func checkCouchbaseConsoleIsRunning(t *testing.T, clusterUrl string, logger *log.Logger) {
+func checkCouchbaseConsoleIsRunning(t *testing.T, clusterUrl string) {
 	maxRetries := 180
 	sleepBetweenRetries := 5 * time.Second
 
 	webConsoleUrl := fmt.Sprintf("%s/ui/index.html", clusterUrl)
-	err := http_helper.HttpGetWithRetryWithCustomValidation(webConsoleUrl, maxRetries, sleepBetweenRetries, logger, func(status int, body string) bool {
+	http_helper.HttpGetWithRetryWithCustomValidation(t, webConsoleUrl, maxRetries, sleepBetweenRetries, func(status int, body string) bool {
 		return status == 200 && strings.Contains(body, "Couchbase Console")
 	})
-
-	if err != nil {
-		t.Fatalf("Failed to connect to Couchbase at %s: %v", webConsoleUrl, err)
-	}
 }
 
 // A partial representation of the JSON structure returned by the server node API:
@@ -41,48 +37,44 @@ type ServerNode struct {
 	ClusterMembership string `json:"clusterMembership"`
 }
 
-func checkCouchbaseClusterIsInitialized(t *testing.T, clusterUrl string, expectedNodes int, logger *log.Logger) {
+func checkCouchbaseClusterIsInitialized(t *testing.T, clusterUrl string, expectedNodes int) {
 	maxRetries := 300
 	sleepBetweenRetries := 5 * time.Second
 	serverNodeUrl := fmt.Sprintf("%s/pools/nodes", clusterUrl)
 
-	err := http_helper.HttpGetWithRetryWithCustomValidation(serverNodeUrl, maxRetries, sleepBetweenRetries, logger, func(status int, body string) bool {
+	http_helper.HttpGetWithRetryWithCustomValidation(t, serverNodeUrl, maxRetries, sleepBetweenRetries, func(status int, body string) bool {
 		if status != 200 {
-			logger.Printf("Expected a 200 OK from %s but got %d", serverNodeUrl, status)
+			logger.Logf(t, "Expected a 200 OK from %s but got %d", serverNodeUrl, status)
 			return false
 		}
 
 		var serverNodesReponse ServerNodeResponse
 		if err := json.Unmarshal([]byte(body), &serverNodesReponse); err != nil {
-			logger.Printf("Failed to parse response from %s due to error %v. Response body:\n%s", serverNodeUrl, err, body)
+			logger.Logf(t, "Failed to parse response from %s due to error %v. Response body:\n%s", serverNodeUrl, err, body)
 			return false
 		}
 
 		if len(serverNodesReponse.Nodes) != expectedNodes {
-			logger.Printf("Expected to find %d nodes in the cluster, but %s returned %d. Response body:\n%s", expectedNodes, serverNodeUrl, len(serverNodesReponse.Nodes), body)
+			logger.Logf(t, "Expected to find %d nodes in the cluster, but %s returned %d. Response body:\n%s", expectedNodes, serverNodeUrl, len(serverNodesReponse.Nodes), body)
 			return false
 		}
 
 		for _, serverNode := range serverNodesReponse.Nodes {
-			logger.Printf("Checking state of node %s", serverNode.Hostname)
+			logger.Logf(t, "Checking state of node %s", serverNode.Hostname)
 
 			if serverNode.Status != "healthy" {
-				logger.Printf("Expected all nodes to be in 'healthy' state, but node %s is in state '%s'", serverNode.Hostname, serverNode.Status)
+				logger.Logf(t, "Expected all nodes to be in 'healthy' state, but node %s is in state '%s'", serverNode.Hostname, serverNode.Status)
 				return false
 			}
 
 			if serverNode.ClusterMembership != "active" {
-				logger.Printf("Expected all nodes to be 'active' in the cluster, but node %s has cluster membership state '%s'", serverNode.Hostname, serverNode.ClusterMembership)
+				logger.Logf(t, "Expected all nodes to be 'active' in the cluster, but node %s has cluster membership state '%s'", serverNode.Hostname, serverNode.ClusterMembership)
 				return false
 			}
 		}
 
 		return true
 	})
-
-	if err != nil {
-		t.Fatalf("Failed to connect to Couchbase at %s: %v", serverNodeUrl, err)
-	}
 }
 
 type TestData struct {
@@ -106,8 +98,8 @@ type CouchbaseMeta struct {
 	Flags int `json:"flags"`
 }
 
-func checkCouchbaseDataNodesWorking(t *testing.T, dataNodesUrl string, logger *log.Logger) {
-	uniqueId := util.UniqueId()
+func checkCouchbaseDataNodesWorking(t *testing.T, dataNodesUrl string) {
+	uniqueId := random.UniqueId()
 	testBucketName := fmt.Sprintf("test%s", uniqueId)
 	testKey := fmt.Sprintf("test-key-%s", uniqueId)
 	testValue := TestData{
@@ -115,23 +107,23 @@ func checkCouchbaseDataNodesWorking(t *testing.T, dataNodesUrl string, logger *l
 		Bar: 42,
 	}
 
-	createBucket(t, dataNodesUrl, testBucketName, logger)
-	writeToBucket(t, dataNodesUrl, testBucketName, testKey, testValue, logger)
+	createBucket(t, dataNodesUrl, testBucketName)
+	writeToBucket(t, dataNodesUrl, testBucketName, testKey, testValue)
 
-	actualValue := readFromBucket(t, dataNodesUrl, testBucketName, testKey, logger)
+	actualValue := readFromBucket(t, dataNodesUrl, testBucketName, testKey)
 	assert.Equal(t, testValue, actualValue)
 }
 
-func checkReplicationIsWorking(t *testing.T, dataNodesUrlPrimary string, dataNodesUrlReplica string, bucketPrimary string, bucketReplica string, logger *log.Logger) {
-	uniqueId := util.UniqueId()
+func checkReplicationIsWorking(t *testing.T, dataNodesUrlPrimary string, dataNodesUrlReplica string, bucketPrimary string, bucketReplica string) {
+	uniqueId := random.UniqueId()
 	testKey := fmt.Sprintf("test-key-%s", uniqueId)
 	testValue := TestData{
 		Foo: fmt.Sprintf("test-value-%s", uniqueId),
 		Bar: 42,
 	}
 
-	writeToBucket(t, dataNodesUrlPrimary, bucketPrimary, testKey, testValue, logger)
-	actualValue := readFromBucket(t, dataNodesUrlReplica, bucketReplica, testKey, logger)
+	writeToBucket(t, dataNodesUrlPrimary, bucketPrimary, testKey, testValue)
+	actualValue := readFromBucket(t, dataNodesUrlReplica, bucketReplica, testKey)
 
 	assert.Equal(t, testValue, actualValue)
 }
@@ -140,12 +132,12 @@ func checkReplicationIsWorking(t *testing.T, dataNodesUrlPrimary string, dataNod
 // Dockerized cluster, and the SDK does not work with Dockerized clusters, as it tries to use IPs that are only
 // accessible from inside a Docker container. Therefore, we just use the HTTP API directly. For more info, search for
 // "Connect via SDK" on this page: https://developer.couchbase.com/documentation/server/current/install/docker-deploy-multi-node-cluster.html
-func createBucket(t *testing.T, clusterUrl string, bucketName string, logger *log.Logger) {
+func createBucket(t *testing.T, clusterUrl string, bucketName string) {
 	description := fmt.Sprintf("Creating bucket %s", bucketName)
 	maxRetries := 120
 	sleepBetweenRetries := 5 * time.Second
 
-	logger.Printf(description)
+	logger.Log(t, description)
 
 	// https://developer.couchbase.com/documentation/server/3.x/admin/REST/rest-bucket-create.html
 	createBucketUrl := fmt.Sprintf("%s/pools/default/buckets", clusterUrl)
@@ -157,18 +149,18 @@ func createBucket(t *testing.T, clusterUrl string, bucketName string, logger *lo
 		"ramQuotaMB": {"100"},
 	}
 
-	_, err := util.DoWithRetry(description, maxRetries, sleepBetweenRetries, logger, func() (string, error) {
-		statusCode, body, err := HttpPostForm(t, createBucketUrl, postParams, logger)
+	retry.DoWithRetry(t, description, maxRetries, sleepBetweenRetries, func() (string, error) {
+		statusCode, body, err := HttpPostForm(t, createBucketUrl, postParams)
 		if err != nil {
 			return "", err
 		}
 
 		if statusCode == 202 {
-			logger.Printf("Successfully created bucket %s", bucketName)
+			logger.Logf(t, "Successfully created bucket %s", bucketName)
 			return "", nil
 		}
 
-		logger.Printf("Expected status code 202, but got %d", statusCode)
+		logger.Logf(t, "Expected status code 202, but got %d", statusCode)
 
 		if strings.Contains(body, "Cannot create buckets during rebalance") {
 			return "", fmt.Errorf("Cluster is currently rebalancing. Cannot create bucket right now.")
@@ -177,13 +169,9 @@ func createBucket(t *testing.T, clusterUrl string, bucketName string, logger *lo
 		}
 	})
 
-	if err != nil {
-		t.Fatalf("Failed to create bucket %s: %v", bucketName, err)
-	}
-
 	// It takes a little bit of time for Couchbase to create the bucket. If you don't wait and immediately try to open
 	// the bucket, you get a confusing authentication error.
-	logger.Printf("Waiting a few seconds for the bucket to be created")
+	logger.Logf(t, "Waiting a few seconds for the bucket to be created")
 	time.Sleep(15 * time.Second)
 }
 
@@ -191,8 +179,8 @@ func createBucket(t *testing.T, clusterUrl string, bucketName string, logger *lo
 // Dockerized cluster, and the SDK does not work with Dockerized clusters, as it tries to use IPs that are only
 // accessible from inside a Docker container. Therefore, we just use the HTTP API directly. For more info, search for
 // "Connect via SDK" on this page: https://developer.couchbase.com/documentation/server/current/install/docker-deploy-multi-node-cluster.html
-func writeToBucket(t *testing.T, clusterUrl string, bucketName string, key string, value TestData, logger *log.Logger) {
-	logger.Printf("Writing (%s, %s) to bucket %s", key, value, bucketName)
+func writeToBucket(t *testing.T, clusterUrl string, bucketName string, key string, value TestData) {
+	logger.Logf(t, "Writing (%s, %s) to bucket %s", key, value, bucketName)
 
 	jsonBytes, err := json.Marshal(value)
 	if err != nil {
@@ -212,8 +200,8 @@ func writeToBucket(t *testing.T, clusterUrl string, bucketName string, key strin
 
 	// Buckets take a while to replicate, and until they do, you get vague errors such as "Unexpected server error",
 	// so retry a few times.
-	out, err := util.DoWithRetry(description, retries, timeBetweenRetries, logger, func() (string, error) {
-		statusCode, body, err := HttpPostForm(t, bucketUrl, postParams, logger)
+	out := retry.DoWithRetry(t, description, retries, timeBetweenRetries, func() (string, error) {
+		statusCode, body, err := HttpPostForm(t, bucketUrl, postParams)
 		if err != nil {
 			return "", err
 		}
@@ -225,17 +213,13 @@ func writeToBucket(t *testing.T, clusterUrl string, bucketName string, key strin
 		return fmt.Sprintf("Successfully wrote (%s, %s) to bucket %s", key, value, bucketName), nil
 	})
 
-	if err != nil {
-		t.Fatalf("Failed to write to (%s, %s) to bucket %s: %v", key, value, bucketName, err)
-	}
-
-	logger.Printf(out)
+	logger.Logf(t, out)
 }
 // Read from a Couchbase bucket. Note that we do NOT use any Couchbase SDK here because this test runs against a
 // Dockerized cluster, and the SDK does not work with Dockerized clusters, as it tries to use IPs that are only
 // accessible from inside a Docker container. Therefore, we just use the HTTP API directly. For more info, search for
 // "Connect via SDK" on this page: https://developer.couchbase.com/documentation/server/current/install/docker-deploy-multi-node-cluster.html
-func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key string, logger *log.Logger) TestData {
+func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key string) TestData {
 	description := fmt.Sprintf("Reading key %s from bucket %s", key, bucketName)
 	maxRetries := 180
 	timeBetweenRetries := 5 * time.Second
@@ -244,9 +228,9 @@ func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key stri
 	// by using the Couchbase web console and inspecting the requests that it is sending.
 	bucketUrl := fmt.Sprintf("%s/pools/default/buckets/%s/docs/%s", clusterUrl, bucketName, key)
 
-	logger.Printf(description)
-	body, err := util.DoWithRetry(description, maxRetries, timeBetweenRetries, logger, func() (string, error) {
-		statusCode, body, err := http_helper.HttpGet(bucketUrl, logger)
+	logger.Logf(t, description)
+	body := retry.DoWithRetry(t, description, maxRetries, timeBetweenRetries, func() (string, error) {
+		statusCode, body, err := http_helper.HttpGetE(t, bucketUrl)
 
 		if err != nil {
 			return "", err
@@ -259,67 +243,32 @@ func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key stri
 		return body, nil
 	})
 
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	var value CouchbaseTestDataResponse
 	if err := json.Unmarshal([]byte(body), &value); err != nil {
 		t.Fatalf("Failed to parse body '%s' for key %s in bucket %s: %v", body, key, bucketName, err)
 	}
 
-	logger.Printf("Got back %v for key %s from bucket %s", value, key, bucketName)
+	logger.Logf(t, "Got back %v for key %s from bucket %s", value, key, bucketName)
 
 	return value.Json
 }
 
-func checkSyncGatewayWorking(t *testing.T, syncGatewayUrl string, logger *log.Logger) {
+func checkSyncGatewayWorking(t *testing.T, syncGatewayUrl string) {
 	// It can take a LONG time for the Couchbase cluster to rebalance itself, so we may have to wait a while
 	maxRetries := 200
 	sleepBetweenRetries := 5 * time.Second
 
-	err := http_helper.HttpGetWithRetryWithCustomValidation(syncGatewayUrl, maxRetries, sleepBetweenRetries, logger, func(status int, body string) bool {
+	http_helper.HttpGetWithRetryWithCustomValidation(t, syncGatewayUrl, maxRetries, sleepBetweenRetries, func(status int, body string) bool {
 		return status == 200 && strings.Contains(body, `"state":"Online"`)
 	})
-
-	if err != nil {
-		t.Fatalf("Unable to connect to Sync Gateway at %s: %v", syncGatewayUrl, err)
-	}
 }
 
-func buildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, edition string, resourceCollection *terratest.RandomResourceCollection, logger *log.Logger) string {
-	amiId, err := buildCouchbaseWithPacker(logger, fmt.Sprintf("%s-ami", osName), fmt.Sprintf("couchbase-%s", resourceCollection.UniqueId), resourceCollection.AwsRegion, couchbaseAmiDir, edition)
-	if err != nil {
-		t.Fatalf("Failed to build Couchbase AMI: %v", err)
-	}
-
-	return amiId
+func buildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, edition string, awsRegion string, uniqueId string) string {
+	return buildCouchbaseWithPacker(t, fmt.Sprintf("%s-ami", osName), fmt.Sprintf("couchbase-%s", uniqueId), awsRegion, couchbaseAmiDir, edition)
 }
 
-func testStageBuildCouchbaseAmi(t *testing.T, osName string, edition string, couchbaseAmiDir string, couchbaseTerraformDir string, logger *log.Logger) {
-	resourceCollection := createBaseRandomResourceCollection(t)
-
-	amiId := buildCouchbaseAmi(t, osName, couchbaseAmiDir, edition, resourceCollection, logger)
-
-	test_structure.SaveAmiId(t, couchbaseTerraformDir, amiId, logger)
-	test_structure.SaveRandomResourceCollection(t, couchbaseTerraformDir, resourceCollection, logger)
-}
-
-func testStageTeardown(t *testing.T, couchbaseTerraformDir string, logger *log.Logger) {
-	resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseTerraformDir, logger)
-	terratestOptions := test_structure.LoadTerratestOptions(t, couchbaseTerraformDir, logger)
-
-	if _, err := terratest.Destroy(terratestOptions, resourceCollection); err != nil {
-		t.Fatalf("Failed to run destory: %v", err)
-	}
-
-	test_structure.CleanupAmiId(t, couchbaseTerraformDir, logger)
-	test_structure.CleanupTerratestOptions(t, couchbaseTerraformDir, logger)
-	test_structure.CleanupRandomResourceCollection(t, couchbaseTerraformDir, logger)
-}
-
-func getClusterName(t *testing.T, clusterVarName string, terratestOptions *terratest.TerratestOptions) string {
-	clusterNameVal, ok := terratestOptions.Vars[clusterVarName]
+func getClusterName(t *testing.T, clusterVarName string, terraformOptions *terraform.Options) string {
+	clusterNameVal, ok := terraformOptions.Vars[clusterVarName]
 	if !ok {
 		t.Fatalf("Could not find cluster name in TerratestOptions Var %s", clusterVarName)
 	}
@@ -327,45 +276,31 @@ func getClusterName(t *testing.T, clusterVarName string, terratestOptions *terra
 	return fmt.Sprintf("%v", clusterNameVal)
 }
 
-func testStageLogs(t *testing.T, couchbaseTerraformDir string, clusterVarName string, resourceCollection *terratest.RandomResourceCollection, logger *log.Logger) {
-	terratestOptions := test_structure.LoadTerratestOptions(t, couchbaseTerraformDir, logger)
+func testStageLogs(t *testing.T, terraformOptions *terraform.Options, clusterVarName string, awsRegion string) {
+	clusterName := getClusterName(t, clusterVarName, terraformOptions)
 
-	clusterName := getClusterName(t, clusterVarName, terratestOptions)
+	logs := aws.GetSyslogForInstancesInAsg(t, clusterName, awsRegion)
 
-	logs, err := aws.GetSyslogForInstancesInAsg(clusterName, resourceCollection.AwsRegion, logger)
-	if err != nil {
-		t.Fatalf("Failed to fetch syslog: %v", err)
-	}
-
-	logger.Printf("\n\n============== Logs for cluster %s ==============", clusterName)
+	logger.Logf(t, "\n\n============== Logs for cluster %s ==============", clusterName)
 	for instanceId, syslog := range logs {
-		logger.Printf("Most recent 64 KB of logs for instance %s in %s:\n\n%s\n\n", instanceId, resourceCollection.AwsRegion, syslog)
+		logger.Logf(t, "Most recent 64 KB of logs for instance %s in %s:\n\n%s\n\n", instanceId, awsRegion, syslog)
 	}
 }
 
 // Format a unique name for the Couchbase cluster. Note that Couchbase DB names must be lower case.
-func formatCouchbaseClusterName(baseName string, resourceCollection *terratest.RandomResourceCollection) string {
-	return strings.ToLower(fmt.Sprintf("%s-%s", baseName, resourceCollection.UniqueId))
+func formatCouchbaseClusterName(baseName string, uniqueId string) string {
+	return strings.ToLower(fmt.Sprintf("%s-%s", baseName, uniqueId))
 }
 
-func validateSingleClusterWorks(t *testing.T, terraformFolder string, couchbaseClusterVarName string, loadBalancerProtocol string, logger *log.Logger) {
-	terratestOptions := test_structure.LoadTerratestOptions(t, terraformFolder, logger)
-	clusterName := getClusterName(t, couchbaseClusterVarName, terratestOptions)
+func validateSingleClusterWorks(t *testing.T, terraformOptions *terraform.Options, couchbaseClusterVarName string, loadBalancerProtocol string) {
+	clusterName := getClusterName(t, couchbaseClusterVarName, terraformOptions)
 
-	couchbaseServerUrl, err := terratest.OutputRequired(terratestOptions, "couchbase_web_console_url")
-	if err != nil {
-		t.Fatal(err)
-	}
+	couchbaseServerUrl := terraform.OutputRequired(t, terraformOptions, "couchbase_web_console_url")
 	couchbaseServerUrl = fmt.Sprintf("%s://%s:%s@%s", loadBalancerProtocol, usernameForTest, passwordForTest, couchbaseServerUrl)
+	syncGatewayUrl := fmt.Sprintf("%s://%s/%s", loadBalancerProtocol, terraform.OutputRequired(t, terraformOptions, "sync_gateway_url"), clusterName)
 
-	syncGatewayUrl, err := terratest.OutputRequired(terratestOptions, "sync_gateway_url")
-	if err != nil {
-		t.Fatal(err)
-	}
-	syncGatewayUrl = fmt.Sprintf("%s://%s/%s", loadBalancerProtocol, syncGatewayUrl, clusterName)
-
-	checkCouchbaseConsoleIsRunning(t, couchbaseServerUrl, logger)
-	checkCouchbaseClusterIsInitialized(t, couchbaseServerUrl, 3, logger)
-	checkCouchbaseDataNodesWorking(t, couchbaseServerUrl, logger)
-	checkSyncGatewayWorking(t, syncGatewayUrl, logger)
+	checkCouchbaseConsoleIsRunning(t, couchbaseServerUrl)
+	checkCouchbaseClusterIsInitialized(t, couchbaseServerUrl, 3)
+	checkCouchbaseDataNodesWorking(t, couchbaseServerUrl)
+	checkSyncGatewayWorking(t, syncGatewayUrl)
 }

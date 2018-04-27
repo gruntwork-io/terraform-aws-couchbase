@@ -2,11 +2,11 @@ package test
 
 import (
 	"testing"
-	"github.com/gruntwork-io/terratest/test-structure"
-	"github.com/gruntwork-io/terratest"
 	"path/filepath"
 	"fmt"
-	terralog "github.com/gruntwork-io/terratest/log"
+	"github.com/gruntwork-io/terratest/modules/test-structure"
+	"github.com/gruntwork-io/terratest/modules/terraform"
+	"github.com/gruntwork-io/terratest/modules/random"
 )
 
 const dataNodeClusterVarName = "couchbase_data_node_cluster_name"
@@ -24,73 +24,69 @@ func TestIntegrationCouchbaseEnterpriseMultiClusterAmazonLinux(t *testing.T) {
 }
 
 func testCouchbaseMultiCluster(t *testing.T, testName string, osName string, edition string) {
-	logger := terralog.NewLogger(testName)
-
-	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName, logger)
+	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName)
 	couchbaseAmiDir := filepath.Join(examplesFolder, "couchbase-ami")
 	couchbaseMultiClusterDir := filepath.Join(examplesFolder, "couchbase-multi-cluster")
 
-	test_structure.RunTestStage("setup_ami", logger, func() {
-		testStageBuildCouchbaseAmi(t, osName, edition, couchbaseAmiDir, couchbaseMultiClusterDir, logger)
+	test_structure.RunTestStage(t, "setup_ami", func() {
+		awsRegion := getRandomAwsRegion(t)
+		uniqueId := random.UniqueId()
+
+		amiId := buildCouchbaseAmi(t, osName, couchbaseAmiDir, edition, awsRegion, uniqueId)
+
+		test_structure.SaveAmiId(t, couchbaseMultiClusterDir, amiId)
+		test_structure.SaveString(t, couchbaseMultiClusterDir, savedAwsRegion, awsRegion)
+		test_structure.SaveString(t, couchbaseMultiClusterDir, savedUniqueId, uniqueId)
 	})
 
-	test_structure.RunTestStage("setup_deploy", logger, func() {
-		resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseMultiClusterDir, logger)
-		amiId := test_structure.LoadAmiId(t, couchbaseMultiClusterDir, logger)
+	test_structure.RunTestStage(t, "setup_deploy", func() {
+		amiId := test_structure.LoadAmiId(t, couchbaseMultiClusterDir)
+		awsRegion := test_structure.LoadString(t, couchbaseMultiClusterDir, savedAwsRegion)
+		uniqueId := test_structure.LoadString(t, couchbaseMultiClusterDir, savedUniqueId)
 
-		terratestOptions := createBaseTerratestOptions(t, testName, couchbaseMultiClusterDir, resourceCollection)
-		terratestOptions.Vars = map[string]interface{} {
-			"aws_region":                   resourceCollection.AwsRegion,
-			"ami_id":                       amiId,
-			dataNodeClusterVarName:         formatCouchbaseClusterName("data", resourceCollection),
-			indexQuerySearchClusterVarName: formatCouchbaseClusterName("search", resourceCollection),
-			syncGatewayClusterVarName: 		formatCouchbaseClusterName("sync", resourceCollection),
+		terraformOptions := &terraform.Options{
+			TerraformDir: couchbaseMultiClusterDir,
+			Vars: map[string]interface{} {
+				"aws_region":                   awsRegion,
+				"ami_id":                       amiId,
+				dataNodeClusterVarName:         formatCouchbaseClusterName("data", uniqueId),
+				indexQuerySearchClusterVarName: formatCouchbaseClusterName("search", uniqueId),
+				syncGatewayClusterVarName: 		formatCouchbaseClusterName("sync", uniqueId),
+			},
 		}
 
-		deploy(t, terratestOptions)
+		terraform.Apply(t, terraformOptions)
 
-		test_structure.SaveTerratestOptions(t, couchbaseMultiClusterDir, terratestOptions, logger)
+		test_structure.SaveTerraformOptions(t, couchbaseMultiClusterDir, terraformOptions)
 	})
 
-	defer test_structure.RunTestStage("teardown", logger, func() {
-		testStageTeardown(t, couchbaseMultiClusterDir, logger)
+	defer test_structure.RunTestStage(t, "teardown", func() {
+		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseMultiClusterDir)
+		terraform.Destroy(t, terraformOptions)
 	})
 
-	defer test_structure.RunTestStage("logs", logger, func() {
-		resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseMultiClusterDir, logger)
+	defer test_structure.RunTestStage(t, "logs", func() {
+		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseMultiClusterDir)
+		awsRegion := test_structure.LoadString(t, couchbaseMultiClusterDir, savedAwsRegion)
 
-		testStageLogs(t, couchbaseMultiClusterDir, dataNodeClusterVarName, resourceCollection, logger)
-		testStageLogs(t, couchbaseMultiClusterDir, indexQuerySearchClusterVarName, resourceCollection, logger)
-		testStageLogs(t, couchbaseMultiClusterDir, syncGatewayClusterVarName, resourceCollection, logger)
+		testStageLogs(t, terraformOptions, dataNodeClusterVarName, awsRegion)
+		testStageLogs(t, terraformOptions, indexQuerySearchClusterVarName, awsRegion)
+		testStageLogs(t, terraformOptions, syncGatewayClusterVarName, awsRegion)
 	})
 
-	test_structure.RunTestStage("validation", logger, func() {
-		terratestOptions := test_structure.LoadTerratestOptions(t, couchbaseMultiClusterDir, logger)
-		clusterName := getClusterName(t, dataNodeClusterVarName, terratestOptions)
+	test_structure.RunTestStage(t, "validation", func() {
+		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseMultiClusterDir)
+		clusterName := getClusterName(t, dataNodeClusterVarName, terraformOptions)
 
-		couchbaseDataNodesUrl, err := terratest.OutputRequired(terratestOptions, "couchbase_data_nodes_web_console_url")
-		if err != nil {
-			t.Fatal(err)
-		}
-		couchbaseDataNodesUrl = fmt.Sprintf("http://%s:%s@%s", usernameForTest, passwordForTest, couchbaseDataNodesUrl)
+		couchbaseDataNodesUrl := fmt.Sprintf("http://%s:%s@%s", usernameForTest, passwordForTest, terraform.OutputRequired(t, terraformOptions, "couchbase_data_nodes_web_console_url"))
+		couchbaseIndexSearchQueryNodesUrl := fmt.Sprintf("http://%s:%s@%s", usernameForTest, passwordForTest, terraform.OutputRequired(t, terraformOptions, "couchbase_index_query_search_nodes_web_console_url"))
+		syncGatewayUrl := fmt.Sprintf("http://%s/%s", terraform.OutputRequired(t, terraformOptions, "sync_gateway_url"), clusterName)
 
-		couchbaseIndexSearchQueryNodesUrl, err := terratest.OutputRequired(terratestOptions, "couchbase_index_query_search_nodes_web_console_url")
-		if err != nil {
-			t.Fatal(err)
-		}
-		couchbaseIndexSearchQueryNodesUrl = fmt.Sprintf("http://%s:%s@%s", usernameForTest, passwordForTest, couchbaseIndexSearchQueryNodesUrl)
-
-		syncGatewayUrl, err := terratest.OutputRequired(terratestOptions, "sync_gateway_url")
-		if err != nil {
-			t.Fatal(err)
-		}
-		syncGatewayUrl = fmt.Sprintf("http://%s/%s", syncGatewayUrl, clusterName)
-
-		checkCouchbaseConsoleIsRunning(t, couchbaseDataNodesUrl, logger)
-		checkCouchbaseClusterIsInitialized(t, couchbaseDataNodesUrl, 5, logger)
-		checkCouchbaseDataNodesWorking(t, couchbaseDataNodesUrl, logger)
-		checkCouchbaseConsoleIsRunning(t, couchbaseIndexSearchQueryNodesUrl, logger)
-		checkSyncGatewayWorking(t, syncGatewayUrl, logger)
+		checkCouchbaseConsoleIsRunning(t, couchbaseDataNodesUrl)
+		checkCouchbaseClusterIsInitialized(t, couchbaseDataNodesUrl, 5)
+		checkCouchbaseDataNodesWorking(t, couchbaseDataNodesUrl)
+		checkCouchbaseConsoleIsRunning(t, couchbaseIndexSearchQueryNodesUrl)
+		checkSyncGatewayWorking(t, syncGatewayUrl)
 	})
 }
 
