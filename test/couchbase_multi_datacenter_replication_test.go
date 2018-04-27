@@ -49,20 +49,32 @@ func testCouchbaseMultiDataCenterReplication(t *testing.T, osName string, editio
 		waitForPackerBuilds.Add(2)
 
 		var amiIdPrimary string
+		var amiErrPrimary error
+
 		var amiIdReplica string
+		var amiErrReplica error
 
 		go func() {
 			defer waitForPackerBuilds.Done()
 
-			amiIdPrimary = buildCouchbaseAmi(t, osName, couchbaseAmiDir, edition, awsRegionPrimary, uniqueIdPrimary)
+			amiIdPrimary, amiErrPrimary = buildCouchbaseAmiE(t, osName, couchbaseAmiDir, edition, awsRegionPrimary, uniqueIdPrimary)
 		}()
 
 		go func() {
 			defer waitForPackerBuilds.Done()
-			amiIdReplica = buildCouchbaseAmi(t, osName, couchbaseAmiDir, edition, awsRegionReplica, uniqueIdReplica)
+			amiIdReplica, amiErrReplica = buildCouchbaseAmiE(t, osName, couchbaseAmiDir, edition, awsRegionReplica, uniqueIdReplica)
 		}()
 
 		waitForPackerBuilds.Wait()
+
+		// We cannot call t.Fatal in the goroutines above, as t.Fatal only works in the original goroutine for the
+		// test. Therefore, we instead check for errors explicitly here.
+		if amiErrPrimary != nil {
+			t.Fatal(amiErrPrimary)
+		}
+		if amiErrReplica != nil {
+			t.Fatal(amiErrReplica)
+		}
 
 		test_structure.SaveString(t, couchbaseMultiClusterDir, savedAmiIdPrimary, amiIdPrimary)
 		test_structure.SaveString(t, couchbaseMultiClusterDir, savedAmiIdReplica, amiIdReplica)

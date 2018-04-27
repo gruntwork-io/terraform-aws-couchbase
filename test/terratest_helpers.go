@@ -34,6 +34,14 @@ func getRandomAwsRegion(t *testing.T) string {
 }
 
 func buildCouchbaseWithPacker(t *testing.T, builderName string, baseAmiName string, awsRegion string, folderPath string, edition string) string {
+	amiId, err := buildCouchbaseWithPackerE(t, builderName, baseAmiName, awsRegion, folderPath, edition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return amiId
+}
+
+func buildCouchbaseWithPackerE(t *testing.T, builderName string, baseAmiName string, awsRegion string, folderPath string, edition string) (string, error) {
 	templatePath := fmt.Sprintf("%s/couchbase.json", folderPath)
 
 	options := &packer.Options{
@@ -57,8 +65,9 @@ func buildCouchbaseWithPacker(t *testing.T, builderName string, baseAmiName stri
 		options.Vars["root_folder_path"] = "/home/circleci/project/"
 	}
 
-	return packer.BuildAmi(t, options)
+	return packer.BuildAmiE(t, options)
 }
+
 
 func HttpPostForm(t *testing.T, postUrl string, postParams url.Values) (int, string, error) {
 	logger.Logf(t, "Making an HTTP POST call to URL %s with body %v", postUrl, postParams)

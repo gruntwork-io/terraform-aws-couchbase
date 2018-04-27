@@ -264,7 +264,15 @@ func checkSyncGatewayWorking(t *testing.T, syncGatewayUrl string) {
 }
 
 func buildCouchbaseAmi(t *testing.T, osName string, couchbaseAmiDir string, edition string, awsRegion string, uniqueId string) string {
-	return buildCouchbaseWithPacker(t, fmt.Sprintf("%s-ami", osName), fmt.Sprintf("couchbase-%s", uniqueId), awsRegion, couchbaseAmiDir, edition)
+	amiId, err := buildCouchbaseAmiE(t, osName, couchbaseAmiDir, edition, awsRegion, uniqueId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return amiId
+}
+
+func buildCouchbaseAmiE(t *testing.T, osName string, couchbaseAmiDir string, edition string, awsRegion string, uniqueId string) (string, error) {
+	return buildCouchbaseWithPackerE(t, fmt.Sprintf("%s-ami", osName), fmt.Sprintf("couchbase-%s", uniqueId), awsRegion, couchbaseAmiDir, edition)
 }
 
 func getClusterName(t *testing.T, clusterVarName string, terraformOptions *terraform.Options) string {
