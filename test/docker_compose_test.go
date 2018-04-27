@@ -4,13 +4,12 @@ import (
 	"testing"
 	"fmt"
 	"path/filepath"
-	"github.com/gruntwork-io/terratest/test-structure"
-	terralog "github.com/gruntwork-io/terratest/log"
-	"log"
-	"github.com/gruntwork-io/terratest/shell"
 	"strconv"
-	"github.com/gruntwork-io/terratest/util"
 	"os"
+	"github.com/gruntwork-io/terratest/modules/test-structure"
+	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/gruntwork-io/terratest/modules/logger"
+	"github.com/gruntwork-io/terratest/modules/docker"
 )
 
 func TestUnitCouchbaseInDocker(t *testing.T) {
@@ -35,7 +34,7 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 		t.Run(testCase.testName, func(t *testing.T) {
 			t.Parallel()
 			skipInCircleCi(t)
-			testCouchbaseInDockerBasic(t, testCase.testName, testCase.examplesFolderName, testCase.osName, testCase.edition, testCase.clusterSize, testCase.couchbaseWebConsolePort, testCase.syncGatewayWebConsolePort)
+			testCouchbaseInDockerBasic(t, testCase.examplesFolderName, testCase.osName, testCase.edition, testCase.clusterSize, testCase.couchbaseWebConsolePort, testCase.syncGatewayWebConsolePort)
 		})
 	}
 
@@ -57,7 +56,7 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 		t.Run(testCase.testName, func(t *testing.T) {
 			t.Parallel()
 			skipInCircleCi(t)
-			testCouchbaseInDockerReplication(t, testCase.testName, testCase.examplesFolderName, testCase.osName, testCase.edition, testCase.clusterSize, testCase.couchbaseWebConsolePortEast, testCase.couchbaseWebConsolePortWest)
+			testCouchbaseInDockerReplication(t, testCase.examplesFolderName, testCase.osName, testCase.edition, testCase.clusterSize, testCase.couchbaseWebConsolePortEast, testCase.couchbaseWebConsolePortWest)
 		})
 	}
 }
@@ -68,10 +67,8 @@ func skipInCircleCi(t *testing.T) {
 	}
 }
 
-func testCouchbaseInDockerBasic(t *testing.T, testName string, examplesFolderName string, osName string, edition string, clusterSize int, couchbaseWebConsolePort int, syncGatewayWebConsolePort int) {
-	logger := terralog.NewLogger(testName)
-
-	uniqueId := util.UniqueId()
+func testCouchbaseInDockerBasic(t *testing.T, examplesFolderName string, osName string, edition string, clusterSize int, couchbaseWebConsolePort int, syncGatewayWebConsolePort int) {
+	uniqueId := random.UniqueId()
 	envVars := map[string]string{
 		"OS_NAME": osName,
 		"CONTAINER_BASE_NAME": fmt.Sprintf("couchbase-%s", uniqueId),
@@ -79,40 +76,38 @@ func testCouchbaseInDockerBasic(t *testing.T, testName string, examplesFolderNam
 		"SYNC_GATEWAY_PORT": strconv.Itoa(syncGatewayWebConsolePort),
 	}
 
-	tmpExamplesDir := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName, logger)
+	tmpExamplesDir := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", t.Name())
 	couchbaseAmiDir := filepath.Join(tmpExamplesDir, "couchbase-ami")
 	couchbaseSingleClusterDockerDir := filepath.Join(tmpExamplesDir, examplesFolderName, "local-test")
 
-	test_structure.RunTestStage("setup_image", logger, func() {
-		buildCouchbaseWithPacker(logger, fmt.Sprintf("%s-docker", osName), "couchbase","us-east-1", couchbaseAmiDir, edition)
+	test_structure.RunTestStage(t, "setup_image", func() {
+		buildCouchbaseWithPacker(t, fmt.Sprintf("%s-docker", osName), "couchbase","us-east-1", couchbaseAmiDir, edition)
 	})
 
-	test_structure.RunTestStage("setup_docker", logger, func() {
-		startCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, testName, envVars, logger)
+	defer test_structure.RunTestStage(t, "teardown", func() {
+		getDockerComposeLogs(t, couchbaseSingleClusterDockerDir, envVars)
+		stopCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, envVars)
 	})
 
-	defer test_structure.RunTestStage("teardown", logger, func() {
-		getDockerComposeLogs(t, couchbaseSingleClusterDockerDir, testName, envVars, logger)
-		stopCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, testName, envVars, logger)
+	test_structure.RunTestStage(t, "setup_docker", func() {
+		startCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, envVars)
 	})
 
-	test_structure.RunTestStage("validation", logger, func() {
+	test_structure.RunTestStage(t, "validation", func() {
 		consoleUrl := fmt.Sprintf("http://localhost:%d", couchbaseWebConsolePort)
-		checkCouchbaseConsoleIsRunning(t, consoleUrl, logger)
+		checkCouchbaseConsoleIsRunning(t, consoleUrl)
 
 		dataNodesUrl := fmt.Sprintf("http://%s:%s@localhost:%d", usernameForTest, passwordForTest, couchbaseWebConsolePort)
-		checkCouchbaseClusterIsInitialized(t, dataNodesUrl, clusterSize, logger)
-		checkCouchbaseDataNodesWorking(t, dataNodesUrl, logger)
+		checkCouchbaseClusterIsInitialized(t, dataNodesUrl, clusterSize)
+		checkCouchbaseDataNodesWorking(t, dataNodesUrl)
 
 		syncGatewayUrl := fmt.Sprintf("http://localhost:%d/mock-couchbase-asg", syncGatewayWebConsolePort)
-		checkSyncGatewayWorking(t, syncGatewayUrl, logger)
+		checkSyncGatewayWorking(t, syncGatewayUrl)
 	})
 }
 
-func testCouchbaseInDockerReplication(t *testing.T, testName string, examplesFolderName string, osName string, edition string, clusterSize int, couchbaseWebConsolePortEast int, couchbaseWebConsolePortWest int) {
-	logger := terralog.NewLogger(testName)
-
-	uniqueId := util.UniqueId()
+func testCouchbaseInDockerReplication(t *testing.T, examplesFolderName string, osName string, edition string, clusterSize int, couchbaseWebConsolePortEast int, couchbaseWebConsolePortWest int) {
+	uniqueId := random.UniqueId()
 	envVars := map[string]string{
 		"OS_NAME": osName,
 		"CONTAINER_BASE_NAME": fmt.Sprintf("couchbase-%s", uniqueId),
@@ -120,65 +115,50 @@ func testCouchbaseInDockerReplication(t *testing.T, testName string, examplesFol
 		"WEB_CONSOLE_WEST_PORT": strconv.Itoa(couchbaseWebConsolePortWest),
 	}
 
-	tmpExamplesDir := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName, logger)
+	tmpExamplesDir := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", t.Name())
 	couchbaseAmiDir := filepath.Join(tmpExamplesDir, "couchbase-ami")
 	couchbaseSingleClusterDockerDir := filepath.Join(tmpExamplesDir, examplesFolderName, "local-test")
 
-	test_structure.RunTestStage("setup_image", logger, func() {
-		buildCouchbaseWithPacker(logger, fmt.Sprintf("%s-docker", osName), "couchbase","us-east-1", couchbaseAmiDir, edition)
+	test_structure.RunTestStage(t, "setup_image", func() {
+		buildCouchbaseWithPacker(t, fmt.Sprintf("%s-docker", osName), "couchbase","us-east-1", couchbaseAmiDir, edition)
 	})
 
-	test_structure.RunTestStage("setup_docker", logger, func() {
-		startCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, testName, envVars, logger)
+	test_structure.RunTestStage(t, "setup_docker", func() {
+		startCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, envVars)
 	})
 
-	defer test_structure.RunTestStage("teardown", logger, func() {
-		getDockerComposeLogs(t, couchbaseSingleClusterDockerDir, testName, envVars, logger)
-		stopCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, testName, envVars, logger)
+	defer test_structure.RunTestStage(t, "teardown", func() {
+		getDockerComposeLogs(t, couchbaseSingleClusterDockerDir, envVars)
+		stopCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, envVars)
 	})
 
-	test_structure.RunTestStage("validation", logger, func() {
+	test_structure.RunTestStage(t, "validation", func() {
 		consoleUrlEast := fmt.Sprintf("http://localhost:%d", couchbaseWebConsolePortEast)
-		checkCouchbaseConsoleIsRunning(t, consoleUrlEast, logger)
+		checkCouchbaseConsoleIsRunning(t, consoleUrlEast)
 
 		consoleUrlWest := fmt.Sprintf("http://localhost:%d", couchbaseWebConsolePortWest)
-		checkCouchbaseConsoleIsRunning(t, consoleUrlWest, logger)
+		checkCouchbaseConsoleIsRunning(t, consoleUrlWest)
 
 		dataNodesUrlEast := fmt.Sprintf("http://%s:%s@localhost:%d", usernameForTest, passwordForTest, couchbaseWebConsolePortEast)
-		checkCouchbaseClusterIsInitialized(t, dataNodesUrlEast, clusterSize, logger)
+		checkCouchbaseClusterIsInitialized(t, dataNodesUrlEast, clusterSize)
 
 		dataNodesUrlWest := fmt.Sprintf("http://%s:%s@localhost:%d", usernameForTest, passwordForTest, couchbaseWebConsolePortWest)
-		checkCouchbaseClusterIsInitialized(t, dataNodesUrlWest, clusterSize, logger)
+		checkCouchbaseClusterIsInitialized(t, dataNodesUrlWest, clusterSize)
 
-		checkReplicationIsWorking(t, dataNodesUrlEast, dataNodesUrlWest, "test-bucket", "test-bucket-replica", logger)
+		checkReplicationIsWorking(t, dataNodesUrlEast, dataNodesUrlWest, "test-bucket", "test-bucket-replica")
 	})
 }
 
-func startCouchbaseWithDockerCompose(t *testing.T, exampleDir string, testName string, envVars map[string]string, logger *log.Logger) {
-	runDockerCompose(t, exampleDir, testName, envVars, logger, "up", "-d")
+func startCouchbaseWithDockerCompose(t *testing.T, exampleDir string, envVars map[string]string) {
+	docker.RunDockerCompose(t, &docker.Options{WorkingDir: exampleDir, EnvVars: envVars}, "up", "-d")
 }
 
-func getDockerComposeLogs(t *testing.T, exampleDir string, testName string, envVars map[string]string, logger *log.Logger) {
-	logger.Printf("Fetching docker-compose logs:")
-	runDockerCompose(t, exampleDir, testName, envVars, logger, "logs")
+func getDockerComposeLogs(t *testing.T, exampleDir string, envVars map[string]string) {
+	logger.Logf(t, "Fetching docker-compose logs:")
+	docker.RunDockerCompose(t, &docker.Options{WorkingDir: exampleDir, EnvVars: envVars}, "logs")
 }
 
-func stopCouchbaseWithDockerCompose(t *testing.T, exampleDir string, testName string, envVars map[string]string, logger *log.Logger) {
-	runDockerCompose(t, exampleDir, testName, envVars, logger, "down")
-	runDockerCompose(t, exampleDir, testName, envVars, logger, "rm", "-f")
-}
-
-func runDockerCompose(t *testing.T, exampleDir string, testName string, envVars map[string]string, logger *log.Logger, args ... string) {
-	cmd := shell.Command{
-		Command:    "docker-compose",
-		// We append --project-name to ensure containers from multiple different tests using Docker Compose don't end
-		// up in the same project and end up conflicting with each other.
-		Args:       append([]string{"--project-name", testName}, args...),
-		WorkingDir: exampleDir,
-		Env: envVars,
-	}
-
-	if err := shell.RunCommand(cmd, logger); err != nil {
-		t.Fatalf("Failed to run docker-compose %v in %s: %v", args, exampleDir, err)
-	}
+func stopCouchbaseWithDockerCompose(t *testing.T, exampleDir string, envVars map[string]string) {
+	docker.RunDockerCompose(t, &docker.Options{WorkingDir: exampleDir, EnvVars: envVars}, "down")
+	docker.RunDockerCompose(t, &docker.Options{WorkingDir: exampleDir, EnvVars: envVars}, "rm", "-f")
 }

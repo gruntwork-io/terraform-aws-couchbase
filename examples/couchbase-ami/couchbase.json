@@ -36,7 +36,7 @@
       "filters": {
         "virtualization-type": "hvm",
         "architecture": "x86_64",
-        "name": "*amzn2-ami-hvm-*",
+        "name": "amzn2-ami-hvm-*-x86_64-gp2",
         "block-device-mapping.volume-type": "gp2",
         "root-device-type": "ebs"
       },
@@ -99,14 +99,14 @@
     "only": ["ubuntu-ami"]
   },{
     "type": "shell",
-    "inline": ["mkdir -p /tmp/terraform-aws-couchbase"]
-  },{
-    "type": "shell",
     "inline": [
       "sudo mkdir -p /opt/gruntwork",
       "git clone --branch v0.0.2 https://github.com/gruntwork-io/bash-commons.git /tmp/bash-commons",
       "sudo cp -r /tmp/bash-commons/modules/bash-commons/src /opt/gruntwork/bash-commons"
     ]
+  },{
+    "type": "shell",
+    "inline": ["mkdir -p /tmp/terraform-aws-couchbase"]
   },{
     "type": "file",
     "source": "{{user `root_folder_path`}}",

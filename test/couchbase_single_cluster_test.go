@@ -3,69 +3,86 @@ package test
 import (
 	"testing"
 	"path/filepath"
-	terralog "github.com/gruntwork-io/terratest/log"
-	"github.com/gruntwork-io/terratest/test-structure"
+	"github.com/gruntwork-io/terratest/modules/terraform"
+	"github.com/gruntwork-io/terratest/modules/test-structure"
+	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/gruntwork-io/terratest/modules/aws"
 )
 
 const couchbaseClusterVarName = "cluster_name"
 
 func TestIntegrationCouchbaseCommunitySingleClusterUbuntu(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseCommunitySingleClusterUbuntu", "ubuntu", "community")
+	testCouchbaseSingleCluster(t, "ubuntu", "community")
 }
 
 func TestIntegrationCouchbaseCommunitySingleClusterAmazonLinux(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseCommunitySingleClusterAmazonLinux", "amazon-linux", "community")
+	testCouchbaseSingleCluster(t, "amazon-linux", "community")
 }
 
 func TestIntegrationCouchbaseEnterpriseSingleClusterUbuntu(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseEnterpriseSingleClusterUbuntu", "ubuntu", "enterprise")
+	testCouchbaseSingleCluster(t, "ubuntu", "enterprise")
 }
 
 func TestIntegrationCouchbaseEnterpriseSingleClusterAmazonLinux(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseEnterpriseSingleClusterAmazonLinux", "amazon-linux", "enterprise")
+	testCouchbaseSingleCluster(t, "amazon-linux", "enterprise")
 }
 
-func testCouchbaseSingleCluster(t *testing.T, testName string, osName string, edition string) {
-	logger := terralog.NewLogger(testName)
-
-	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName, logger)
+func testCouchbaseSingleCluster(t *testing.T, osName string, edition string) {
+	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", t.Name())
 	couchbaseAmiDir := filepath.Join(examplesFolder, "couchbase-ami")
 	couchbaseSingleClusterDir := filepath.Join(examplesFolder, "couchbase-single-cluster")
 
-	test_structure.RunTestStage("setup_ami", logger, func() {
-		testStageBuildCouchbaseAmi(t, osName, edition, couchbaseAmiDir, couchbaseSingleClusterDir, logger)
+	test_structure.RunTestStage(t, "setup_ami", func() {
+		awsRegion := getRandomAwsRegion(t)
+		uniqueId := random.UniqueId()
+
+		amiId := buildCouchbaseAmi(t, osName, couchbaseAmiDir, edition, awsRegion, uniqueId)
+
+		test_structure.SaveAmiId(t, couchbaseSingleClusterDir, amiId)
+		test_structure.SaveString(t, couchbaseSingleClusterDir, savedAwsRegion, awsRegion)
+		test_structure.SaveString(t, couchbaseSingleClusterDir, savedUniqueId, uniqueId)
 	})
 
-	test_structure.RunTestStage("setup_deploy", logger, func() {
-		resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseSingleClusterDir, logger)
-		amiId := test_structure.LoadAmiId(t, couchbaseSingleClusterDir, logger)
+	defer test_structure.RunTestStage(t, "teardown", func() {
+		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseSingleClusterDir)
+		terraform.Destroy(t, terraformOptions)
 
-		terratestOptions := createBaseTerratestOptions(t, testName, couchbaseSingleClusterDir, resourceCollection)
-		terratestOptions.Vars = map[string]interface{} {
-			"aws_region":            resourceCollection.AwsRegion,
-			"ami_id":                amiId,
-			couchbaseClusterVarName: formatCouchbaseClusterName("single-cluster", resourceCollection),
+		amiId := test_structure.LoadAmiId(t, couchbaseSingleClusterDir)
+		awsRegion := test_structure.LoadString(t, couchbaseSingleClusterDir, savedAwsRegion)
+		aws.DeleteAmi(t, awsRegion, amiId)
+	})
+
+	defer test_structure.RunTestStage(t, "logs", func() {
+		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseSingleClusterDir)
+		awsRegion := test_structure.LoadString(t, couchbaseSingleClusterDir, savedAwsRegion)
+		testStageLogs(t, terraformOptions, couchbaseClusterVarName, awsRegion)
+	})
+
+	test_structure.RunTestStage(t, "setup_deploy", func() {
+		amiId := test_structure.LoadAmiId(t, couchbaseSingleClusterDir)
+		awsRegion := test_structure.LoadString(t, couchbaseSingleClusterDir, savedAwsRegion)
+		uniqueId := test_structure.LoadString(t, couchbaseSingleClusterDir, savedUniqueId)
+
+		terraformOptions := &terraform.Options{
+			TerraformDir: couchbaseSingleClusterDir,
+			Vars: map[string]interface{}{
+				"aws_region":            awsRegion,
+				"ami_id":                amiId,
+				couchbaseClusterVarName: formatCouchbaseClusterName("single-cluster", uniqueId),
+			},
 		}
 
-		deploy(t, terratestOptions)
+		terraform.InitAndApply(t, terraformOptions)
 
-		test_structure.SaveTerratestOptions(t, couchbaseSingleClusterDir, terratestOptions, logger)
+		test_structure.SaveTerraformOptions(t, couchbaseSingleClusterDir, terraformOptions)
 	})
 
-	defer test_structure.RunTestStage("teardown", logger, func() {
-		testStageTeardown(t, couchbaseSingleClusterDir, logger)
-	})
-
-	defer test_structure.RunTestStage("logs", logger, func() {
-		resourceCollection := test_structure.LoadRandomResourceCollection(t, couchbaseSingleClusterDir, logger)
-		testStageLogs(t, couchbaseSingleClusterDir, couchbaseClusterVarName, resourceCollection, logger)
-	})
-
-	test_structure.RunTestStage("validation", logger, func() {
-		validateSingleClusterWorks(t, couchbaseSingleClusterDir, couchbaseClusterVarName, "http", logger)
+	test_structure.RunTestStage(t, "validation", func() {
+		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseSingleClusterDir)
+		validateSingleClusterWorks(t, terraformOptions, couchbaseClusterVarName, "http")
 	})
 }
