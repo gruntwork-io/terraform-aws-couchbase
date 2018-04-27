@@ -8,6 +8,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/test-structure"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/terraform"
+	"github.com/gruntwork-io/terratest/modules/aws"
 )
 
 const clusterNamePrimaryVarName = "cluster_name_primary"
@@ -73,6 +74,29 @@ func testCouchbaseMultiDataCenterReplication(t *testing.T, testName string, osNa
 		test_structure.SaveString(t, couchbaseMultiClusterDir, savedUniqueIdReplica, uniqueIdReplica)
 	})
 
+	defer test_structure.RunTestStage(t, "teardown", func() {
+		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseMultiClusterDir)
+		terraform.Destroy(t, terraformOptions)
+
+		amiIdPrimary := test_structure.LoadString(t, couchbaseMultiClusterDir, savedAmiIdPrimary)
+		amiIdReplica := test_structure.LoadString(t, couchbaseMultiClusterDir, savedAmiIdReplica)
+
+		awsRegionPrimary := test_structure.LoadString(t, couchbaseMultiClusterDir, savedAwsRegionPrimary)
+		awsRegionReplica := test_structure.LoadString(t, couchbaseMultiClusterDir, savedAwsRegionReplica)
+
+		aws.DeleteAmi(t, awsRegionPrimary, amiIdPrimary)
+		aws.DeleteAmi(t, awsRegionReplica, amiIdReplica)
+	})
+
+	defer test_structure.RunTestStage(t, "logs", func() {
+		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseMultiClusterDir)
+		awsRegionPrimary := test_structure.LoadString(t, couchbaseMultiClusterDir, savedAwsRegionPrimary)
+		awsRegionReplica := test_structure.LoadString(t, couchbaseMultiClusterDir, savedAwsRegionReplica)
+
+		testStageLogs(t, terraformOptions, clusterNamePrimaryVarName, awsRegionPrimary)
+		testStageLogs(t, terraformOptions, clusterNameReplicaVarName, awsRegionReplica)
+	})
+
 	test_structure.RunTestStage(t, "setup_deploy", func() {
 		amiIdPrimary := test_structure.LoadString(t, couchbaseMultiClusterDir, savedAmiIdPrimary)
 		amiIdReplica := test_structure.LoadString(t, couchbaseMultiClusterDir, savedAmiIdReplica)
@@ -95,23 +119,9 @@ func testCouchbaseMultiDataCenterReplication(t *testing.T, testName string, osNa
 			},
 		}
 
-		terraform.Apply(t, terraformOptions)
+		terraform.InitAndApply(t, terraformOptions)
 
 		test_structure.SaveTerraformOptions(t, couchbaseMultiClusterDir, terraformOptions)
-	})
-
-	defer test_structure.RunTestStage(t, "teardown", func() {
-		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseMultiClusterDir)
-		terraform.Destroy(t, terraformOptions)
-	})
-
-	defer test_structure.RunTestStage(t, "logs", func() {
-		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseMultiClusterDir)
-		awsRegionPrimary := test_structure.LoadString(t, couchbaseMultiClusterDir, savedAwsRegionPrimary)
-		awsRegionReplica := test_structure.LoadString(t, couchbaseMultiClusterDir, savedAwsRegionReplica)
-
-		testStageLogs(t, terraformOptions, clusterNamePrimaryVarName, awsRegionPrimary)
-		testStageLogs(t, terraformOptions, clusterNameReplicaVarName, awsRegionReplica)
 	})
 
 	test_structure.RunTestStage(t, "validation", func() {

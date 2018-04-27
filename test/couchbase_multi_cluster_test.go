@@ -7,6 +7,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/test-structure"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/gruntwork-io/terratest/modules/aws"
 )
 
 const dataNodeClusterVarName = "couchbase_data_node_cluster_name"
@@ -39,6 +40,24 @@ func testCouchbaseMultiCluster(t *testing.T, testName string, osName string, edi
 		test_structure.SaveString(t, couchbaseMultiClusterDir, savedUniqueId, uniqueId)
 	})
 
+	defer test_structure.RunTestStage(t, "teardown", func() {
+		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseMultiClusterDir)
+		terraform.Destroy(t, terraformOptions)
+
+		amiId := test_structure.LoadAmiId(t, couchbaseMultiClusterDir)
+		awsRegion := test_structure.LoadString(t, couchbaseMultiClusterDir, savedAwsRegion)
+		aws.DeleteAmi(t, awsRegion, amiId)
+	})
+
+	defer test_structure.RunTestStage(t, "logs", func() {
+		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseMultiClusterDir)
+		awsRegion := test_structure.LoadString(t, couchbaseMultiClusterDir, savedAwsRegion)
+
+		testStageLogs(t, terraformOptions, dataNodeClusterVarName, awsRegion)
+		testStageLogs(t, terraformOptions, indexQuerySearchClusterVarName, awsRegion)
+		testStageLogs(t, terraformOptions, syncGatewayClusterVarName, awsRegion)
+	})
+
 	test_structure.RunTestStage(t, "setup_deploy", func() {
 		amiId := test_structure.LoadAmiId(t, couchbaseMultiClusterDir)
 		awsRegion := test_structure.LoadString(t, couchbaseMultiClusterDir, savedAwsRegion)
@@ -55,23 +74,9 @@ func testCouchbaseMultiCluster(t *testing.T, testName string, osName string, edi
 			},
 		}
 
-		terraform.Apply(t, terraformOptions)
+		terraform.InitAndApply(t, terraformOptions)
 
 		test_structure.SaveTerraformOptions(t, couchbaseMultiClusterDir, terraformOptions)
-	})
-
-	defer test_structure.RunTestStage(t, "teardown", func() {
-		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseMultiClusterDir)
-		terraform.Destroy(t, terraformOptions)
-	})
-
-	defer test_structure.RunTestStage(t, "logs", func() {
-		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseMultiClusterDir)
-		awsRegion := test_structure.LoadString(t, couchbaseMultiClusterDir, savedAwsRegion)
-
-		testStageLogs(t, terraformOptions, dataNodeClusterVarName, awsRegion)
-		testStageLogs(t, terraformOptions, indexQuerySearchClusterVarName, awsRegion)
-		testStageLogs(t, terraformOptions, syncGatewayClusterVarName, awsRegion)
 	})
 
 	test_structure.RunTestStage(t, "validation", func() {

@@ -84,13 +84,13 @@ func testCouchbaseInDockerBasic(t *testing.T, examplesFolderName string, osName 
 		buildCouchbaseWithPacker(t, fmt.Sprintf("%s-docker", osName), "couchbase","us-east-1", couchbaseAmiDir, edition)
 	})
 
-	test_structure.RunTestStage(t, "setup_docker", func() {
-		startCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, envVars)
-	})
-
 	defer test_structure.RunTestStage(t, "teardown", func() {
 		getDockerComposeLogs(t, couchbaseSingleClusterDockerDir, envVars)
 		stopCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, envVars)
+	})
+
+	test_structure.RunTestStage(t, "setup_docker", func() {
+		startCouchbaseWithDockerCompose(t, couchbaseSingleClusterDockerDir, envVars)
 	})
 
 	test_structure.RunTestStage(t, "validation", func() {

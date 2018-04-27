@@ -6,6 +6,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/gruntwork-io/terratest/modules/test-structure"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/gruntwork-io/terratest/modules/aws"
 )
 
 const couchbaseClusterVarName = "cluster_name"
@@ -46,6 +47,21 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string, ed
 		test_structure.SaveString(t, couchbaseSingleClusterDir, savedUniqueId, uniqueId)
 	})
 
+	defer test_structure.RunTestStage(t, "teardown", func() {
+		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseSingleClusterDir)
+		terraform.Destroy(t, terraformOptions)
+
+		amiId := test_structure.LoadAmiId(t, couchbaseSingleClusterDir)
+		awsRegion := test_structure.LoadString(t, couchbaseSingleClusterDir, savedAwsRegion)
+		aws.DeleteAmi(t, awsRegion, amiId)
+	})
+
+	defer test_structure.RunTestStage(t, "logs", func() {
+		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseSingleClusterDir)
+		awsRegion := test_structure.LoadString(t, couchbaseSingleClusterDir, savedAwsRegion)
+		testStageLogs(t, terraformOptions, couchbaseClusterVarName, awsRegion)
+	})
+
 	test_structure.RunTestStage(t, "setup_deploy", func() {
 		amiId := test_structure.LoadAmiId(t, couchbaseSingleClusterDir)
 		awsRegion := test_structure.LoadString(t, couchbaseSingleClusterDir, savedAwsRegion)
@@ -60,20 +76,9 @@ func testCouchbaseSingleCluster(t *testing.T, testName string, osName string, ed
 			},
 		}
 
-		terraform.Apply(t, terraformOptions)
+		terraform.InitAndApply(t, terraformOptions)
 
 		test_structure.SaveTerraformOptions(t, couchbaseSingleClusterDir, terraformOptions)
-	})
-
-	defer test_structure.RunTestStage(t, "teardown", func() {
-		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseSingleClusterDir)
-		terraform.Destroy(t, terraformOptions)
-	})
-
-	defer test_structure.RunTestStage(t, "logs", func() {
-		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseSingleClusterDir)
-		awsRegion := test_structure.LoadString(t, couchbaseSingleClusterDir, savedAwsRegion)
-		testStageLogs(t, terraformOptions, couchbaseClusterVarName, awsRegion)
 	})
 
 	test_structure.RunTestStage(t, "validation", func() {
