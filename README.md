@@ -62,7 +62,7 @@ See the [examples folder](https://github.com/gruntwork-io/terraform-aws-couchbas
 sample code.
 
 
-
+ 
 
 ## What's a Module?
 
