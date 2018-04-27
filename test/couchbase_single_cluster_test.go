@@ -13,26 +13,26 @@ const couchbaseClusterVarName = "cluster_name"
 
 func TestIntegrationCouchbaseCommunitySingleClusterUbuntu(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseCommunitySingleClusterUbuntu", "ubuntu", "community")
+	testCouchbaseSingleCluster(t, "ubuntu", "community")
 }
 
 func TestIntegrationCouchbaseCommunitySingleClusterAmazonLinux(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseCommunitySingleClusterAmazonLinux", "amazon-linux", "community")
+	testCouchbaseSingleCluster(t, "amazon-linux", "community")
 }
 
 func TestIntegrationCouchbaseEnterpriseSingleClusterUbuntu(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseEnterpriseSingleClusterUbuntu", "ubuntu", "enterprise")
+	testCouchbaseSingleCluster(t, "ubuntu", "enterprise")
 }
 
 func TestIntegrationCouchbaseEnterpriseSingleClusterAmazonLinux(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleCluster(t, "TestIntegrationCouchbaseEnterpriseSingleClusterAmazonLinux", "amazon-linux", "enterprise")
+	testCouchbaseSingleCluster(t, "amazon-linux", "enterprise")
 }
 
-func testCouchbaseSingleCluster(t *testing.T, testName string, osName string, edition string) {
-	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName)
+func testCouchbaseSingleCluster(t *testing.T, osName string, edition string) {
+	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", t.Name())
 	couchbaseAmiDir := filepath.Join(examplesFolder, "couchbase-ami")
 	couchbaseSingleClusterDir := filepath.Join(examplesFolder, "couchbase-single-cluster")
 

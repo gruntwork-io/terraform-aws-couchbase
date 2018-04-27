@@ -25,16 +25,16 @@ const savedUniqueIdReplica = "UniqueIdReplica"
 
 func TestIntegrationCouchbaseEnterpriseMultiDataCenterReplicationUbuntu(t *testing.T) {
 	t.Parallel()
-	testCouchbaseMultiDataCenterReplication(t, "TestIntegrationCouchbaseEnterpriseMultiDataCenterReplicationUbuntu", "ubuntu", "enterprise")
+	testCouchbaseMultiDataCenterReplication(t, "ubuntu", "enterprise")
 }
 
 func TestIntegrationCouchbaseEnterpriseMultiDataCenterReplicationAmazonLinux(t *testing.T) {
 	t.Parallel()
-	testCouchbaseMultiDataCenterReplication(t, "TestIntegrationCouchbaseEnterpriseMultiDataCenterReplicationAmazonLinux", "amazon-linux", "enterprise")
+	testCouchbaseMultiDataCenterReplication(t, "amazon-linux", "enterprise")
 }
 
-func testCouchbaseMultiDataCenterReplication(t *testing.T, testName string, osName string, edition string) {
-	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName)
+func testCouchbaseMultiDataCenterReplication(t *testing.T, osName string, edition string) {
+	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", t.Name())
 	couchbaseAmiDir := filepath.Join(examplesFolder, "couchbase-ami")
 	couchbaseMultiClusterDir := filepath.Join(examplesFolder, "couchbase-multi-datacenter-replication")
 

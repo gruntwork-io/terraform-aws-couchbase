@@ -16,16 +16,16 @@ const syncGatewayClusterVarName = "sync_gateway_cluster_name"
 
 func TestIntegrationCouchbaseEnterpriseMultiClusterUbuntu(t *testing.T) {
 	t.Parallel()
-	testCouchbaseMultiCluster(t, "TestIntegrationCouchbaseEnterpriseMultiClusterUbuntu", "ubuntu", "enterprise")
+	testCouchbaseMultiCluster(t, "ubuntu", "enterprise")
 }
 
 func TestIntegrationCouchbaseEnterpriseMultiClusterAmazonLinux(t *testing.T) {
 	t.Parallel()
-	testCouchbaseMultiCluster(t, "TestIntegrationCouchbaseEnterpriseMultiClusterAmazonLinux", "amazon-linux", "enterprise")
+	testCouchbaseMultiCluster(t, "amazon-linux", "enterprise")
 }
 
-func testCouchbaseMultiCluster(t *testing.T, testName string, osName string, edition string) {
-	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName)
+func testCouchbaseMultiCluster(t *testing.T, osName string, edition string) {
+	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", t.Name())
 	couchbaseAmiDir := filepath.Join(examplesFolder, "couchbase-ami")
 	couchbaseMultiClusterDir := filepath.Join(examplesFolder, "couchbase-multi-cluster")
 

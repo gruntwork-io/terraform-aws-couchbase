@@ -14,11 +14,11 @@ const domainNameForTest = "gruntwork.in"
 
 func TestIntegrationCouchbaseCommunitySingleClusterDnsTlsUbuntu(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleClusterDnsTls(t, "TestIntegrationCouchbaseCommunitySingleClusterDnsTlsUbuntu", "ubuntu", "community")
+	testCouchbaseSingleClusterDnsTls(t, "ubuntu", "community")
 }
 
-func testCouchbaseSingleClusterDnsTls(t *testing.T, testName string, osName string, edition string) {
-	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", testName)
+func testCouchbaseSingleClusterDnsTls(t *testing.T, osName string, edition string) {
+	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", t.Name())
 	couchbaseAmiDir := filepath.Join(examplesFolder, "couchbase-ami")
 	couchbaseSingleClusterDnsTlsDir := filepath.Join(examplesFolder, "couchbase-single-cluster-dns-tls")
 
