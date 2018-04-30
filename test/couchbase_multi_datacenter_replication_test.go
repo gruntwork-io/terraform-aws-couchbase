@@ -34,7 +34,7 @@ func TestIntegrationCouchbaseEnterpriseMultiDataCenterReplicationAmazonLinux(t *
 }
 
 func testCouchbaseMultiDataCenterReplication(t *testing.T, osName string, edition string) {
-	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", t.Name())
+	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples")
 	couchbaseAmiDir := filepath.Join(examplesFolder, "couchbase-ami")
 	couchbaseMultiClusterDir := filepath.Join(examplesFolder, "couchbase-multi-datacenter-replication")
 

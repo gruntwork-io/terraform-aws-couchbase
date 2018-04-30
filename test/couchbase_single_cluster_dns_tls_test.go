@@ -18,7 +18,7 @@ func TestIntegrationCouchbaseCommunitySingleClusterDnsTlsUbuntu(t *testing.T) {
 }
 
 func testCouchbaseSingleClusterDnsTls(t *testing.T, osName string, edition string) {
-	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", t.Name())
+	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples")
 	couchbaseAmiDir := filepath.Join(examplesFolder, "couchbase-ami")
 	couchbaseSingleClusterDnsTlsDir := filepath.Join(examplesFolder, "couchbase-single-cluster-dns-tls")
 

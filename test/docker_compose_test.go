@@ -76,7 +76,7 @@ func testCouchbaseInDockerBasic(t *testing.T, examplesFolderName string, osName 
 		"SYNC_GATEWAY_PORT": strconv.Itoa(syncGatewayWebConsolePort),
 	}
 
-	tmpExamplesDir := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", t.Name())
+	tmpExamplesDir := test_structure.CopyTerraformFolderToTemp(t, "../", "examples")
 	couchbaseAmiDir := filepath.Join(tmpExamplesDir, "couchbase-ami")
 	couchbaseSingleClusterDockerDir := filepath.Join(tmpExamplesDir, examplesFolderName, "local-test")
 
@@ -115,7 +115,7 @@ func testCouchbaseInDockerReplication(t *testing.T, examplesFolderName string, o
 		"WEB_CONSOLE_WEST_PORT": strconv.Itoa(couchbaseWebConsolePortWest),
 	}
 
-	tmpExamplesDir := test_structure.CopyTerraformFolderToTemp(t, "../", "examples", t.Name())
+	tmpExamplesDir := test_structure.CopyTerraformFolderToTemp(t, "../", "examples")
 	couchbaseAmiDir := filepath.Join(tmpExamplesDir, "couchbase-ami")
 	couchbaseSingleClusterDockerDir := filepath.Join(tmpExamplesDir, examplesFolderName, "local-test")
 
