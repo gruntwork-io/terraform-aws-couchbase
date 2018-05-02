@@ -27,7 +27,7 @@ variable "aws_region" {
 
 variable "cluster_name" {
   description = "What to name the Couchbase cluster and all of its associated resources"
-  default     = "couchbase-example"
+  default     = "couchbase-server"
 }
 
 variable "ssh_key_name" {

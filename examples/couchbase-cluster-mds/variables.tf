@@ -27,17 +27,17 @@ variable "aws_region" {
 
 variable "couchbase_data_node_cluster_name" {
   description = "What to name the Couchbase data nodes cluster and all of its associated resources"
-  default     = "couchbase-data"
+  default     = "couchbase-server-data"
 }
 
 variable "couchbase_index_query_search_node_cluster_name" {
   description = "What to name the Couchbase index/query/search nodes cluster and all of its associated resources"
-  default     = "couchbase-search"
+  default     = "couchbase-server-search"
 }
 
 variable "sync_gateway_cluster_name" {
   description = "What to name the Sync Gateway cluster and all of its associated resources"
-  default     = "sync-gateway"
+  default     = "couchbase-sync-gateway"
 }
 
 variable "ssh_key_name" {

@@ -31,7 +31,7 @@ variable "aws_region_primary" {
 
 variable "cluster_name_primary" {
   description = "What to name the primary Couchbase cluster and all of its associated resources"
-  default     = "couchbase-primary"
+  default     = "couchbase-server-primary"
 }
 
 variable "aws_region_replica" {
@@ -41,7 +41,7 @@ variable "aws_region_replica" {
 
 variable "cluster_name_replica" {
   description = "What to name the replica Couchbase cluster and all of its associated resources"
-  default     = "couchbase-replica"
+  default     = "couchbase-server-replica"
 }
 
 variable "ssh_key_name_primary" {
