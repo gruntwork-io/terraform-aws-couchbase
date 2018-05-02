@@ -70,11 +70,9 @@ workflows:
               only: /.*/
             tags:
               only: /.*/
-  release:
-    jobs:
       - release:
           requires:
-            - build
+            - test
           # Publish new AMIs whenever a new vesion (e.g., v0.3.4) is released
           filters:
             tags:
