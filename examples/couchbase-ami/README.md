@@ -31,7 +31,7 @@ To build the Couchbase AMI:
 1. To build an Amazon Linux AMI for Couchbase Community: `packer build -only=amazon-linux-ami -var edition=community couchbase.json`.
 
 When the build finishes, it will output the IDs of the new AMIs. To see how to deploy this AMI, check out the 
-[couchbase-single-cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-single-cluster), 
+[couchbase-cluster-simple](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-cluster-simple),
 [couchbase-multi-cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-multi-cluster), and 
 [couchbase-multi-datacenter-replication](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-multi-datacenter-replication) 
 examples.
