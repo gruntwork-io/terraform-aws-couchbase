@@ -38,7 +38,7 @@ To deploy a Couchbase Cluster:
 1. Run `terraform init`.
 1. Run `terraform apply`.
 
- 
+
 
 ## Connecting to the cluster
 
