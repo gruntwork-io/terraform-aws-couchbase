@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"io/ioutil"
 	"strings"
-	"os"
 	"github.com/gruntwork-io/terratest/modules/logger"
 	"github.com/gruntwork-io/terratest/modules/packer"
 	"github.com/gruntwork-io/terratest/modules/aws"
@@ -52,17 +51,6 @@ func buildCouchbaseWithPackerE(t *testing.T, builderName string, baseAmiName str
 			"base_ami_name": baseAmiName,
 			"edition": edition,
 		},
-	}
-
-	// The Packer file provisioner we use tries to copy this entire Couchbase module using a relative path like
-	// ../../../terraform-aws-couchbase. This works fine in a normal checkout, but with CircleCi, (a) the code is
-	// checked out into a folder called "project" and not "terraform-aws-couchbase" and (b) to support GOPATH, we
-	// create a symlink to the original project and run the tests from that symlinked folder. One or both of these
-	// issues leads to very strange issues that sometimes cause the Packer build to fail:
-	// https://github.com/hashicorp/packer/issues/6103
-	if os.Getenv("CIRCLECI") != "" {
-		logger.Logf(t, "Overriding root folder path for Packer build to /home/circleci/project/")
-		options.Vars["root_folder_path"] = "/home/circleci/project/"
 	}
 
 	return packer.BuildAmiE(t, options)
