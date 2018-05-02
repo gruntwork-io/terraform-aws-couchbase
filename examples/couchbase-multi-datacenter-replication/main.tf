@@ -358,7 +358,7 @@ data "aws_ami" "coubase_ubuntu_example_primary" {
     values = ["*couchbase-ubuntu-example*"]
   }
 
-  provider = "aws.replica"
+  provider = "aws.primary"
 }
 
 data "aws_ami" "coubase_ubuntu_example_replica" {
