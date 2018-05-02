@@ -3,8 +3,7 @@
   "variables": {
     "aws_region": "us-east-1",
     "edition": "enterprise",
-    "base_ami_name": "couchbase",
-    "root_folder_path": "{{template_dir}}/../../../terraform-aws-couchbase/"
+    "base_ami_name": "couchbase"
   },
   "builders": [{
     "name": "ubuntu-ami",
@@ -109,7 +108,7 @@
     "inline": ["mkdir -p /tmp/terraform-aws-couchbase"]
   },{
     "type": "file",
-    "source": "{{user `root_folder_path`}}",
+    "source": "{{template_dir}}/../../../",
     "destination": "/tmp/terraform-aws-couchbase"
   },{
     "type": "shell",
