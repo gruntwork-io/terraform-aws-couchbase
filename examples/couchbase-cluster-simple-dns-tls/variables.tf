@@ -11,8 +11,8 @@
 # You must provide a value for each of these parameters.
 # ---------------------------------------------------------------------------------------------------------------------
 
-variable "ami_id" {
-  description = "The ID of the AMI to run in the cluster. This should be an AMI built from the Packer template under examples/couchbase-ami/couchbase.json."
+variable "domain_name" {
+  description = "A domain name for which (a) you have a Route 53 Hosted Zone, (b) a wildcard SSL certificate from Amazon Certificate Manager. This module will configure the load balancer (a) with a DNS A Record set to <cluster_name>.<domain_name> and (b) to listen for SSL requests using the wildcard SSL cert. For example, if you set this value to acme.com, the load balancer will have the domain name couchbase-example.example.com and will listen on SSL requests using an ACM cert for *.example.com."
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -20,24 +20,19 @@ variable "ami_id" {
 # These parameters have reasonable defaults.
 # ---------------------------------------------------------------------------------------------------------------------
 
+variable "ami_id" {
+  description = "The ID of the AMI to run in the cluster. This should be an AMI built from the Packer template under examples/couchbase-ami/couchbase.json. Leave blank to use one of the example AMIs we have published publicly."
+  default     = ""
+}
+
 variable "aws_region" {
   description = "The AWS region to deploy into (e.g. us-east-1)."
   default     = "us-east-1"
 }
 
-variable "couchbase_data_node_cluster_name" {
-  description = "What to name the Couchbase data nodes cluster and all of its associated resources"
-  default     = "couchbase-data"
-}
-
-variable "couchbase_index_query_search_node_cluster_name" {
-  description = "What to name the Couchbase index/query/search nodes cluster and all of its associated resources"
-  default     = "couchbase-search"
-}
-
-variable "sync_gateway_cluster_name" {
-  description = "What to name the Sync Gateway cluster and all of its associated resources"
-  default     = "sync-gateway"
+variable "cluster_name" {
+  description = "What to name the Couchbase cluster and all of its associated resources"
+  default     = "couchbase-server"
 }
 
 variable "ssh_key_name" {
@@ -70,14 +65,9 @@ variable "volume_owner" {
   default     = "couchbase"
 }
 
-variable "data_nodes_load_balancer_port" {
-  description = "The port the load balancer should listen on for Couchbase Web Console requests for the data nodes."
+variable "couchbase_load_balancer_port" {
+  description = "The port the load balancer should listen on for Couchbase Web Console requests."
   default     = 8091
-}
-
-variable "index_query_search_nodes_load_balancer_port" {
-  description = "The port the load balancer should listen on for Couchbase Web Console requests for the index, query, and search nodes."
-  default     = 9091
 }
 
 variable "sync_gateway_load_balancer_port" {

@@ -27,7 +27,7 @@ func TestIntegrationCouchbaseEnterpriseMultiClusterAmazonLinux(t *testing.T) {
 func testCouchbaseMultiCluster(t *testing.T, osName string, edition string) {
 	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples")
 	couchbaseAmiDir := filepath.Join(examplesFolder, "couchbase-ami")
-	couchbaseMultiClusterDir := filepath.Join(examplesFolder, "couchbase-multi-cluster")
+	couchbaseMultiClusterDir := filepath.Join(examplesFolder, "couchbase-cluster-mds")
 
 	test_structure.RunTestStage(t, "setup_ami", func() {
 		awsRegion := getRandomAwsRegion(t)

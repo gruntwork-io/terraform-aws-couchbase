@@ -2,7 +2,8 @@
 # DEPLOY A COUCHBASE CLUSTER IN AWS
 # This is an example of how to deploy Couchbase in AWS with all of the Couchbase services and Sync Gateway in a single
 # cluster. The cluster runs on top of an Auto Scaling Group (ASG), with EBS Volumes attached, and a load balancer
-# used for health checks and to distribute traffic across Sync Gateway.
+# used for health checks and to distribute traffic across Sync Gateway. The load balancer has DNS and TLS configured
+# for it.
 # ---------------------------------------------------------------------------------------------------------------------
 
 provider "aws" {
@@ -28,7 +29,7 @@ module "couchbase" {
   max_size      = 3
   instance_type = "t2.medium"
 
-  ami_id    = "${var.ami_id}"
+  ami_id    = "${data.template_file.ami_id.rendered}"
   user_data = "${data.template_file.user_data_server.rendered}"
 
   vpc_id     = "${data.aws_vpc.default.id}"
@@ -119,8 +120,27 @@ module "load_balancer" {
   vpc_id     = "${data.aws_vpc.default.id}"
   subnet_ids = "${data.aws_subnet_ids.default.ids}"
 
-  http_listener_ports            = ["${var.couchbase_load_balancer_port}", "${var.sync_gateway_load_balancer_port}"]
-  https_listener_ports_and_certs = []
+  # In this example, we only listen for HTTPS requests on the load balancer
+
+  http_listener_ports = []
+  https_listener_ports_and_certs = [
+    {
+      port            = "${var.couchbase_load_balancer_port}"
+      certificate_arn = "${data.aws_acm_certificate.load_balancer.arn}"
+    },
+    {
+      port            = "${var.sync_gateway_load_balancer_port}"
+      certificate_arn = "${data.aws_acm_certificate.load_balancer.arn}"
+    },
+  ]
+  # Create a DNS A record for <cluster_name>.<var.domain_name> (e.g., couchbase-example.acme.com) pointing at this load
+  # balancer.
+  route53_records = [
+    {
+      domain  = "${var.cluster_name}.${var.domain_name}"
+      zone_id = "${data.aws_route53_zone.load_balancer.id}"
+    },
+  ]
 
   # To make testing easier, we allow inbound connections from any IP. In production usage, you may want to only allow
   # connectsion from certain trusted servers, or even use an internal load balancer, so it's only accessible from
@@ -149,7 +169,7 @@ module "couchbase_target_group" {
   health_check_path = "/ui/index.html"
   vpc_id            = "${data.aws_vpc.default.id}"
 
-  listener_arns                   = ["${lookup(module.load_balancer.http_listener_arns, var.couchbase_load_balancer_port)}"]
+  listener_arns                   = ["${lookup(module.load_balancer.https_listener_arns, var.couchbase_load_balancer_port)}"]
   num_listener_arns               = 1
   listener_rule_starting_priority = 100
 
@@ -170,7 +190,7 @@ module "sync_gateway_target_group" {
   health_check_path = "/"
   vpc_id            = "${data.aws_vpc.default.id}"
 
-  listener_arns                   = ["${lookup(module.load_balancer.http_listener_arns, var.sync_gateway_load_balancer_port)}"]
+  listener_arns                   = ["${lookup(module.load_balancer.https_listener_arns, var.sync_gateway_load_balancer_port)}"]
   num_listener_arns               = 1
   listener_rule_starting_priority = 100
 }
@@ -239,4 +259,59 @@ data "aws_vpc" "default" {
 
 data "aws_subnet_ids" "default" {
   vpc_id = "${data.aws_vpc.default.id}"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# LOOK UP AN SSL CERT USING AMAZON CERTIFICATE MANAGER (ACM)
+# This example assumes you have requested a (free, auto-renewing) wildcard SSL cert from ACM for var.domain_name.
+# ---------------------------------------------------------------------------------------------------------------------
+
+data "aws_acm_certificate" "load_balancer" {
+  domain   = "*.${var.domain_name}"
+  statuses = ["ISSUED"]
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# USE THE PUBLIC EXAMPLE AMIS IF VAR.AMI_ID IS NOT SPECIFIED
+# We have published some example AMIs publicly that will be used if var.ami_id is not specified. This makes it easier
+# to try these examples out, but we recommend you build your own AMIs for production use.
+# ---------------------------------------------------------------------------------------------------------------------
+
+data "aws_ami" "coubase_ubuntu_example" {
+  most_recent = true
+  owners      = ["738755648600"] # Gruntwork
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
+
+  filter {
+    name   = "image-type"
+    values = ["machine"]
+  }
+
+  filter {
+    name   = "name"
+    values = ["*couchbase-ubuntu-example*"]
+  }
+}
+
+data "template_file" "ami_id" {
+  template = "${var.ami_id == "" ? data.aws_ami.coubase_ubuntu_example.id : var.ami_id}"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# LOOK UP A HOSTED ZONE IN ROUTE 53
+# This example assumes you have a Hosted Zone in Route 53 for var.domain_name. We will register a DNS A Record for the
+# load balancer in this Hosted Zone.
+# ---------------------------------------------------------------------------------------------------------------------
+
+data "aws_route53_zone" "load_balancer" {
+  name = "${var.domain_name}."
 }

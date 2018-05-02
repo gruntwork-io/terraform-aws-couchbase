@@ -41,6 +41,23 @@ jobs:
       # Run the tests
       - run: run-go-tests --path test --timeout 90m
 
+  release:
+    machine: true
+    steps:
+      - checkout
+
+      # The weird way you have to set PATH in Circle 2.0
+      - run: echo 'export PATH=$HOME/.local/bin:$HOME/terraform:$HOME/packer:$PATH' >> $BASH_ENV
+
+      # Use the Gruntwork Installer to install the gruntwork-module-circleci-helpers
+      - run: curl -Ls https://raw.githubusercontent.com/gruntwork-io/gruntwork-installer/master/bootstrap-gruntwork-installer.sh | bash /dev/stdin --version v0.0.21
+      - run: gruntwork-install --module-name "gruntwork-module-circleci-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "v0.7.1"
+      - run: gruntwork-install --module-name "build-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "v0.7.1"
+      - run: gruntwork-install --module-name "aws-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "v0.7.1"
+
+      - run: ~/$CIRCLE_PROJECT_REPONAME/.circleci/publish-amis.sh "ubuntu-ami"
+      - run: ~/$CIRCLE_PROJECT_REPONAME/.circleci/publish-amis.sh "amazon-linux-ami"
+
 workflows:
   version: 2
   test:
@@ -53,3 +70,14 @@ workflows:
               only: /.*/
             tags:
               only: /.*/
+  release:
+    jobs:
+      - release:
+          requires:
+            - build
+          # Publish new AMIs whenever a new vesion (e.g., v0.3.4) is released
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/

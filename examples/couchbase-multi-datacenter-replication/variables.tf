@@ -11,18 +11,20 @@
 # You must provide a value for each of these parameters.
 # ---------------------------------------------------------------------------------------------------------------------
 
-variable "ami_id_primary" {
-  description = "The ID of the AMI to run in the cluster in var.aws_region_primary. This should be an AMI built from the Packer template under examples/couchbase-ami/couchbase.json."
-}
-
-variable "ami_id_replica" {
-  description = "The ID of the AMI to run in the cluster in var.aws_region_replica. This should be an AMI built from the Packer template under examples/couchbase-ami/couchbase.json."
-}
-
 # ---------------------------------------------------------------------------------------------------------------------
 # OPTIONAL PARAMETERS
 # These parameters have reasonable defaults.
 # ---------------------------------------------------------------------------------------------------------------------
+
+variable "ami_id_primary" {
+  description = "The ID of the AMI to run in the cluster in var.aws_region_primary. This should be an AMI built from the Packer template under examples/couchbase-ami/couchbase.json. Leave blank to use one of the example AMIs we have published publicly."
+  default     = ""
+}
+
+variable "ami_id_replica" {
+  description = "The ID of the AMI to run in the cluster in var.aws_region_replica. This should be an AMI built from the Packer template under examples/couchbase-ami/couchbase.json. Leave blank to use one of the example AMIs we have published publicly."
+  default     = ""
+}
 
 variable "aws_region_primary" {
   description = "The AWS region to deploy the primary Couchbase cluster into (e.g. us-east-1)."
@@ -31,7 +33,7 @@ variable "aws_region_primary" {
 
 variable "cluster_name_primary" {
   description = "What to name the primary Couchbase cluster and all of its associated resources"
-  default     = "couchbase-primary"
+  default     = "couchbase-server-primary"
 }
 
 variable "aws_region_replica" {
@@ -41,7 +43,7 @@ variable "aws_region_replica" {
 
 variable "cluster_name_replica" {
   description = "What to name the replica Couchbase cluster and all of its associated resources"
-  default     = "couchbase-replica"
+  default     = "couchbase-server-replica"
 }
 
 variable "ssh_key_name_primary" {

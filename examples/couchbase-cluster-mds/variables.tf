@@ -11,23 +11,34 @@
 # You must provide a value for each of these parameters.
 # ---------------------------------------------------------------------------------------------------------------------
 
-variable "ami_id" {
-  description = "The ID of the AMI to run in the cluster. This should be an AMI built from the Packer template under examples/couchbase-ami/couchbase.json."
-}
-
 # ---------------------------------------------------------------------------------------------------------------------
 # OPTIONAL PARAMETERS
 # These parameters have reasonable defaults.
 # ---------------------------------------------------------------------------------------------------------------------
+
+variable "ami_id" {
+  description = "The ID of the AMI to run in the cluster. This should be an AMI built from the Packer template under examples/couchbase-ami/couchbase.json. Leave blank to use one of the example AMIs we have published publicly."
+  default     = ""
+}
 
 variable "aws_region" {
   description = "The AWS region to deploy into (e.g. us-east-1)."
   default     = "us-east-1"
 }
 
-variable "cluster_name" {
-  description = "What to name the Couchbase cluster and all of its associated resources"
-  default     = "couchbase-example"
+variable "couchbase_data_node_cluster_name" {
+  description = "What to name the Couchbase data nodes cluster and all of its associated resources"
+  default     = "couchbase-server-data"
+}
+
+variable "couchbase_index_query_search_node_cluster_name" {
+  description = "What to name the Couchbase index/query/search nodes cluster and all of its associated resources"
+  default     = "couchbase-server-search"
+}
+
+variable "sync_gateway_cluster_name" {
+  description = "What to name the Sync Gateway cluster and all of its associated resources"
+  default     = "couchbase-sync-gateway"
 }
 
 variable "ssh_key_name" {
@@ -60,9 +71,14 @@ variable "volume_owner" {
   default     = "couchbase"
 }
 
-variable "couchbase_load_balancer_port" {
-  description = "The port the load balancer should listen on for Couchbase Web Console requests."
+variable "data_nodes_load_balancer_port" {
+  description = "The port the load balancer should listen on for Couchbase Web Console requests for the data nodes."
   default     = 8091
+}
+
+variable "index_query_search_nodes_load_balancer_port" {
+  description = "The port the load balancer should listen on for Couchbase Web Console requests for the index, query, and search nodes."
+  default     = 9091
 }
 
 variable "sync_gateway_load_balancer_port" {

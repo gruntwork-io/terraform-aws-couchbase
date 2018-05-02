@@ -20,7 +20,7 @@ func TestIntegrationCouchbaseCommunitySingleClusterDnsTlsUbuntu(t *testing.T) {
 func testCouchbaseSingleClusterDnsTls(t *testing.T, osName string, edition string) {
 	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples")
 	couchbaseAmiDir := filepath.Join(examplesFolder, "couchbase-ami")
-	couchbaseSingleClusterDnsTlsDir := filepath.Join(examplesFolder, "couchbase-single-cluster-dns-tls")
+	couchbaseSingleClusterDnsTlsDir := filepath.Join(examplesFolder, "couchbase-cluster-simple-dns-tls")
 
 	test_structure.RunTestStage(t, "setup_ami", func() {
 		awsRegion := getRandomAwsRegion(t)

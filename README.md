@@ -14,8 +14,8 @@ Or as multiple clusters for the various Couchbase services (data, management, se
 
 ## Quick start
 
-If you want to quickly spin up a Couchbase cluster, check out the instructions for the [couchbase-single-cluster
-example](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/examples/couchbase-single-cluster).   
+If you want to quickly spin up a Couchbase cluster, check out the instructions for the [couchbase-cluster-simple
+example](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/examples/couchbase-cluster-simple).
 
 
 
@@ -26,7 +26,7 @@ This repo has the following folder structure:
 
 * [root](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master): The root folder contains an example
   of how to deploy Couchbase as a single-cluster. See 
-  [couchbase-single-cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/examples/couchbase-single-cluster)
+  [couchbase-cluster-simple](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/examples/couchbase-cluster-simple)
   for the documentation.
 * [modules](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules): This folder contains the 
   main implementation code for this Module, broken down into multiple standalone submodules.
