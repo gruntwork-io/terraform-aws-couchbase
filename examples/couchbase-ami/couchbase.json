@@ -108,7 +108,7 @@
     "inline": ["mkdir -p /tmp/terraform-aws-couchbase"]
   },{
     "type": "file",
-    "source": "{{template_dir}}/../../../",
+    "source": "{{template_dir}}/../../",
     "destination": "/tmp/terraform-aws-couchbase"
   },{
     "type": "shell",
