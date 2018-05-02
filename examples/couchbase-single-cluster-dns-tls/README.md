@@ -15,8 +15,8 @@ You will need to create an [Amazon Machine Image (AMI)](http://docs.aws.amazon.c
 that has Couchbase installed, which you can do using the [couchbase-ami 
 example](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-ami)). 
 
-To see an example of the Couchbase services and Sync Gateway deployed in separate clusters, see the [couchbase-multi-cluster
-example](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/examples/couchbase-multi-cluster). For 
+To see an example of the Couchbase services and Sync Gateway deployed in separate clusters, see the [couchbase-cluster-mds
+example](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/examples/couchbase-cluster-mds). For
 more info on how the Couchbase cluster works, check out the 
 [couchbase-cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster) documentation.
 

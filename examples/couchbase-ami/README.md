@@ -32,7 +32,7 @@ To build the Couchbase AMI:
 
 When the build finishes, it will output the IDs of the new AMIs. To see how to deploy this AMI, check out the 
 [couchbase-cluster-simple](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-cluster-simple),
-[couchbase-multi-cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-multi-cluster), and 
+[couchbase-cluster-mds](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-cluster-mds), and
 [couchbase-multi-datacenter-replication](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-multi-datacenter-replication) 
 examples.
 
