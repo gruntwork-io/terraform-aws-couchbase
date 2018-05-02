@@ -11,10 +11,6 @@
 # You must provide a value for each of these parameters.
 # ---------------------------------------------------------------------------------------------------------------------
 
-variable "ami_id" {
-  description = "The ID of the AMI to run in the cluster. This should be an AMI built from the Packer template under examples/couchbase-ami/couchbase.json."
-}
-
 variable "domain_name" {
   description = "A domain name for which (a) you have a Route 53 Hosted Zone, (b) a wildcard SSL certificate from Amazon Certificate Manager. This module will configure the load balancer (a) with a DNS A Record set to <cluster_name>.<domain_name> and (b) to listen for SSL requests using the wildcard SSL cert. For example, if you set this value to acme.com, the load balancer will have the domain name couchbase-example.example.com and will listen on SSL requests using an ACM cert for *.example.com."
 }
@@ -23,6 +19,11 @@ variable "domain_name" {
 # OPTIONAL PARAMETERS
 # These parameters have reasonable defaults.
 # ---------------------------------------------------------------------------------------------------------------------
+
+variable "ami_id" {
+  description = "The ID of the AMI to run in the cluster. This should be an AMI built from the Packer template under examples/couchbase-ami/couchbase.json. Leave blank to use one of the example AMIs we have published publicly."
+  default     = ""
+}
 
 variable "aws_region" {
   description = "The AWS region to deploy into (e.g. us-east-1)."

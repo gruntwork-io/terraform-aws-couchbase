@@ -30,7 +30,7 @@ module "couchbase_data_nodes" {
   # R4 or M4 instances.
   instance_type = "t2.micro"
 
-  ami_id    = "${var.ami_id}"
+  ami_id    = "${data.template_file.ami_id.rendered}"
   user_data = "${data.template_file.user_data_couchbase_data_nodes.rendered}"
 
   vpc_id     = "${data.aws_vpc.default.id}"
@@ -87,7 +87,7 @@ module "couchbase_index_query_search_nodes" {
   # R4 or M4 instances.
   instance_type = "t2.micro"
 
-  ami_id    = "${var.ami_id}"
+  ami_id    = "${data.template_file.ami_id.rendered}"
   user_data = "${data.template_file.user_data_couchbase_index_query_search_nodes.rendered}"
 
   vpc_id     = "${data.aws_vpc.default.id}"
@@ -144,7 +144,7 @@ module "sync_gateway" {
   # R4 or M4 instances.
   instance_type = "t2.micro"
 
-  ami_id    = "${var.ami_id}"
+  ami_id    = "${data.template_file.ami_id.rendered}"
   user_data = "${data.template_file.user_data_sync_gateway.rendered}"
 
   vpc_id     = "${data.aws_vpc.default.id}"
@@ -442,6 +442,41 @@ module "iam_policies_sync_gateway" {
   source = "../../modules/couchbase-iam-policies"
 
   iam_role_id = "${module.sync_gateway.iam_role_id}"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# USE THE PUBLIC EXAMPLE AMIS IF VAR.AMI_ID IS NOT SPECIFIED
+# We have published some example AMIs publicly that will be used if var.ami_id is not specified. This makes it easier
+# to try these examples out, but we recommend you build your own AMIs for production use.
+# ---------------------------------------------------------------------------------------------------------------------
+
+data "aws_ami" "coubase_ubuntu_example" {
+  most_recent = true
+  owners      = ["738755648600"] # Gruntwork
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
+
+  filter {
+    name   = "image-type"
+    values = ["machine"]
+  }
+
+  filter {
+    name   = "name"
+    values = ["*couchbase-ubuntu-example*"]
+  }
+}
+
+data "template_file" "ami_id" {
+  template = "${var.ami_id == "" ? data.aws_ami.coubase_ubuntu_example.id : var.ami_id}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

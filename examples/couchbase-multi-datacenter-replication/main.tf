@@ -32,7 +32,7 @@ module "couchbase_primary" {
   max_size      = 3
   instance_type = "t2.micro"
 
-  ami_id    = "${var.ami_id_primary}"
+  ami_id    = "${data.template_file.ami_id_primary.rendered}"
   user_data = "${data.template_file.user_data_primary.rendered}"
 
   vpc_id     = "${data.aws_vpc.default_primary.id}"
@@ -72,7 +72,7 @@ module "couchbase_replica" {
   max_size      = 3
   instance_type = "t2.micro"
 
-  ami_id    = "${var.ami_id_replica}"
+  ami_id    = "${data.template_file.ami_id_replica.rendered}"
   user_data = "${data.template_file.user_data_replica.rendered}"
 
   vpc_id     = "${data.aws_vpc.default_replica.id}"
@@ -326,6 +326,45 @@ module "iam_policies_replica" {
   providers = {
     aws = "aws.replica"
   }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# USE THE PUBLIC EXAMPLE AMIS IF VAR.AMI_ID_XXX IS NOT SPECIFIED
+# We have published some example AMIs publicly that will be used if var.ami_id_primary or var.ami_id_replica is not
+# specified. This makes it easier to try these examples out, but we recommend you build your own AMIs for production use.
+# ---------------------------------------------------------------------------------------------------------------------
+
+data "aws_ami" "coubase_ubuntu_example" {
+  most_recent = true
+  owners      = ["738755648600"] # Gruntwork
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
+
+  filter {
+    name   = "image-type"
+    values = ["machine"]
+  }
+
+  filter {
+    name   = "name"
+    values = ["*couchbase-ubuntu-example*"]
+  }
+}
+
+data "template_file" "ami_id_primary" {
+  template = "${var.ami_id_primary == "" ? data.aws_ami.coubase_ubuntu_example.id : var.ami_id_primary}"
+}
+
+data "template_file" "ami_id_replica" {
+  template = "${var.ami_id_replica == "" ? data.aws_ami.coubase_ubuntu_example.id : var.ami_id_replica}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

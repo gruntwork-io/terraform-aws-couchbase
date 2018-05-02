@@ -28,7 +28,7 @@ module "couchbase" {
   max_size      = 3
   instance_type = "t2.medium"
 
-  ami_id    = "${var.ami_id}"
+  ami_id    = "${data.template_file.ami_id.rendered}"
   user_data = "${data.template_file.user_data_server.rendered}"
 
   vpc_id     = "${data.aws_vpc.default.id}"
@@ -224,6 +224,41 @@ module "iam_policies" {
   source = "../../modules/couchbase-iam-policies"
 
   iam_role_id = "${module.couchbase.iam_role_id}"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# USE THE PUBLIC EXAMPLE AMIS IF VAR.AMI_ID IS NOT SPECIFIED
+# We have published some example AMIs publicly that will be used if var.ami_id is not specified. This makes it easier
+# to try these examples out, but we recommend you build your own AMIs for production use.
+# ---------------------------------------------------------------------------------------------------------------------
+
+data "aws_ami" "coubase_ubuntu_example" {
+  most_recent = true
+  owners      = ["738755648600"] # Gruntwork
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
+
+  filter {
+    name   = "image-type"
+    values = ["machine"]
+  }
+
+  filter {
+    name   = "name"
+    values = ["*couchbase-ubuntu-example*"]
+  }
+}
+
+data "template_file" "ami_id" {
+  template = "${var.ami_id == "" ? data.aws_ami.coubase_ubuntu_example.id : var.ami_id}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
