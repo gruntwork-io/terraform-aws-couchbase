@@ -55,8 +55,8 @@ jobs:
       - run: gruntwork-install --module-name "build-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "v0.7.1"
       - run: gruntwork-install --module-name "aws-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "v0.7.1"
 
-      - run: ~/$CIRCLE_PROJECT_REPONAME/.circleci/publish-amis.sh "ubuntu-ami"
-      - run: ~/$CIRCLE_PROJECT_REPONAME/.circleci/publish-amis.sh "amazon-linux-ami"
+      - run: ~/project/.circleci/publish-amis.sh "ubuntu-ami"
+      - run: ~/project/.circleci/publish-amis.sh "amazon-linux-ami"
 
 workflows:
   version: 2
