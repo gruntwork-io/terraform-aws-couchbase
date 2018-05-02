@@ -334,7 +334,7 @@ module "iam_policies_replica" {
 # specified. This makes it easier to try these examples out, but we recommend you build your own AMIs for production use.
 # ---------------------------------------------------------------------------------------------------------------------
 
-data "aws_ami" "coubase_ubuntu_example" {
+data "aws_ami" "coubase_ubuntu_example_primary" {
   most_recent = true
   owners      = ["738755648600"] # Gruntwork
 
@@ -357,14 +357,43 @@ data "aws_ami" "coubase_ubuntu_example" {
     name   = "name"
     values = ["*couchbase-ubuntu-example*"]
   }
+
+  provider = "aws.replica"
+}
+
+data "aws_ami" "coubase_ubuntu_example_replica" {
+  most_recent = true
+  owners      = ["738755648600"] # Gruntwork
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
+
+  filter {
+    name   = "image-type"
+    values = ["machine"]
+  }
+
+  filter {
+    name   = "name"
+    values = ["*couchbase-ubuntu-example*"]
+  }
+
+  provider = "aws.replica"
 }
 
 data "template_file" "ami_id_primary" {
-  template = "${var.ami_id_primary == "" ? data.aws_ami.coubase_ubuntu_example.id : var.ami_id_primary}"
+  template = "${var.ami_id_primary == "" ? data.aws_ami.coubase_ubuntu_example_primary.id : var.ami_id_primary}"
 }
 
 data "template_file" "ami_id_replica" {
-  template = "${var.ami_id_replica == "" ? data.aws_ami.coubase_ubuntu_example.id : var.ami_id_replica}"
+  template = "${var.ami_id_replica == "" ? data.aws_ami.coubase_ubuntu_example_replica.id : var.ami_id_replica}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
