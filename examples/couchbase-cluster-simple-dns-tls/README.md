@@ -5,7 +5,7 @@ This folder shows an example of Terraform code that uses the
 module to deploy a [Couchbase](https://www.couchbase.com/) cluster in [AWS](https://aws.amazon.com/). The cluster 
 consists of one Auto Scaling Group (ASG) that runs all Couchbase services and Sync Gateway:
 
-![Couchbase single-cluster architecture](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/_docs/couchbase-cluster-simple-architecture.png?raw=true)
+![Couchbase single-cluster architecture](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/_docs/couchbase-single-cluster-architecture.png?raw=true)
 
 This example also deploys a Load Balancer in front of the Couchbase cluster, and configures SSL/DNS for it (see [DNS
 and SSL](#dns-and-ssl)), using the [load-balancer
