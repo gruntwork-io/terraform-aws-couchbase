@@ -32,7 +32,7 @@ module "couchbase_cluster" {
               /opt/couchbase/bin/run-couchbase-server --username admin --password password
               EOF
   
-  # ... See vars.tf for the other parameters you must define for the couchbase-cluster module
+  # ... See variables.tf for the other parameters you must define for the couchbase-cluster module
 }
 ```
 
@@ -58,7 +58,7 @@ Note the following parameters:
   [run-sync-gateway](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/run-sync-gateway)
   scripts to configure and run Couchbase and/or Sync Gateway. 
 
-You can find the other parameters in [vars.tf](vars.tf).
+You can find the other parameters in [variables.tf](variables.tf).
 
 Check out the [examples folder](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples) for 
 fully-working sample code. 

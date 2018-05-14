@@ -75,7 +75,7 @@ module "couchbase_target_group" {
   # server
   enable_stickiness = true
     
-  # ... See vars.tf for the other parameters you must define for this module
+  # ... See variables.tf for the other parameters you must define for this module
 }
 
 module "sync_gateway_target_group" {
@@ -91,7 +91,7 @@ module "sync_gateway_target_group" {
   num_listener_arns               = 1
   listener_rule_starting_priority = 100
 
-  # ... See vars.tf for the other parameters you must define for this module
+  # ... See variables.tf for the other parameters you must define for this module
 }
 ```
 
