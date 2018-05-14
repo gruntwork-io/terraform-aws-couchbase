@@ -24,7 +24,7 @@ To deploy a Couchbase Cluster:
 1. Optional: build custom Couchbase AMIs. See the
    [couchbase-ami example](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-ami)
    documentation for instructions. Note that you'll need to build one AMI in each of the regions specified in
-   `vars.tf`: `aws_region_primary` and `aws_region_replica`:
+   `variables.tf`: `aws_region_primary` and `aws_region_replica`:
 
     ```
     packer build -var aws_region=us-east-1 -only=ubuntu-ami couchbase.json
@@ -32,7 +32,7 @@ To deploy a Couchbase Cluster:
     ```
 
 1. Install [Terraform](https://www.terraform.io/).
-1. Open `vars.tf`, set the environment variables specified at the top of the file, and fill in any other variables that
+1. Open `variables.tf`, set the environment variables specified at the top of the file, and fill in any other variables that
    don't have a default. If you built custom AMIs, put their IDs into the `ami_id_primary` and `ami_id_replica`
    variables. If you didn't, this example will use public AMIs that Gruntwork has published, which are fine for
    testing/learning, but not recommended for production use.
