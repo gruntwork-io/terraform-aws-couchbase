@@ -48,7 +48,7 @@ Check out [How do you connect to the Couchbase
 cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster#how-do-you-connect-to-the-couchbase-cluster)
 documentation. To log into the Couchbase Web Console, use the username and password from the `cluster_username`
 and `cluster_password` vars in
-[user-data.sh](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-multi-datacenter-replication/user-data/user-data-primary.sh).
+[user-data-primary.sh](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-multi-datacenter-replication/user-data/user-data-primary.sh).
 
 Note that booting up and rebalancing a Couchbase cluster can take 5 - 10 minutes, depending on the number and types of
 instances.
