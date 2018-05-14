@@ -28,6 +28,15 @@ if [[ -z "$PACKER_BUILD_NAME" ]]; then
   exit 1
 fi
 
+if [[ -z "$AMI_PUBLISHING_ACCESS_KEY_ID" || -z "$AMI_PUBLISHING_SECRET_ACCESS_KEY" ]]; then
+  echo "ERROR: This script expects AWS access keys for publishing public AMIs to be set as the environment variables AMI_PUBLISHING_ACCESS_KEY_ID and AMI_PUBLISHING_SECRET_ACCESS_KEY."
+  exit 1
+fi
+
+# Publish AMIs to a different AWS account (not our test account) to ensure they don't get deleted by cloud-nuke
+export AWS_ACCESS_KEY_ID="$AMI_PUBLISHING_ACCESS_KEY_ID"
+export AWS_SECRET_ACCESS_KEY="$AMI_PUBLISHING_SECRET_ACCESS_KEY"
+
 # Build the example AMI. WARNING! In a production setting, you should build your own AMI to ensure it has exactly the
 # configuration you want. We build this example AMI solely to make initial use of this Module as easy as possible.
 build-packer-artifact \
@@ -46,11 +55,3 @@ publish-ami \
   --markdown-description-text "**WARNING! Do NOT use these AMIs in a production setting.** They are meant only to make
     initial experiments with this module more convenient."
 
-# Git add, commit, and push the newly created AMI IDs as a markdown doc to the repo
-git-add-commit-push \
-  --path "$AMI_LIST_MARKDOWN_DIR/$PACKER_BUILD_NAME-list.md" \
-  --message "$GIT_COMMIT_MESSAGE" \
-  --user-name "$GIT_USER_NAME" \
-  --user-email "$GIT_USER_EMAIL" \
-  --git-push-behavior "current" \
-  --branch-name "$BRANCH_NAME"
