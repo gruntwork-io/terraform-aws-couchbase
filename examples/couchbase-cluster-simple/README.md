@@ -1,6 +1,6 @@
 # Couchbase Single Cluster Example
 
-This folder shows an example of Terraform code that uses the 
+The root folder of this repo shows an example of Terraform code that uses the
 [couchbase-cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster) 
 module to deploy a [Couchbase](https://www.couchbase.com/) cluster in [AWS](https://aws.amazon.com/). The cluster 
 consists of one Auto Scaling Group (ASG) that runs all Couchbase services and Sync Gateway:

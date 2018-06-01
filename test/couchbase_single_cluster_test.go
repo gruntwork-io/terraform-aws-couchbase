@@ -32,7 +32,7 @@ func TestIntegrationCouchbaseEnterpriseSingleClusterAmazonLinux(t *testing.T) {
 }
 
 func testCouchbaseSingleCluster(t *testing.T, osName string, edition string) {
-	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples")
+	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", ".")
 	couchbaseAmiDir := filepath.Join(examplesFolder, "couchbase-ami")
 	couchbaseSingleClusterDir := filepath.Join(examplesFolder, "couchbase-cluster-simple")
 

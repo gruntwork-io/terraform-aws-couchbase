@@ -14,8 +14,10 @@ Or as multiple clusters for the various Couchbase services (data, management, se
 
 ## Quick start
 
-If you want to quickly spin up a Couchbase cluster, check out the instructions for the [couchbase-cluster-simple
-example](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/examples/couchbase-cluster-simple).
+If you want to quickly spin up a Couchbase cluster, you can run the simple example that is in the root of this repo.
+Check out [couchbase-cluster-simple example
+documentation](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/examples/couchbase-cluster-simple)
+for instructions.
 
 
 
