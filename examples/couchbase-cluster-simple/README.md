@@ -1,6 +1,6 @@
 # Couchbase Single Cluster Example
 
-This folder shows an example of Terraform code that uses the 
+The root folder of this repo shows an example of Terraform code that uses the
 [couchbase-cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster) 
 module to deploy a [Couchbase](https://www.couchbase.com/) cluster in [AWS](https://aws.amazon.com/). The cluster 
 consists of one Auto Scaling Group (ASG) that runs all Couchbase services and Sync Gateway:
@@ -30,12 +30,12 @@ To deploy a Couchbase Cluster:
    [couchbase-ami example](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-ami)
    documentation for instructions. Make sure to note down the ID of the AMI.
 1. Install [Terraform](https://www.terraform.io/).
-1. Open `variables.tf`, set the environment variables specified at the top of the file, and fill in any other variables that
-   don't have a default. If you built a custom AMI, put its ID into the `ami_id` variable. If you didn't, this example
-   will use public AMIs that Gruntwork has published, which are fine for testing/learning, but not recommended for
-   production use.
-1. Run `terraform init`.
-1. Run `terraform apply`.
+1. Open the `variables.tf` file in the root of this repo, set the environment variables specified at the top of the
+   file, and fill in any other variables that don't have a default. If you built a custom AMI, put its ID into the
+   `ami_id` variable. If you didn't, this example will use public AMIs that Gruntwork has published, which are fine for
+   testing/learning, but not recommended for production use.
+1. Run `terraform init` in the root folder of this repo.
+1. Run `terraform apply` in the root folder of this repo.
 
 
 

@@ -5,10 +5,6 @@
 # used for health checks and to distribute traffic across Sync Gateway.
 # ---------------------------------------------------------------------------------------------------------------------
 
-provider "aws" {
-  region = "${var.aws_region}"
-}
-
 terraform {
   required_version = ">= 0.10.3"
 }
@@ -21,7 +17,7 @@ module "couchbase" {
   # When using these modules in your own code, you will need to use a Git URL with a ref attribute that pins you
   # to a specific version of the modules, such as the following example:
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/couchbase-cluster?ref=v0.0.1"
-  source = "../../modules/couchbase-cluster"
+  source = "./modules/couchbase-cluster"
 
   cluster_name  = "${var.cluster_name}"
   min_size      = 3
@@ -81,7 +77,7 @@ module "couchbase" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 data "template_file" "user_data_server" {
-  template = "${file("${path.module}/user-data/user-data.sh")}"
+  template = "${file("${path.module}/examples/couchbase-cluster-simple/user-data/user-data.sh")}"
 
   vars {
     cluster_asg_name = "${var.cluster_name}"
@@ -113,7 +109,7 @@ module "load_balancer" {
   # When using these modules in your own code, you will need to use a Git URL with a ref attribute that pins you
   # to a specific version of the modules, such as the following example:
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/load-balancer?ref=v0.0.1"
-  source = "../../modules/load-balancer"
+  source = "./modules/load-balancer"
 
   name       = "${var.cluster_name}"
   vpc_id     = "${data.aws_vpc.default.id}"
@@ -141,7 +137,7 @@ module "couchbase_target_group" {
   # When using these modules in your own code, you will need to use a Git URL with a ref attribute that pins you
   # to a specific version of the modules, such as the following example:
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/load-balancer-target-group?ref=v0.0.1"
-  source = "../../modules/load-balancer-target-group"
+  source = "./modules/load-balancer-target-group"
 
   target_group_name = "${var.cluster_name}-cb"
   asg_name          = "${module.couchbase.asg_name}"
@@ -162,7 +158,7 @@ module "sync_gateway_target_group" {
   # When using these modules in your own code, you will need to use a Git URL with a ref attribute that pins you
   # to a specific version of the modules, such as the following example:
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/load-balancer-target-group?ref=v0.0.1"
-  source = "../../modules/load-balancer-target-group"
+  source = "./modules/load-balancer-target-group"
 
   target_group_name = "${var.cluster_name}-sg"
   asg_name          = "${module.couchbase.asg_name}"
@@ -184,7 +180,7 @@ module "couchbase_security_group_rules" {
   # When using these modules in your own code, you will need to use a Git URL with a ref attribute that pins you
   # to a specific version of the modules, such as the following example:
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/couchbase-server-security-group-rules?ref=v0.0.1"
-  source = "../../modules/couchbase-server-security-group-rules"
+  source = "./modules/couchbase-server-security-group-rules"
 
   security_group_id = "${module.couchbase.security_group_id}"
 
@@ -203,7 +199,7 @@ module "sync_gateway_security_group_rules" {
   # When using these modules in your own code, you will need to use a Git URL with a ref attribute that pins you
   # to a specific version of the modules, such as the following example:
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/sync-gateway-security-group-rules?ref=v0.0.1"
-  source = "../../modules/sync-gateway-security-group-rules"
+  source = "./modules/sync-gateway-security-group-rules"
 
   security_group_id = "${module.couchbase.security_group_id}"
 
@@ -221,7 +217,7 @@ module "iam_policies" {
   # When using these modules in your own code, you will need to use a Git URL with a ref attribute that pins you
   # to a specific version of the modules, such as the following example:
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/couchbase-server-security-group-rules?ref=v0.0.1"
-  source = "../../modules/couchbase-iam-policies"
+  source = "./modules/couchbase-iam-policies"
 
   iam_role_id = "${module.couchbase.iam_role_id}"
 }

@@ -32,9 +32,8 @@ func TestIntegrationCouchbaseEnterpriseSingleClusterAmazonLinux(t *testing.T) {
 }
 
 func testCouchbaseSingleCluster(t *testing.T, osName string, edition string) {
-	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples")
-	couchbaseAmiDir := filepath.Join(examplesFolder, "couchbase-ami")
-	couchbaseSingleClusterDir := filepath.Join(examplesFolder, "couchbase-cluster-simple")
+	rootFolder := test_structure.CopyTerraformFolderToTemp(t, "../", ".")
+	couchbaseAmiDir := filepath.Join(rootFolder, "examples", "couchbase-ami")
 
 	test_structure.RunTestStage(t, "setup_ami", func() {
 		awsRegion := getRandomAwsRegion(t)
@@ -42,47 +41,49 @@ func testCouchbaseSingleCluster(t *testing.T, osName string, edition string) {
 
 		amiId := buildCouchbaseAmi(t, osName, couchbaseAmiDir, edition, awsRegion, uniqueId)
 
-		test_structure.SaveAmiId(t, couchbaseSingleClusterDir, amiId)
-		test_structure.SaveString(t, couchbaseSingleClusterDir, savedAwsRegion, awsRegion)
-		test_structure.SaveString(t, couchbaseSingleClusterDir, savedUniqueId, uniqueId)
+		test_structure.SaveAmiId(t, rootFolder, amiId)
+		test_structure.SaveString(t, rootFolder, savedAwsRegion, awsRegion)
+		test_structure.SaveString(t, rootFolder, savedUniqueId, uniqueId)
 	})
 
 	defer test_structure.RunTestStage(t, "teardown", func() {
-		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseSingleClusterDir)
+		terraformOptions := test_structure.LoadTerraformOptions(t, rootFolder)
 		terraform.Destroy(t, terraformOptions)
 
-		amiId := test_structure.LoadAmiId(t, couchbaseSingleClusterDir)
-		awsRegion := test_structure.LoadString(t, couchbaseSingleClusterDir, savedAwsRegion)
+		amiId := test_structure.LoadAmiId(t, rootFolder)
+		awsRegion := test_structure.LoadString(t, rootFolder, savedAwsRegion)
 		aws.DeleteAmi(t, awsRegion, amiId)
 	})
 
 	defer test_structure.RunTestStage(t, "logs", func() {
-		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseSingleClusterDir)
-		awsRegion := test_structure.LoadString(t, couchbaseSingleClusterDir, savedAwsRegion)
+		terraformOptions := test_structure.LoadTerraformOptions(t, rootFolder)
+		awsRegion := test_structure.LoadString(t, rootFolder, savedAwsRegion)
 		testStageLogs(t, terraformOptions, couchbaseClusterVarName, awsRegion)
 	})
 
 	test_structure.RunTestStage(t, "setup_deploy", func() {
-		amiId := test_structure.LoadAmiId(t, couchbaseSingleClusterDir)
-		awsRegion := test_structure.LoadString(t, couchbaseSingleClusterDir, savedAwsRegion)
-		uniqueId := test_structure.LoadString(t, couchbaseSingleClusterDir, savedUniqueId)
+		amiId := test_structure.LoadAmiId(t, rootFolder)
+		awsRegion := test_structure.LoadString(t, rootFolder, savedAwsRegion)
+		uniqueId := test_structure.LoadString(t, rootFolder, savedUniqueId)
 
 		terraformOptions := &terraform.Options{
-			TerraformDir: couchbaseSingleClusterDir,
+			TerraformDir: rootFolder,
 			Vars: map[string]interface{}{
-				"aws_region":            awsRegion,
 				"ami_id":                amiId,
 				couchbaseClusterVarName: formatCouchbaseClusterName("single-cluster", uniqueId),
+			},
+			EnvVars: map[string]string{
+				AWS_DEFAULT_REGION_ENV_VAR: awsRegion,
 			},
 		}
 
 		terraform.InitAndApply(t, terraformOptions)
 
-		test_structure.SaveTerraformOptions(t, couchbaseSingleClusterDir, terraformOptions)
+		test_structure.SaveTerraformOptions(t, rootFolder, terraformOptions)
 	})
 
 	test_structure.RunTestStage(t, "validation", func() {
-		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseSingleClusterDir)
+		terraformOptions := test_structure.LoadTerraformOptions(t, rootFolder)
 		validateSingleClusterWorks(t, terraformOptions, couchbaseClusterVarName, "http")
 	})
 }
