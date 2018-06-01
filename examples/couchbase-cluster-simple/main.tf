@@ -5,10 +5,6 @@
 # used for health checks and to distribute traffic across Sync Gateway.
 # ---------------------------------------------------------------------------------------------------------------------
 
-provider "aws" {
-  region = "${var.aws_region}"
-}
-
 terraform {
   required_version = ">= 0.10.3"
 }

@@ -56,10 +56,12 @@ func testCouchbaseSingleClusterDnsTls(t *testing.T, osName string, edition strin
 		terraformOptions := &terraform.Options{
 			TerraformDir: couchbaseSingleClusterDnsTlsDir,
 			Vars: map[string]interface{}{
-				"aws_region":            awsRegion,
 				"ami_id":                amiId,
 				"domain_name":           domainNameForTest,
 				couchbaseClusterVarName: formatCouchbaseClusterName("single-cluster", uniqueId),
+			},
+			EnvVars: map[string]string{
+				AWS_DEFAULT_REGION_ENV_VAR: awsRegion,
 			},
 		}
 

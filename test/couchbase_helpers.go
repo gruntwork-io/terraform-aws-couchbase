@@ -15,6 +15,8 @@ import (
 	"github.com/gruntwork-io/terratest/modules/terraform"
 )
 
+const AWS_DEFAULT_REGION_ENV_VAR = "AWS_DEFAULT_REGION"
+
 func checkCouchbaseConsoleIsRunning(t *testing.T, clusterUrl string) {
 	maxRetries := 180
 	sleepBetweenRetries := 5 * time.Second

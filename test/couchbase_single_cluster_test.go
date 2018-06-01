@@ -70,9 +70,11 @@ func testCouchbaseSingleCluster(t *testing.T, osName string, edition string) {
 		terraformOptions := &terraform.Options{
 			TerraformDir: couchbaseSingleClusterDir,
 			Vars: map[string]interface{}{
-				"aws_region":            awsRegion,
 				"ami_id":                amiId,
 				couchbaseClusterVarName: formatCouchbaseClusterName("single-cluster", uniqueId),
+			},
+			EnvVars: map[string]string{
+				AWS_DEFAULT_REGION_ENV_VAR: awsRegion,
 			},
 		}
 

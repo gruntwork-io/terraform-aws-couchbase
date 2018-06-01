@@ -66,11 +66,13 @@ func testCouchbaseMultiCluster(t *testing.T, osName string, edition string) {
 		terraformOptions := &terraform.Options{
 			TerraformDir: couchbaseMultiClusterDir,
 			Vars: map[string]interface{} {
-				"aws_region":                   awsRegion,
 				"ami_id":                       amiId,
 				dataNodeClusterVarName:         formatCouchbaseClusterName("data", uniqueId),
 				indexQuerySearchClusterVarName: formatCouchbaseClusterName("search", uniqueId),
 				syncGatewayClusterVarName: 		formatCouchbaseClusterName("sync", uniqueId),
+			},
+			EnvVars: map[string]string{
+				AWS_DEFAULT_REGION_ENV_VAR: awsRegion,
 			},
 		}
 
