@@ -3,20 +3,6 @@
 # This is an example of how to deploy two Couchbase clusters in AWS with replication between them.
 # ---------------------------------------------------------------------------------------------------------------------
 
-provider "aws" {
-  alias = "primary"
-
-  # Region intentionally ommitted so this example will prompt the user for a region when run via Terraform Registry
-  # instructions
-}
-
-provider "aws" {
-  alias = "replica"
-
-  # Region intentionally ommitted so this example will prompt the user for a region when run via Terraform Registry
-  # instructions
-}
-
 terraform {
   required_version = ">= 0.10.3"
 }
