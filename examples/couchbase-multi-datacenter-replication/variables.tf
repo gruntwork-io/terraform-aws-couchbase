@@ -26,19 +26,9 @@ variable "ami_id_replica" {
   default     = ""
 }
 
-variable "aws_region_primary" {
-  description = "The AWS region to deploy the primary Couchbase cluster into (e.g. us-east-1)."
-  default     = "us-east-1"
-}
-
 variable "cluster_name_primary" {
   description = "What to name the primary Couchbase cluster and all of its associated resources"
   default     = "couchbase-server-primary"
-}
-
-variable "aws_region_replica" {
-  description = "The AWS region to deploy the replica Couchbase cluster into (e.g. us-east-1)."
-  default     = "us-west-1"
 }
 
 variable "cluster_name_replica" {

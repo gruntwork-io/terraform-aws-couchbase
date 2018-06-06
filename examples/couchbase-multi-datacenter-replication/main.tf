@@ -4,13 +4,17 @@
 # ---------------------------------------------------------------------------------------------------------------------
 
 provider "aws" {
-  alias  = "primary"
-  region = "${var.aws_region_primary}"
+  alias = "primary"
+
+  # Region intentionally ommitted so this example will prompt the user for a region when run via Terraform Registry
+  # instructions
 }
 
 provider "aws" {
-  alias  = "replica"
-  region = "${var.aws_region_replica}"
+  alias = "replica"
+
+  # Region intentionally ommitted so this example will prompt the user for a region when run via Terraform Registry
+  # instructions
 }
 
 terraform {
@@ -110,7 +114,7 @@ data "template_file" "user_data_primary" {
     cluster_port     = "${module.couchbase_security_group_rules_primary.rest_port}"
 
     replication_dest_cluster_name       = "${var.cluster_name_replica}"
-    replication_dest_cluster_aws_region = "${var.aws_region_replica}"
+    replication_dest_cluster_aws_region = "${data.aws_region.replica.name}"
   }
 }
 
@@ -431,5 +435,9 @@ data "aws_vpc" "default_replica" {
 data "aws_subnet_ids" "default_replica" {
   vpc_id = "${data.aws_vpc.default_replica.id}"
 
+  provider = "aws.replica"
+}
+
+data "aws_region" "replica" {
   provider = "aws.replica"
 }
