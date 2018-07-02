@@ -448,7 +448,7 @@ module "iam_policies_sync_gateway" {
 
 data "aws_ami" "coubase_ubuntu_example" {
   most_recent = true
-  owners      = ["738755648600"] # Gruntwork
+  owners      = ["562637147889"] # Gruntwork
 
   filter {
     name   = "virtualization-type"

@@ -275,7 +275,7 @@ data "aws_acm_certificate" "load_balancer" {
 
 data "aws_ami" "coubase_ubuntu_example" {
   most_recent = true
-  owners      = ["738755648600"] # Gruntwork
+  owners      = ["562637147889"] # Gruntwork
 
   filter {
     name   = "virtualization-type"
