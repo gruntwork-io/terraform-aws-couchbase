@@ -326,7 +326,7 @@ module "iam_policies_replica" {
 
 data "aws_ami" "coubase_ubuntu_example_primary" {
   most_recent = true
-  owners      = ["738755648600"] # Gruntwork
+  owners      = ["562637147889"] # Gruntwork
 
   filter {
     name   = "virtualization-type"
@@ -353,7 +353,7 @@ data "aws_ami" "coubase_ubuntu_example_primary" {
 
 data "aws_ami" "coubase_ubuntu_example_replica" {
   most_recent = true
-  owners      = ["738755648600"] # Gruntwork
+  owners      = ["562637147889"] # Gruntwork
 
   filter {
     name   = "virtualization-type"
