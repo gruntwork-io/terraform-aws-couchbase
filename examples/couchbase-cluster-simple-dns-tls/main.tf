@@ -236,7 +236,7 @@ module "sync_gateway_security_group_rules" {
 module "iam_policies" {
   # When using these modules in your own code, you will need to use a Git URL with a ref attribute that pins you
   # to a specific version of the modules, such as the following example:
-  # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/couchbase-server-security-group-rules?ref=v0.0.1"
+  # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/couchbase-iam-policies?ref=v0.0.1"
   source = "../../modules/couchbase-iam-policies"
 
   iam_role_id = "${module.couchbase.iam_role_id}"
