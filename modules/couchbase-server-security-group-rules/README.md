@@ -11,7 +11,7 @@ Couchbase uses a large number of ports, and this module allows you to configure 
 
 ## Quick start
 
-Let's say you want to deploy Couchbase using the [couchbase-cluster
+Let's say you want to deploy Couchbase using the [couchbase-cluster 
 module](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/modules/couchbase-cluster): 
 
 ```hcl
