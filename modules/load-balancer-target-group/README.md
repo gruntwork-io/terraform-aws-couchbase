@@ -19,7 +19,7 @@ working sample code.
 ## How do you use this module?
 
 Imagine you've deployed Couchbase and Sync Gateway using the [couchbase-cluster
-module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/load-balancer) and a Load Balancer
+module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster) and a Load Balancer
 using the [load-balancer module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/load-balancer):    
 
 ```hcl
