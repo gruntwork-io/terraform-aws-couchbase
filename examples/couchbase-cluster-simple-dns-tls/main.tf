@@ -310,4 +310,5 @@ data "template_file" "ami_id" {
 
 data "aws_route53_zone" "load_balancer" {
   name = "${var.domain_name}."
+  tags = "${var.domain_name_tags}"
 }
