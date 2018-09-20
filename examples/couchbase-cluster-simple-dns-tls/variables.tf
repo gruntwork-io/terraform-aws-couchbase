@@ -70,3 +70,9 @@ variable "sync_gateway_load_balancer_port" {
   description = "The port the load balancer should listen on for Sync Gateway requests."
   default     = 4984
 }
+
+variable "domain_name_tags" {
+  description = "Tags the hosted zone must have. Useful if you have multiple hosted zones with the same domain name."
+  type        = "map"
+  default     = {}
+}

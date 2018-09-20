@@ -1,16 +1,20 @@
 package test
 
 import (
-	"testing"
-	"path/filepath"
-	"github.com/gruntwork-io/terratest/modules/test-structure"
+	"github.com/gruntwork-io/terratest/modules/aws"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/terraform"
-	"github.com/gruntwork-io/terratest/modules/aws"
+	"github.com/gruntwork-io/terratest/modules/test-structure"
+	"path/filepath"
+	"testing"
 )
 
 // This domain name is registered in the Gruntwork Phx DevOps account. It also has ACM certs in all regions.
 const domainNameForTest = "gruntwork.in"
+
+// We have multiple hosted zones in the Gruntwork Phx DevOps account with the same domain name. This helps
+// filter them down to the real public hosted zone for domainNameForTest.
+var domainNameTags = map[string]string{"original": "true"}
 
 func TestIntegrationCouchbaseCommunitySingleClusterDnsTlsUbuntu(t *testing.T) {
 	t.Parallel()
@@ -42,7 +46,7 @@ func testCouchbaseSingleClusterDnsTls(t *testing.T, osName string, edition strin
 		aws.DeleteAmi(t, awsRegion, amiId)
 	})
 
-	defer test_structure.RunTestStage(t,"logs", func() {
+	defer test_structure.RunTestStage(t, "logs", func() {
 		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseSingleClusterDnsTlsDir)
 		awsRegion := test_structure.LoadString(t, couchbaseSingleClusterDnsTlsDir, savedAwsRegion)
 		testStageLogs(t, terraformOptions, couchbaseClusterVarName, awsRegion)
@@ -58,6 +62,7 @@ func testCouchbaseSingleClusterDnsTls(t *testing.T, osName string, edition strin
 			Vars: map[string]interface{}{
 				"ami_id":                amiId,
 				"domain_name":           domainNameForTest,
+				"domain_name_tags":      domainNameTags,
 				couchbaseClusterVarName: formatCouchbaseClusterName("single-cluster", uniqueId),
 			},
 			EnvVars: map[string]string{
