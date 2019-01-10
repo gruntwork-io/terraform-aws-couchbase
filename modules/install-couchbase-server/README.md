@@ -59,7 +59,7 @@ Options:
   --version		The version of Couchbase to install. Default: 5.1.0.
   --checksum		The checksum of the Couchbase package. Required if --version is specified. You can get it from the downloads page of the Couchbase website.
   --checksum-type	The type of checksum in --checksum. Required if --version is specified. Must be one of: sha256, md5.
-  --swapiness		The OS swapiness setting to use. Couchbase recommends setting this to 0. Default: 0.
+  --swappiness		The OS swappiness setting to use. Couchbase recommends setting this to 0. Default: 0.
 
 Example:
 
@@ -90,7 +90,7 @@ Install the following:
 
 ### Update swap settings
 
-Set the "swapiness" setting on your OS to 0. See [Swap Space and Kernel 
+Set the "swappiness" setting on your OS to 0. See [Swap Space and Kernel 
 Swappiness](https://developer.couchbase.com/documentation/server/current/install/install-swap-space.html) for details.
 
 
