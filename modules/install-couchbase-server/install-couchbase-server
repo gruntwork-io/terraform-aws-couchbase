@@ -118,6 +118,10 @@ function install_couchbase_on_amazon_linux {
 
   log_info "Cleaning up $filepath"
   rm -f "$filepath"
+
+  # Workaround for https://github.com/gruntwork-io/terraform-aws-couchbase/issues/33
+  log_info "Creating symlink for libtinfo"
+  sudo ln -s /usr/lib64/libtinfo.so.6 /usr/lib64/libtinfo.so.5
 }
 
 # Disabling transparent huge pages is recommended for Couchbase servers.
