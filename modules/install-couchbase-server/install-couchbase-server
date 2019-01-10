@@ -31,8 +31,8 @@ readonly DEFAULT_COUCHBASE_COMMUNITY_MD5_CHECKSUM_AMAZON_LINUX="1c2bfda713f93991
 readonly SHA256_CHECKSUM_TYPE="sha256"
 readonly MD5_CHECKSUM_TYPE="md5"
 
-readonly DEFAULT_SWAPINESS="0"
-readonly SWAPINESS_CONFIG_FILE="/etc/sysctl.conf"
+readonly DEFAULT_SWAPPINESS="0"
+readonly SWAPPINESS_CONFIG_FILE="/etc/sysctl.conf"
 readonly DISABLE_THP_BOOT_SCRIPT="/etc/init.d/disable-thp"
 
 readonly DEFAULT_COUCHBASE_DIR="/opt/couchbase"
@@ -53,7 +53,7 @@ function print_usage {
   echo -e "  --version\t\tThe version of Couchbase to install. Default: $DEFAULT_COUCHBASE_ENTERPRISE_VERSION."
   echo -e "  --checksum\t\tThe checksum of the Couchbase package. Required if --version is specified. You can get it from the downloads page of the Couchbase website."
   echo -e "  --checksum-type\tThe type of checksum in --checksum. Required if --version is specified. Must be one of: $SHA256_CHECKSUM_TYPE, $MD5_CHECKSUM_TYPE."
-  echo -e "  --swapiness\t\tThe OS swapiness setting to use. Couchbase recommends setting this to 0. Default: $DEFAULT_SWAPINESS."
+  echo -e "  --swappiness\t\tThe OS swappiness setting to use. Couchbase recommends setting this to 0. Default: $DEFAULT_SWAPPINESS."
   echo
   echo "Example:"
   echo
@@ -127,14 +127,14 @@ function disable_transparent_huge_pages {
   sudo cp "$SCRIPT_DIR/disable-thp" "$DISABLE_THP_BOOT_SCRIPT"
 }
 
-# A swapiness of 0 or 1 is recommended for Couchbase servers.
+# A swappiness of 0 or 1 is recommended for Couchbase servers.
 # https://developer.couchbase.com/documentation/server/current/install/install-swap-space.html
-function update_swapiness {
-  local readonly swapiness="$1"
+function update_swappiness {
+  local readonly swappiness="$1"
 
-  log_info "Updating OS swapiness settings to $swapiness in $SWAPINESS_CONFIG_FILE"
+  log_info "Updating OS swappiness settings to $swappiness in $SWAPPINESS_CONFIG_FILE"
 
-  file_replace_or_append_text "^vm.swappiness.*=.*$" "vm.swapiness = $swapiness" "$SWAPINESS_CONFIG_FILE"
+  file_replace_or_append_text "^vm.swappiness.*=.*$" "vm.swappiness = $swappiness" "$SWAPPINESS_CONFIG_FILE"
 }
 
 function install_couchbase_scripts {
@@ -166,7 +166,7 @@ function install {
   local version
   local checksum
   local checksum_type
-  local swapiness="$DEFAULT_SWAPINESS"
+  local swappiness="$DEFAULT_SWAPPINESS"
 
   while [[ $# > 0 ]]; do
     local key="$1"
@@ -194,9 +194,9 @@ function install {
         checksum_type="$2"
         shift
         ;;
-      --swapiness)
+      --swappiness)
         assert_not_empty "$key" "$2"
-        swapiness="$2"
+        swappiness="$2"
         shift
         ;;
       --help)
@@ -243,7 +243,7 @@ function install {
     exit 1
   fi
 
-  update_swapiness "$swapiness"
+  update_swappiness "$swappiness"
   disable_transparent_huge_pages
   install_couchbase_scripts "$DEFAULT_COUCHBASE_BIN_DIR"
   install_couchbase_commons "$COUCHBASE_COMMONS_SRC_DIR" "$COUCHBASE_COMMONS_INSTALL_DIR"
