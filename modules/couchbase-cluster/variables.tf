@@ -160,3 +160,9 @@ variable "tags" {
   #   }
   # ]
 }
+
+variable "security_group_tags" {
+  description = "Custom tags to apply to the security group."
+  type        = "map"
+  default     = {}
+}
