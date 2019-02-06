@@ -86,6 +86,8 @@ resource "aws_security_group" "lc_security_group" {
   lifecycle {
     create_before_destroy = true
   }
+
+  tags = "${var.security_group_tags}"
 }
 
 resource "aws_security_group_rule" "allow_ssh_inbound" {
