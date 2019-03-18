@@ -446,7 +446,7 @@ module "iam_policies_sync_gateway" {
 # to try these examples out, but we recommend you build your own AMIs for production use.
 # ---------------------------------------------------------------------------------------------------------------------
 
-data "aws_ami" "coubase_ubuntu_example" {
+data "aws_ami" "couchbase_ubuntu_example" {
   most_recent = true
   owners      = ["562637147889"] # Gruntwork
 
@@ -472,7 +472,7 @@ data "aws_ami" "coubase_ubuntu_example" {
 }
 
 data "template_file" "ami_id" {
-  template = "${var.ami_id == "" ? data.aws_ami.coubase_ubuntu_example.id : var.ami_id}"
+  template = "${var.ami_id == "" ? data.aws_ami.couchbase_ubuntu_example.id : var.ami_id}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
