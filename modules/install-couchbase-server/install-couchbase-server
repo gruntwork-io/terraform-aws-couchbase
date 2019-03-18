@@ -129,6 +129,16 @@ function install_couchbase_on_amazon_linux {
 function disable_transparent_huge_pages {
   log_info "Adding boot script $DISABLE_THP_BOOT_SCRIPT to disable transparent huge pages"
   sudo cp "$SCRIPT_DIR/disable-thp" "$DISABLE_THP_BOOT_SCRIPT"
+  sudo chmod 755 "$DISABLE_THP_BOOT_SCRIPT"
+
+  if os_is_ubuntu; then
+    sudo update-rc.d disable-thp defaults
+  elif os_is_amazon_linux; then
+    sudo chkconfig disable-thp on
+  else
+    log_error "This script only supports Ubuntu 16.04 and Amazon Linux 2."
+    exit 1
+  fi
 }
 
 # A swappiness of 0 or 1 is recommended for Couchbase servers.
