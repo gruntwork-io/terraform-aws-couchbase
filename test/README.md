@@ -26,6 +26,7 @@ clean up.
 ### Prerequisites
 
 - Install the latest version of [Go](https://golang.org/).
+- Install the latest version of [Packer](https://packer.io).
 - Install [dep](https://github.com/golang/dep) for Go dependency management.
 - Install [Terraform](https://www.terraform.io/downloads.html).
 - Configure your AWS credentials using one of the [options supported by the AWS 
