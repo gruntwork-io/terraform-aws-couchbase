@@ -25,6 +25,7 @@ func getRandomAwsRegion(t *testing.T) string {
 	excludedRegions := []string{
 		"ap-northeast-2",
 		"ap-southeast-1",
+		"ap-southeast-2",
 		"eu-central-1",
 		"us-west-2",
 		"sa-east-1", // Amazon Linux 2 doesn't seem to be available in this region
