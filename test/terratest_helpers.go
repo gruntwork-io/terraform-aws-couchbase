@@ -27,6 +27,7 @@ func getRandomAwsRegion(t *testing.T) string {
 		"ap-southeast-1",
 		"ap-southeast-2",
 		"eu-central-1",
+		"us-west-1",
 		"us-west-2",
 		"sa-east-1", // Amazon Linux 2 doesn't seem to be available in this region
 		"eu-north-1", // Many instance types are not available in this region
