@@ -324,7 +324,7 @@ module "iam_policies_replica" {
 # specified. This makes it easier to try these examples out, but we recommend you build your own AMIs for production use.
 # ---------------------------------------------------------------------------------------------------------------------
 
-data "aws_ami" "coubase_ubuntu_example_primary" {
+data "aws_ami" "couchbase_ubuntu_example_primary" {
   most_recent = true
   owners      = ["562637147889"] # Gruntwork
 
@@ -351,7 +351,7 @@ data "aws_ami" "coubase_ubuntu_example_primary" {
   provider = "aws.primary"
 }
 
-data "aws_ami" "coubase_ubuntu_example_replica" {
+data "aws_ami" "couchbase_ubuntu_example_replica" {
   most_recent = true
   owners      = ["562637147889"] # Gruntwork
 
@@ -379,11 +379,11 @@ data "aws_ami" "coubase_ubuntu_example_replica" {
 }
 
 data "template_file" "ami_id_primary" {
-  template = "${var.ami_id_primary == "" ? data.aws_ami.coubase_ubuntu_example_primary.id : var.ami_id_primary}"
+  template = "${var.ami_id_primary == "" ? data.aws_ami.couchbase_ubuntu_example_primary.id : var.ami_id_primary}"
 }
 
 data "template_file" "ami_id_replica" {
-  template = "${var.ami_id_replica == "" ? data.aws_ami.coubase_ubuntu_example_replica.id : var.ami_id_replica}"
+  template = "${var.ami_id_replica == "" ? data.aws_ami.couchbase_ubuntu_example_replica.id : var.ami_id_replica}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
