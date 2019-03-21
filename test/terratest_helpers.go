@@ -21,19 +21,19 @@ const savedAwsRegion = "AwsRegion"
 const savedUniqueId = "UniqueId"
 
 func getRandomAwsRegion(t *testing.T) string {
-	// Exclude regions where Gruntwork's accounts don't have ACM certs for testing
-	excludedRegions := []string{
-		"ap-northeast-2",
-		"ap-southeast-1",
-		"ap-southeast-2",
+	// Include regions where Gruntwork's accounts have ACM certs for testing
+	includedRegions := []string{
+		"eu-west-1",
 		"eu-central-1",
+		"us-east-1",
+		"us-east-2",
 		"us-west-1",
 		"us-west-2",
-		"sa-east-1", // Amazon Linux 2 doesn't seem to be available in this region
-		"eu-north-1", // Many instance types are not available in this region
+		"ap-northeast-1",
+		"ca-central-1",
 	}
 
-	return aws.GetRandomRegion(t, nil, excludedRegions)
+	return aws.GetRandomRegion(t, includedRegions, nil)
 }
 
 func buildCouchbaseWithPacker(t *testing.T, builderName string, baseAmiName string, awsRegion string, folderPath string, edition string) string {
