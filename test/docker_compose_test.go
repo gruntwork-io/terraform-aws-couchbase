@@ -25,7 +25,7 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 		syncGatewayWebConsolePort int
 	} {
 		{"TestUnitCouchbaseCommunitySingleClusterUbuntuInDocker","couchbase-cluster-simple", "ubuntu", "community", 2, 8091, 4984},
-		{"TestUnitCouchbaseEnterpriseMultiClusterAmazonLinuxInDocker", "couchbase-cluster-mds", "amazon-linux", "enterprise", 3,7091, 3984},
+    //    {"TestUnitCouchbaseEnterpriseMultiClusterAmazonLinuxInDocker", "couchbase-cluster-mds", "amazon-linux", "enterprise", 3,7091, 3984},
 	}
 
 	for _, testCase := range basicTestCases {

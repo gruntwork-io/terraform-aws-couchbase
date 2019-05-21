@@ -23,14 +23,14 @@ const savedUniqueId = "UniqueId"
 func getRandomAwsRegion(t *testing.T) string {
 	// Include regions where Gruntwork's accounts have ACM certs for testing
 	includedRegions := []string{
-		"eu-west-1",
-		"eu-central-1",
+//		"eu-west-1",
+//		"eu-central-1",
 		"us-east-1",
-		"us-east-2",
-		"us-west-1",
-		"us-west-2",
-		"ap-northeast-1",
-		"ca-central-1",
+//		"us-east-2",
+//		"us-west-1",
+//		"us-west-2",
+//		"ap-northeast-1",
+//		"ca-central-1",
 	}
 
 	return aws.GetRandomRegion(t, includedRegions, nil)
