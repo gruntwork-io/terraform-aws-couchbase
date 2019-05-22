@@ -79,6 +79,10 @@ func checkCouchbaseClusterIsInitialized(t *testing.T, clusterUrl string, expecte
 	})
 }
 
+type XAttrsType struct {
+
+}
+
 type TestData struct {
 	Foo string `json:"foo"`
 	Bar int `json:"bar"`
@@ -90,7 +94,8 @@ func (testData TestData) String() string {
 
 type CouchbaseTestDataResponse struct {
 	Meta CouchbaseMeta `json:"meta"`
-	Json TestData `json:"json"`
+	Json string `json:"json"`
+	XAttrs XAttrsType `json:"xattrs"`
 }
 
 type CouchbaseMeta struct {
@@ -108,12 +113,12 @@ func checkCouchbaseDataNodesWorking(t *testing.T, dataNodesUrl string) {
 		Foo: fmt.Sprintf("test-value-%s", uniqueId),
 		Bar: 42,
 	}
-
 	createBucket(t, dataNodesUrl, testBucketName)
 	writeToBucket(t, dataNodesUrl, testBucketName, testKey, testValue)
 
+	newtestValue := fmt.Sprintf("{\"foo\":\"test-value-%s\",\"bar\":42}", uniqueId)
 	actualValue := readFromBucket(t, dataNodesUrl, testBucketName, testKey)
-	assert.Equal(t, testValue, actualValue)
+	assert.Equal(t, newtestValue, actualValue)
 }
 
 func checkReplicationIsWorking(t *testing.T, dataNodesUrlPrimary string, dataNodesUrlReplica string, bucketPrimary string, bucketReplica string) {
@@ -126,8 +131,9 @@ func checkReplicationIsWorking(t *testing.T, dataNodesUrlPrimary string, dataNod
 
 	writeToBucket(t, dataNodesUrlPrimary, bucketPrimary, testKey, testValue)
 	actualValue := readFromBucket(t, dataNodesUrlReplica, bucketReplica, testKey)
+	newtestValue := fmt.Sprintf("{\"foo\":\"test-value-%s\",\"bar\":42}", uniqueId)
 
-	assert.Equal(t, testValue, actualValue)
+	assert.Equal(t, newtestValue, actualValue)
 }
 
 // Create a Couchbase bucket. Note that we do NOT use any Couchbase SDK here because this test runs against a
@@ -221,7 +227,7 @@ func writeToBucket(t *testing.T, clusterUrl string, bucketName string, key strin
 // Dockerized cluster, and the SDK does not work with Dockerized clusters, as it tries to use IPs that are only
 // accessible from inside a Docker container. Therefore, we just use the HTTP API directly. For more info, search for
 // "Connect via SDK" on this page: https://developer.couchbase.com/documentation/server/current/install/docker-deploy-multi-node-cluster.html
-func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key string) TestData {
+func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key string) string {
 	description := fmt.Sprintf("Reading key %s from bucket %s", key, bucketName)
 	maxRetries := 180
 	timeBetweenRetries := 5 * time.Second
@@ -246,6 +252,8 @@ func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key stri
 	})
 
 	var value CouchbaseTestDataResponse
+	logger.Logf(t, "Body %s", body)
+	logger.Logf(t, "Unmarshall %s", json.Unmarshal([]byte(body), &value))
 	if err := json.Unmarshal([]byte(body), &value); err != nil {
 		t.Fatalf("Failed to parse body '%s' for key %s in bucket %s: %v", body, key, bucketName, err)
 	}

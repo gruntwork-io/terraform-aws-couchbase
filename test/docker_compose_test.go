@@ -47,7 +47,7 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 		couchbaseWebConsolePortEast int
 		couchbaseWebConsolePortWest int
 	} {
-		{"TestUnitCouchbaseEnterpriseMultiDataCenterUbuntuInDocker", "couchbase-multi-datacenter-replication", "ubuntu", "enterprise", 2,6091, 5091},
+		//{"TestUnitCouchbaseEnterpriseMultiDataCenterUbuntuInDocker", "couchbase-multi-datacenter-replication", "ubuntu", "enterprise", 2,6091, 5091},
 	}
 
 	for _, testCase := range replicationTestCases {
