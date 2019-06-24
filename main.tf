@@ -87,18 +87,19 @@ data "template_file" "user_data_server" {
   vars = {
     cluster_asg_name             = var.cluster_name
     cluster_port                 = module.couchbase_security_group_rules.rest_port
+
+    # We expose the Sync Gateway on all IPs but the Sync Gateway Admin should ONLY be accessible from localhost, as it
+    # provides admin access to ALL Sync Gateway data.
     sync_gateway_interface       = ":${module.sync_gateway_security_group_rules.interface_port}"
     sync_gateway_admin_interface = "127.0.0.1:${module.sync_gateway_security_group_rules.admin_interface_port}"
+
+    # Pass in the data about the EBS volumes so they can be mounted
     data_volume_device_name      = var.data_volume_device_name
     data_volume_mount_point      = var.data_volume_mount_point
     index_volume_device_name     = var.index_volume_device_name
     index_volume_mount_point     = var.index_volume_mount_point
     volume_owner                 = var.volume_owner
   }
-  # We expose the Sync Gateway on all IPs but the Sync Gateway Admin should ONLY be accessible from localhost, as it
-  # provides admin access to ALL Sync Gateway data.
-
-  # Pass in the data about the EBS volumes so they can be mounted
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

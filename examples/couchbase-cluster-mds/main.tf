@@ -185,16 +185,18 @@ data "template_file" "user_data_couchbase_data_nodes" {
   vars = {
     cluster_asg_name        = var.couchbase_data_node_cluster_name
     cluster_port            = module.couchbase_data_nodes_security_group_rules.rest_port
+
+    # Pass in the data about the EBS volumes so they can be mounted
     data_volume_device_name = var.data_volume_device_name
     data_volume_mount_point = var.data_volume_mount_point
     volume_owner            = var.volume_owner
+
     # Use a small amount of memory so this example can fit on a t2.micro. In production settings, you'll want to run
     # on
     data_ramsize  = "512"
     index_ramsize = "256"
     fts_ramsize   = "256"
   }
-  # Pass in the data about the EBS volumes so they can be mounted
 }
 
 data "template_file" "user_data_couchbase_index_query_search_nodes" {
@@ -203,11 +205,12 @@ data "template_file" "user_data_couchbase_index_query_search_nodes" {
   vars = {
     cluster_asg_name         = var.couchbase_data_node_cluster_name
     cluster_port             = module.couchbase_data_nodes_security_group_rules.rest_port
+
+    # Pass in the data about the EBS volumes so they can be mounted
     index_volume_device_name = var.index_volume_device_name
     index_volume_mount_point = var.index_volume_mount_point
     volume_owner             = var.volume_owner
   }
-  # Pass in the data about the EBS volumes so they can be mounted
 }
 
 data "template_file" "user_data_sync_gateway" {
@@ -216,11 +219,12 @@ data "template_file" "user_data_sync_gateway" {
   vars = {
     cluster_asg_name             = var.couchbase_data_node_cluster_name
     cluster_port                 = module.couchbase_data_nodes_security_group_rules.rest_port
+
+    # We expose the Sync Gateway on all IPs but the Sync Gateway Admin should ONLY be accessible from localhost, as it
+    # provides admin access to ALL Sync Gateway data.
     sync_gateway_interface       = ":${module.sync_gateway_security_group_rules.interface_port}"
     sync_gateway_admin_interface = "127.0.0.1:${module.sync_gateway_security_group_rules.admin_interface_port}"
   }
-  # We expose the Sync Gateway on all IPs but the Sync Gateway Admin should ONLY be accessible from localhost, as it
-  # provides admin access to ALL Sync Gateway data.
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
