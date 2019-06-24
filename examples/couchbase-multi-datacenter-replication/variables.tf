@@ -37,13 +37,13 @@ variable "cluster_name_replica" {
 }
 
 variable "ssh_key_name_primary" {
-  description = "The name of an EC2 Key Pair that can be used to SSH to the EC2 Instances in the primary Couchbase cluster. Must be a Key Pair in the same region as the primary cluster. Set to an empty string to not associate a Key Pair."
-  default     = ""
+  description = "The name of an EC2 Key Pair that can be used to SSH to the EC2 Instances in the primary Couchbase cluster. Must be a Key Pair in the same region as the primary cluster. Set to null to not associate a Key Pair."
+  default     = null
 }
 
 variable "ssh_key_name_replica" {
-  description = "The name of an EC2 Key Pair that can be used to SSH to the EC2 Instances in the replica Couchbase cluster. Must be a Key Pair in the same region as the replica cluster. Set to an empty string to not associate a Key Pair."
-  default     = ""
+  description = "The name of an EC2 Key Pair that can be used to SSH to the EC2 Instances in the replica Couchbase cluster. Must be a Key Pair in the same region as the replica cluster. Set to null to not associate a Key Pair."
+  default     = null
 }
 
 variable "couchbase_load_balancer_port" {
