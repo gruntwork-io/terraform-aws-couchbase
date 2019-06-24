@@ -3,8 +3,13 @@
 # This is an example of how to deploy two Couchbase clusters in AWS with replication between them.
 # ---------------------------------------------------------------------------------------------------------------------
 
+# ----------------------------------------------------------------------------------------------------------------------
+# REQUIRE A SPECIFIC TERRAFORM VERSION OR HIGHER
+# This module has been updated with 0.12 syntax, which means it is no longer compatible with any versions below 0.12.
+# ----------------------------------------------------------------------------------------------------------------------
+
 terraform {
-  required_version = ">= 0.10.3"
+  required_version = ">= 0.12"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -17,22 +22,22 @@ module "couchbase_primary" {
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/couchbase-cluster?ref=v0.0.1"
   source = "../../modules/couchbase-cluster"
 
-  cluster_name  = "${var.cluster_name_primary}"
+  cluster_name  = var.cluster_name_primary
   min_size      = 3
   max_size      = 3
   instance_type = "t2.micro"
 
-  ami_id    = "${data.template_file.ami_id_primary.rendered}"
-  user_data = "${data.template_file.user_data_primary.rendered}"
+  ami_id    = data.template_file.ami_id_primary.rendered
+  user_data = data.template_file.user_data_primary.rendered
 
-  vpc_id     = "${data.aws_vpc.default_primary.id}"
-  subnet_ids = "${data.aws_subnet_ids.default_primary.ids}"
+  vpc_id     = data.aws_vpc.default_primary.id
+  subnet_ids = data.aws_subnet_ids.default_primary.ids
 
   # To make testing easier, we allow SSH requests from any IP address here. In a production deployment, we strongly
   # recommend you limit this to the IP address ranges of known, trusted servers inside your VPC.
   allowed_ssh_cidr_blocks = ["0.0.0.0/0"]
 
-  ssh_key_name = "${var.ssh_key_name_primary}"
+  ssh_key_name = var.ssh_key_name_primary
 
   # To make it easy to test this example from your computer, we allow the Couchbase servers to have public IPs. In a
   # production deployment, you'll probably want to keep all the servers in private subnets with only private IPs.
@@ -43,7 +48,7 @@ module "couchbase_primary" {
   health_check_type = "ELB"
 
   providers = {
-    aws = "aws.primary"
+    aws = aws.primary
   }
 }
 
@@ -57,22 +62,22 @@ module "couchbase_replica" {
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/couchbase-cluster?ref=v0.0.1"
   source = "../../modules/couchbase-cluster"
 
-  cluster_name  = "${var.cluster_name_replica}"
+  cluster_name  = var.cluster_name_replica
   min_size      = 3
   max_size      = 3
   instance_type = "t2.micro"
 
-  ami_id    = "${data.template_file.ami_id_replica.rendered}"
-  user_data = "${data.template_file.user_data_replica.rendered}"
+  ami_id    = data.template_file.ami_id_replica.rendered
+  user_data = data.template_file.user_data_replica.rendered
 
-  vpc_id     = "${data.aws_vpc.default_replica.id}"
-  subnet_ids = "${data.aws_subnet_ids.default_replica.ids}"
+  vpc_id     = data.aws_vpc.default_replica.id
+  subnet_ids = data.aws_subnet_ids.default_replica.ids
 
   # To make testing easier, we allow SSH requests from any IP address here. In a production deployment, we strongly
   # recommend you limit this to the IP address ranges of known, trusted servers inside your VPC.
   allowed_ssh_cidr_blocks = ["0.0.0.0/0"]
 
-  ssh_key_name = "${var.ssh_key_name_replica}"
+  ssh_key_name = var.ssh_key_name_replica
 
   # To make it easy to test this example from your computer, we allow the Couchbase servers to have public IPs. In a
   # production deployment, you'll probably want to keep all the servers in private subnets with only private IPs.
@@ -83,7 +88,7 @@ module "couchbase_replica" {
   health_check_type = "ELB"
 
   providers = {
-    aws = "aws.replica"
+    aws = aws.replica
   }
 }
 
@@ -93,14 +98,13 @@ module "couchbase_replica" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 data "template_file" "user_data_primary" {
-  template = "${file("${path.module}/user-data/user-data-primary.sh")}"
+  template = file("${path.module}/user-data/user-data-primary.sh")
 
-  vars {
-    cluster_asg_name = "${var.cluster_name_primary}"
-    cluster_port     = "${module.couchbase_security_group_rules_primary.rest_port}"
-
-    replication_dest_cluster_name       = "${var.cluster_name_replica}"
-    replication_dest_cluster_aws_region = "${data.aws_region.replica.name}"
+  vars = {
+    cluster_asg_name                    = var.cluster_name_primary
+    cluster_port                        = module.couchbase_security_group_rules_primary.rest_port
+    replication_dest_cluster_name       = var.cluster_name_replica
+    replication_dest_cluster_aws_region = data.aws_region.replica.name
   }
 }
 
@@ -110,11 +114,11 @@ data "template_file" "user_data_primary" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 data "template_file" "user_data_replica" {
-  template = "${file("${path.module}/user-data/user-data-replica.sh")}"
+  template = file("${path.module}/user-data/user-data-replica.sh")
 
-  vars {
-    cluster_asg_name = "${var.cluster_name_replica}"
-    cluster_port     = "${module.couchbase_security_group_rules_replica.rest_port}"
+  vars = {
+    cluster_asg_name = var.cluster_name_replica
+    cluster_port     = module.couchbase_security_group_rules_replica.rest_port
   }
 }
 
@@ -130,11 +134,11 @@ module "load_balancer_primary" {
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/load-balancer?ref=v0.0.1"
   source = "../../modules/load-balancer"
 
-  name       = "${var.cluster_name_primary}"
-  vpc_id     = "${data.aws_vpc.default_primary.id}"
-  subnet_ids = "${data.aws_subnet_ids.default_primary.ids}"
+  name       = var.cluster_name_primary
+  vpc_id     = data.aws_vpc.default_primary.id
+  subnet_ids = data.aws_subnet_ids.default_primary.ids
 
-  http_listener_ports            = ["${var.couchbase_load_balancer_port}"]
+  http_listener_ports            = [var.couchbase_load_balancer_port]
   https_listener_ports_and_certs = []
 
   # To make testing easier, we allow inbound connections from any IP. In production usage, you may want to only allow
@@ -144,7 +148,7 @@ module "load_balancer_primary" {
   allow_inbound_from_cidr_blocks = ["0.0.0.0/0"]
   internal                       = false
   providers = {
-    aws = "aws.primary"
+    aws = aws.primary
   }
 }
 
@@ -155,12 +159,12 @@ module "couchbase_target_group_primary" {
   source = "../../modules/load-balancer-target-group"
 
   target_group_name = "${var.cluster_name_primary}-cb"
-  asg_name          = "${module.couchbase_primary.asg_name}"
-  port              = "${module.couchbase_security_group_rules_primary.rest_port}"
+  asg_name          = module.couchbase_primary.asg_name
+  port              = module.couchbase_security_group_rules_primary.rest_port
   health_check_path = "/ui/index.html"
-  vpc_id            = "${data.aws_vpc.default_primary.id}"
+  vpc_id            = data.aws_vpc.default_primary.id
 
-  listener_arns                   = ["${lookup(module.load_balancer_primary.http_listener_arns, var.couchbase_load_balancer_port)}"]
+  listener_arns                   = [module.load_balancer_primary.http_listener_arns[var.couchbase_load_balancer_port]]
   num_listener_arns               = 1
   listener_rule_starting_priority = 100
 
@@ -169,7 +173,7 @@ module "couchbase_target_group_primary" {
   enable_stickiness = true
 
   providers = {
-    aws = "aws.primary"
+    aws = aws.primary
   }
 }
 
@@ -185,11 +189,11 @@ module "load_balancer_replica" {
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/load-balancer?ref=v0.0.1"
   source = "../../modules/load-balancer"
 
-  name       = "${var.cluster_name_replica}"
-  vpc_id     = "${data.aws_vpc.default_replica.id}"
-  subnet_ids = "${data.aws_subnet_ids.default_replica.ids}"
+  name       = var.cluster_name_replica
+  vpc_id     = data.aws_vpc.default_replica.id
+  subnet_ids = data.aws_subnet_ids.default_replica.ids
 
-  http_listener_ports            = ["${var.couchbase_load_balancer_port}"]
+  http_listener_ports            = [var.couchbase_load_balancer_port]
   https_listener_ports_and_certs = []
 
   # To make testing easier, we allow inbound connections from any IP. In production usage, you may want to only allow
@@ -199,7 +203,7 @@ module "load_balancer_replica" {
   allow_inbound_from_cidr_blocks = ["0.0.0.0/0"]
   internal                       = false
   providers = {
-    aws = "aws.replica"
+    aws = aws.replica
   }
 }
 
@@ -210,12 +214,12 @@ module "couchbase_target_group_replica" {
   source = "../../modules/load-balancer-target-group"
 
   target_group_name = "${var.cluster_name_replica}-cb"
-  asg_name          = "${module.couchbase_replica.asg_name}"
-  port              = "${module.couchbase_security_group_rules_replica.rest_port}"
+  asg_name          = module.couchbase_replica.asg_name
+  port              = module.couchbase_security_group_rules_replica.rest_port
   health_check_path = "/ui/index.html"
-  vpc_id            = "${data.aws_vpc.default_replica.id}"
+  vpc_id            = data.aws_vpc.default_replica.id
 
-  listener_arns                   = ["${lookup(module.load_balancer_replica.http_listener_arns, var.couchbase_load_balancer_port)}"]
+  listener_arns                   = [module.load_balancer_replica.http_listener_arns[var.couchbase_load_balancer_port]]
   num_listener_arns               = 1
   listener_rule_starting_priority = 100
 
@@ -224,7 +228,7 @@ module "couchbase_target_group_replica" {
   enable_stickiness = true
 
   providers = {
-    aws = "aws.replica"
+    aws = aws.replica
   }
 }
 
@@ -239,7 +243,7 @@ module "couchbase_security_group_rules_primary" {
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/couchbase-server-security-group-rules?ref=v0.0.1"
   source = "../../modules/couchbase-server-security-group-rules"
 
-  security_group_id = "${module.couchbase_primary.security_group_id}"
+  security_group_id = module.couchbase_primary.security_group_id
 
   # To keep this example simple, we allow these client-facing ports to be accessed from any IP. In a production
   # deployment, you may want to lock these down just to trusted servers.
@@ -251,7 +255,7 @@ module "couchbase_security_group_rules_primary" {
   memcached_port_cidr_blocks = ["0.0.0.0/0"]
   moxi_port_cidr_blocks      = ["0.0.0.0/0"]
   providers = {
-    aws = "aws.primary"
+    aws = aws.primary
   }
 }
 
@@ -266,7 +270,7 @@ module "couchbase_security_group_rules_replica" {
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/couchbase-server-security-group-rules?ref=v0.0.1"
   source = "../../modules/couchbase-server-security-group-rules"
 
-  security_group_id = "${module.couchbase_replica.security_group_id}"
+  security_group_id = module.couchbase_replica.security_group_id
 
   # To keep this example simple, we allow these client-facing ports to be accessed from any IP. In a production
   # deployment, you may want to lock these down just to trusted servers.
@@ -278,7 +282,7 @@ module "couchbase_security_group_rules_replica" {
   memcached_port_cidr_blocks = ["0.0.0.0/0"]
   moxi_port_cidr_blocks      = ["0.0.0.0/0"]
   providers = {
-    aws = "aws.replica"
+    aws = aws.replica
   }
 }
 
@@ -293,10 +297,10 @@ module "iam_policies_primary" {
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/couchbase-server-security-group-rules?ref=v0.0.1"
   source = "../../modules/couchbase-iam-policies"
 
-  iam_role_id = "${module.couchbase_primary.iam_role_id}"
+  iam_role_id = module.couchbase_primary.iam_role_id
 
   providers = {
-    aws = "aws.primary"
+    aws = aws.primary
   }
 }
 
@@ -311,10 +315,10 @@ module "iam_policies_replica" {
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/couchbase-server-security-group-rules?ref=v0.0.1"
   source = "../../modules/couchbase-iam-policies"
 
-  iam_role_id = "${module.couchbase_replica.iam_role_id}"
+  iam_role_id = module.couchbase_replica.iam_role_id
 
   providers = {
-    aws = "aws.replica"
+    aws = aws.replica
   }
 }
 
@@ -348,7 +352,7 @@ data "aws_ami" "coubase_ubuntu_example_primary" {
     values = ["*couchbase-ubuntu-example*"]
   }
 
-  provider = "aws.primary"
+  provider = aws.primary
 }
 
 data "aws_ami" "coubase_ubuntu_example_replica" {
@@ -375,15 +379,15 @@ data "aws_ami" "coubase_ubuntu_example_replica" {
     values = ["*couchbase-ubuntu-example*"]
   }
 
-  provider = "aws.replica"
+  provider = aws.replica
 }
 
 data "template_file" "ami_id_primary" {
-  template = "${var.ami_id_primary == "" ? data.aws_ami.coubase_ubuntu_example_primary.id : var.ami_id_primary}"
+  template = var.ami_id_primary == null ? data.aws_ami.coubase_ubuntu_example_primary.id : var.ami_id_primary
 }
 
 data "template_file" "ami_id_replica" {
-  template = "${var.ami_id_replica == "" ? data.aws_ami.coubase_ubuntu_example_replica.id : var.ami_id_replica}"
+  template = var.ami_id_replica == null ? data.aws_ami.coubase_ubuntu_example_replica.id : var.ami_id_replica
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -396,13 +400,13 @@ data "template_file" "ami_id_replica" {
 data "aws_vpc" "default_primary" {
   default = true
 
-  provider = "aws.primary"
+  provider = aws.primary
 }
 
 data "aws_subnet_ids" "default_primary" {
-  vpc_id = "${data.aws_vpc.default_primary.id}"
+  vpc_id = data.aws_vpc.default_primary.id
 
-  provider = "aws.primary"
+  provider = aws.primary
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -415,15 +419,16 @@ data "aws_subnet_ids" "default_primary" {
 data "aws_vpc" "default_replica" {
   default = true
 
-  provider = "aws.replica"
+  provider = aws.replica
 }
 
 data "aws_subnet_ids" "default_replica" {
-  vpc_id = "${data.aws_vpc.default_replica.id}"
+  vpc_id = data.aws_vpc.default_replica.id
 
-  provider = "aws.replica"
+  provider = aws.replica
 }
 
 data "aws_region" "replica" {
-  provider = "aws.replica"
+  provider = aws.replica
 }
+

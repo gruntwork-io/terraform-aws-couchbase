@@ -7,14 +7,13 @@
 
 provider "aws" {
   alias = "primary"
-
   # Region intentionally ommitted so this example will prompt the user for a region when run via Terraform Registry
   # instructions
 }
 
 provider "aws" {
   alias = "replica"
-
   # Region intentionally ommitted so this example will prompt the user for a region when run via Terraform Registry
   # instructions
 }
+
