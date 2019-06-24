@@ -183,8 +183,8 @@ data "template_file" "user_data_couchbase_data_nodes" {
   template = file("${path.module}/user-data/user-data-couchbase-data-nodes.sh")
 
   vars = {
-    cluster_asg_name        = var.couchbase_data_node_cluster_name
-    cluster_port            = module.couchbase_data_nodes_security_group_rules.rest_port
+    cluster_asg_name = var.couchbase_data_node_cluster_name
+    cluster_port     = module.couchbase_data_nodes_security_group_rules.rest_port
 
     # Pass in the data about the EBS volumes so they can be mounted
     data_volume_device_name = var.data_volume_device_name
@@ -203,8 +203,8 @@ data "template_file" "user_data_couchbase_index_query_search_nodes" {
   template = file("${path.module}/user-data/user-data-couchbase-index-query-search-nodes.sh")
 
   vars = {
-    cluster_asg_name         = var.couchbase_data_node_cluster_name
-    cluster_port             = module.couchbase_data_nodes_security_group_rules.rest_port
+    cluster_asg_name = var.couchbase_data_node_cluster_name
+    cluster_port     = module.couchbase_data_nodes_security_group_rules.rest_port
 
     # Pass in the data about the EBS volumes so they can be mounted
     index_volume_device_name = var.index_volume_device_name
@@ -217,8 +217,8 @@ data "template_file" "user_data_sync_gateway" {
   template = file("${path.module}/user-data/user-data-sync-gateway.sh")
 
   vars = {
-    cluster_asg_name             = var.couchbase_data_node_cluster_name
-    cluster_port                 = module.couchbase_data_nodes_security_group_rules.rest_port
+    cluster_asg_name = var.couchbase_data_node_cluster_name
+    cluster_port     = module.couchbase_data_nodes_security_group_rules.rest_port
 
     # We expose the Sync Gateway on all IPs but the Sync Gateway Admin should ONLY be accessible from localhost, as it
     # provides admin access to ALL Sync Gateway data.
