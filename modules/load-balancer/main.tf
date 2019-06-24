@@ -38,7 +38,7 @@ resource "aws_alb_listener" "http" {
   protocol          = "HTTP"
 
   default_action {
-    target_group_arn = var.default_target_group_arn == null ? var.default_target_group_arn : element(concat(aws_alb_target_group.black_hole.*.arn, [""]), 0)
+    target_group_arn = var.default_target_group_arn != null ? var.default_target_group_arn : element(concat(aws_alb_target_group.black_hole.*.arn, [""]), 0)
     type             = "forward"
   }
 }
@@ -52,7 +52,7 @@ resource "aws_alb_listener" "https" {
   certificate_arn   = var.https_listener_ports_and_certs[count.index]["certificate_arn"]
 
   default_action {
-    target_group_arn = var.default_target_group_arn == null ? var.default_target_group_arn : element(concat(aws_alb_target_group.black_hole.*.arn, [""]), 0)
+    target_group_arn = var.default_target_group_arn != null ? var.default_target_group_arn : element(concat(aws_alb_target_group.black_hole.*.arn, [""]), 0)
     type             = "forward"
   }
 }
