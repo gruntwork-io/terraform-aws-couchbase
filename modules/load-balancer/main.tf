@@ -1,20 +1,29 @@
+# ----------------------------------------------------------------------------------------------------------------------
+# REQUIRE A SPECIFIC TERRAFORM VERSION OR HIGHER
+# This module has been updated with 0.12 syntax, which means it is no longer compatible with any versions below 0.12.
+# ----------------------------------------------------------------------------------------------------------------------
+
+terraform {
+  required_version = ">= 0.12"
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # CREATE AN THE LOAD BALANCER
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_alb" "lb" {
-  name               = "${var.name}"
+  name               = var.name
   load_balancer_type = "application"
-  idle_timeout       = "${var.idle_timeout}"
+  idle_timeout       = var.idle_timeout
 
-  internal        = "${var.internal}"
-  security_groups = ["${aws_security_group.sg.id}"]
-  subnets         = ["${var.subnet_ids}"]
+  internal        = var.internal
+  security_groups = [aws_security_group.sg.id]
+  subnets         = var.subnet_ids
 
-  enable_http2    = "${var.enable_http2}"
-  ip_address_type = "${var.ip_address_type}"
+  enable_http2    = var.enable_http2
+  ip_address_type = var.ip_address_type
 
-  tags = "${var.tags}"
+  tags = var.tags
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -22,28 +31,28 @@ resource "aws_alb" "lb" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_alb_listener" "http" {
-  count = "${length(var.http_listener_ports)}"
+  count = length(var.http_listener_ports)
 
-  load_balancer_arn = "${aws_alb.lb.arn}"
-  port              = "${element(var.http_listener_ports, count.index)}"
+  load_balancer_arn = aws_alb.lb.arn
+  port              = element(var.http_listener_ports, count.index)
   protocol          = "HTTP"
 
   default_action {
-    target_group_arn = "${length(var.default_target_group_arn) > 0 ? var.default_target_group_arn : element(concat(aws_alb_target_group.black_hole.*.arn, list("")), 0)}"
+    target_group_arn = var.default_target_group_arn == null ? var.default_target_group_arn : element(concat(aws_alb_target_group.black_hole.*.arn, [""]), 0)
     type             = "forward"
   }
 }
 
 resource "aws_alb_listener" "https" {
-  count = "${length(var.https_listener_ports_and_certs)}"
+  count = length(var.https_listener_ports_and_certs)
 
-  load_balancer_arn = "${aws_alb.lb.arn}"
-  port              = "${lookup(var.https_listener_ports_and_certs[count.index], "port")}"
+  load_balancer_arn = aws_alb.lb.arn
+  port              = var.https_listener_ports_and_certs[count.index]["port"]
   protocol          = "HTTPS"
-  certificate_arn   = "${lookup(var.https_listener_ports_and_certs[count.index], "certificate_arn")}"
+  certificate_arn   = var.https_listener_ports_and_certs[count.index]["certificate_arn"]
 
   default_action {
-    target_group_arn = "${length(var.default_target_group_arn) > 0 ? var.default_target_group_arn : element(concat(aws_alb_target_group.black_hole.*.arn, list("")), 0)}"
+    target_group_arn = var.default_target_group_arn == null ? var.default_target_group_arn : element(concat(aws_alb_target_group.black_hole.*.arn, [""]), 0)
     type             = "forward"
   }
 }
@@ -61,12 +70,12 @@ resource "aws_alb_listener" "https" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_alb_target_group" "black_hole" {
-  count = "${length(var.default_target_group_arn) == 0 ? 1 : 0}"
+  count = var.default_target_group_arn == null ? 1 : 0
 
   name     = "${var.name}-hole"
   protocol = "HTTP"
   port     = 12345
-  vpc_id   = "${var.vpc_id}"
+  vpc_id   = var.vpc_id
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -75,7 +84,7 @@ resource "aws_alb_target_group" "black_hole" {
 
 resource "aws_security_group" "sg" {
   name   = "${var.name}-lb"
-  vpc_id = "${var.vpc_id}"
+  vpc_id = var.vpc_id
 }
 
 resource "aws_security_group_rule" "allow_all_outbound" {
@@ -83,54 +92,54 @@ resource "aws_security_group_rule" "allow_all_outbound" {
   from_port         = 0
   to_port           = 0
   protocol          = "-1"
-  security_group_id = "${aws_security_group.sg.id}"
+  security_group_id = aws_security_group.sg.id
   cidr_blocks       = ["0.0.0.0/0"]
 }
 
 resource "aws_security_group_rule" "allow_http_inbound_from_cidr_blocks" {
-  count             = "${length(var.http_listener_ports)}"
+  count             = length(var.http_listener_ports)
   type              = "ingress"
-  from_port         = "${element(var.http_listener_ports, count.index)}"
-  to_port           = "${element(var.http_listener_ports, count.index)}"
+  from_port         = element(var.http_listener_ports, count.index)
+  to_port           = element(var.http_listener_ports, count.index)
   protocol          = "tcp"
-  security_group_id = "${aws_security_group.sg.id}"
-  cidr_blocks       = ["${var.allow_inbound_from_cidr_blocks}"]
+  security_group_id = aws_security_group.sg.id
+  cidr_blocks       = var.allow_inbound_from_cidr_blocks
 }
 
 resource "aws_security_group_rule" "allow_http_inbound_from_security_groups" {
-  count                    = "${length(var.http_listener_ports) * var.num_inbound_security_groups}"
+  count                    = length(var.http_listener_ports) * var.num_inbound_security_groups
   type                     = "ingress"
-  from_port                = "${element(var.http_listener_ports, count.index)}"
-  to_port                  = "${element(var.http_listener_ports, count.index)}"
+  from_port                = element(var.http_listener_ports, count.index)
+  to_port                  = element(var.http_listener_ports, count.index)
   protocol                 = "tcp"
-  security_group_id        = "${aws_security_group.sg.id}"
-  source_security_group_id = "${element(var.allow_inbound_from_security_groups, count.index)}"
+  security_group_id        = aws_security_group.sg.id
+  source_security_group_id = element(var.allow_inbound_from_security_groups, count.index)
 }
 
 resource "aws_security_group_rule" "allow_https_inbound_from_cidr_blocks" {
-  count             = "${length(var.https_listener_ports_and_certs)}"
+  count             = length(var.https_listener_ports_and_certs)
   type              = "ingress"
-  from_port         = "${lookup(var.https_listener_ports_and_certs[count.index], "port")}"
-  to_port           = "${lookup(var.https_listener_ports_and_certs[count.index], "port")}"
+  from_port         = var.https_listener_ports_and_certs[count.index]["port"]
+  to_port           = var.https_listener_ports_and_certs[count.index]["port"]
   protocol          = "tcp"
-  security_group_id = "${aws_security_group.sg.id}"
-  cidr_blocks       = ["${var.allow_inbound_from_cidr_blocks}"]
+  security_group_id = aws_security_group.sg.id
+  cidr_blocks       = var.allow_inbound_from_cidr_blocks
 }
 
 resource "aws_security_group_rule" "allow_https_inbound_from_security_groups" {
-  count             = "${length(var.https_listener_ports_and_certs) * var.num_inbound_security_groups}"
+  count             = length(var.https_listener_ports_and_certs) * var.num_inbound_security_groups
   type              = "ingress"
-  from_port         = "${lookup(var.https_listener_ports_and_certs[count.index], "port")}"
-  to_port           = "${lookup(var.https_listener_ports_and_certs[count.index], "port")}"
+  from_port         = var.https_listener_ports_and_certs[count.index]["port"]
+  to_port           = var.https_listener_ports_and_certs[count.index]["port"]
   protocol          = "tcp"
-  security_group_id = "${aws_security_group.sg.id}"
+  security_group_id = aws_security_group.sg.id
 
   # The split/join workaround below should NOT be necessary, but without it, if var.https_listener_ports_and_certs
   # contains any data sources, and var.allow_inbound_from_security_groups is empty, we get a "element() may not be
   # used with an empty list" error. The count param is supposed to support interpolating data sources, but perhaps
   # because we have a map involved, it does not, so we have to use this ugly workaround for now. For more info, see:
   # https://github.com/hashicorp/terraform/issues/17812
-  source_security_group_id = "${element(split(",", var.num_inbound_security_groups == 0 ? "fake-id-for-workaround" : join(",", var.allow_inbound_from_security_groups)), count.index)}"
+  source_security_group_id = element(split(",", var.num_inbound_security_groups == 0 ? "fake-id-for-workaround" : join(",", var.allow_inbound_from_security_groups)), count.index)
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -138,14 +147,15 @@ resource "aws_security_group_rule" "allow_https_inbound_from_security_groups" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_route53_record" "load_balancer" {
-  count   = "${length(var.route53_records)}"
-  name    = "${lookup(var.route53_records[count.index], "domain")}"
-  zone_id = "${lookup(var.route53_records[count.index], "zone_id")}"
+  count   = length(var.route53_records)
+  name    = var.route53_records[count.index]["domain"]
+  zone_id = var.route53_records[count.index]["zone_id"]
   type    = "A"
 
   alias {
-    name                   = "${aws_alb.lb.dns_name}"
-    zone_id                = "${aws_alb.lb.zone_id}"
+    name                   = aws_alb.lb.dns_name
+    zone_id                = aws_alb.lb.zone_id
     evaluate_target_health = true
   }
 }
+
