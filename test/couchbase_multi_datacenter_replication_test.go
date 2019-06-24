@@ -40,6 +40,15 @@ func TestIntegrationCouchbaseEnterpriseMultiDataCenterReplicationAmazonLinux(t *
 }
 
 func testCouchbaseMultiDataCenterReplication(t *testing.T, osName string, edition string) {
+	// For convenience - uncomment these as well as the "os" import
+	// when doing local testing if you need to skip any sections.
+	//os.Setenv("TERRATEST_REGION", "eu-west-1")
+	//os.Setenv("SKIP_setup_ami", "true")
+	//os.Setenv("SKIP_setup_deploy", "true")
+	//os.Setenv("SKIP_validation", "true")
+	//os.Setenv("SKIP_teardown", "true")
+	//os.Setenv("SKIP_logs", "true")
+
 	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples")
 	couchbaseAmiDir := filepath.Join(examplesFolder, "couchbase-ami")
 	couchbaseMultiClusterDir := filepath.Join(examplesFolder, "couchbase-multi-datacenter-replication")
@@ -132,8 +141,6 @@ func testCouchbaseMultiDataCenterReplication(t *testing.T, osName string, editio
 		terraformOptions := &terraform.Options{
 			TerraformDir: couchbaseMultiClusterDir,
 			Vars: map[string]interface{} {
-				"aws_region_primary":       awsRegionPrimary,
-				"aws_region_replica":       awsRegionReplica,
 				"ami_id_primary":           amiIdPrimary,
 				"ami_id_replica":           amiIdReplica,
 				clusterNamePrimaryVarName:  formatCouchbaseClusterName("primary", uniqueIdPrimary),
