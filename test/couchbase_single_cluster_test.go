@@ -1,12 +1,12 @@
 package test
 
 import (
-	"testing"
-	"path/filepath"
+	"github.com/gruntwork-io/terratest/modules/aws"
+	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/gruntwork-io/terratest/modules/test-structure"
-	"github.com/gruntwork-io/terratest/modules/random"
-	"github.com/gruntwork-io/terratest/modules/aws"
+	"path/filepath"
+	"testing"
 )
 
 const couchbaseClusterVarName = "cluster_name"
@@ -34,6 +34,15 @@ func TestIntegrationCouchbaseEnterpriseSingleClusterAmazonLinux(t *testing.T) {
 func testCouchbaseSingleCluster(t *testing.T, osName string, edition string) {
 	rootFolder := test_structure.CopyTerraformFolderToTemp(t, "../", ".")
 	couchbaseAmiDir := filepath.Join(rootFolder, "examples", "couchbase-ami")
+
+	// For convenience - uncomment these as well as the "os" import
+	// when doing local testing if you need to skip any sections.
+	//os.Setenv("TERRATEST_REGION", "eu-west-1")
+	//os.Setenv("SKIP_setup_ami", "true")
+	//os.Setenv("SKIP_setup_deploy", "true")
+	//os.Setenv("SKIP_validation", "true")
+	//os.Setenv("SKIP_teardown", "true")
+	//os.Setenv("SKIP_logs", "true")
 
 	test_structure.RunTestStage(t, "setup_ami", func() {
 		awsRegion := getRandomAwsRegion(t)
