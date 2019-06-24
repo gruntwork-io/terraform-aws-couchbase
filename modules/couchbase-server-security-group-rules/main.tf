@@ -173,7 +173,7 @@ resource "aws_security_group_rule" "query_port_self" {
 }
 
 resource "aws_security_group_rule" "ssl_query_port_cidr_blocks" {
-  count             = length(var.query_port_cidr_blocks) > 0 && var.enable_ssl_ports ? 1 :0
+  count             = length(var.query_port_cidr_blocks) > 0 && var.enable_ssl_ports ? 1 : 0
   type              = "ingress"
   from_port         = var.ssl_query_port
   to_port           = var.ssl_query_port

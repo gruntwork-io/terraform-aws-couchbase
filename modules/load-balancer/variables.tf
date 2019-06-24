@@ -18,7 +18,7 @@ variable "http_listener_ports" {
 
 variable "https_listener_ports_and_certs" {
   description = "A list of objects that define the ports to listen on for HTTPS requests. Each object should have the keys 'port' (the port number to listen on) and 'certificate_arn' (the ARN of an ACM or IAM TLS cert to use on this listener)."
-  type        = list(object({
+  type = list(object({
     port            = number
     certificate_arn = string
   }))
@@ -103,11 +103,11 @@ variable "idle_timeout" {
 
 variable "route53_records" {
   description = "A list of DNS A records to create in Route 53 that point at this Load Balancer. Each item in the list should be an object with the keys 'domain' (the domain name to create) and 'zone_id' (the Route 53 Hosted Zone ID in which to create the DNS A record)."
-  type        = list(object({
+  type = list(object({
     domain  = string
     zone_id = string
   }))
-  default     = []
+  default = []
 
   # Example:
   #

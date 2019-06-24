@@ -125,8 +125,8 @@ variable "ebs_block_devices" {
   # We can't narrow the inner type down more than "any" because if we use object, then all the fields will be required
   # (whereas some, such as encrypted, should be optional), and if we use map, all the values must be of the same type,
   # whereas some here are strings, some are bools, and some are ints.
-  type        = list(any)
-  default     = []
+  type    = list(any)
+  default = []
   # Example:
   #
   # default = [
@@ -171,12 +171,12 @@ variable "ssh_port" {
 
 variable "tags" {
   description = "List fo extra tag blocks added to the autoscaling group configuration. Each element in the list is a map containing keys 'key', 'value', and 'propagate_at_launch' mapped to the respective values."
-  type        = list(object({
+  type = list(object({
     key                 = string
     value               = string
     propagate_at_launch = bool
   }))
-  default     = []
+  default = []
   # Example:
   #
   # default = [
