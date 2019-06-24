@@ -32,9 +32,6 @@ func TestIntegrationCouchbaseEnterpriseSingleClusterAmazonLinux(t *testing.T) {
 }
 
 func testCouchbaseSingleCluster(t *testing.T, osName string, edition string) {
-	rootFolder := test_structure.CopyTerraformFolderToTemp(t, "../", ".")
-	couchbaseAmiDir := filepath.Join(rootFolder, "examples", "couchbase-ami")
-
 	// For convenience - uncomment these as well as the "os" import
 	// when doing local testing if you need to skip any sections.
 	//os.Setenv("TERRATEST_REGION", "eu-west-1")
@@ -43,6 +40,9 @@ func testCouchbaseSingleCluster(t *testing.T, osName string, edition string) {
 	//os.Setenv("SKIP_validation", "true")
 	//os.Setenv("SKIP_teardown", "true")
 	//os.Setenv("SKIP_logs", "true")
+
+	rootFolder := test_structure.CopyTerraformFolderToTemp(t, "../", ".")
+	couchbaseAmiDir := filepath.Join(rootFolder, "examples", "couchbase-ami")
 
 	test_structure.RunTestStage(t, "setup_ami", func() {
 		awsRegion := getRandomAwsRegion(t)
