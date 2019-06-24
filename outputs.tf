@@ -7,5 +7,6 @@ output "sync_gateway_url" {
 }
 
 output "couchbase_cluster_asg_name" {
-  value = "${module.couchbase.asg_name}"
+  value = module.couchbase.asg_name
 }
+

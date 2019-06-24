@@ -5,8 +5,13 @@
 # used for health checks and to distribute traffic across Sync Gateway.
 # ---------------------------------------------------------------------------------------------------------------------
 
+# ----------------------------------------------------------------------------------------------------------------------
+# REQUIRE A SPECIFIC TERRAFORM VERSION OR HIGHER
+# This module has been updated with 0.12 syntax, which means it is no longer compatible with any versions below 0.12.
+# ----------------------------------------------------------------------------------------------------------------------
+
 terraform {
-  required_version = ">= 0.10.3"
+  required_version = ">= 0.12"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -19,28 +24,28 @@ module "couchbase" {
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/couchbase-cluster?ref=v0.0.1"
   source = "./modules/couchbase-cluster"
 
-  cluster_name  = "${var.cluster_name}"
+  cluster_name  = var.cluster_name
   min_size      = 3
   max_size      = 3
   instance_type = "t2.medium"
 
-  ami_id    = "${data.template_file.ami_id.rendered}"
-  user_data = "${data.template_file.user_data_server.rendered}"
+  ami_id    = data.template_file.ami_id.rendered
+  user_data = data.template_file.user_data_server.rendered
 
-  vpc_id     = "${data.aws_vpc.default.id}"
-  subnet_ids = "${data.aws_subnet_ids.default.ids}"
+  vpc_id     = data.aws_vpc.default.id
+  subnet_ids = data.aws_subnet_ids.default.ids
 
   # We recommend using two EBS Volumes with your Couchbase servers: one for the data directory and one for the index
   # directory.
   ebs_block_devices = [
     {
-      device_name = "${var.data_volume_device_name}"
+      device_name = var.data_volume_device_name
       volume_type = "gp2"
       volume_size = 50
       encrypted   = true
     },
     {
-      device_name = "${var.index_volume_device_name}"
+      device_name = var.index_volume_device_name
       volume_type = "gp2"
       volume_size = 50
       encrypted   = true
@@ -51,7 +56,7 @@ module "couchbase" {
   # recommend you limit this to the IP address ranges of known, trusted servers inside your VPC.
   allowed_ssh_cidr_blocks = ["0.0.0.0/0"]
 
-  ssh_key_name = "${var.ssh_key_name}"
+  ssh_key_name = var.ssh_key_name
 
   # To make it easy to test this example from your computer, we allow the Couchbase servers to have public IPs. In a
   # production deployment, you'll probably want to keep all the servers in private subnets with only private IPs.
@@ -77,26 +82,23 @@ module "couchbase" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 data "template_file" "user_data_server" {
-  template = "${file("${path.module}/examples/couchbase-cluster-simple/user-data/user-data.sh")}"
+  template = file("${path.module}/examples/couchbase-cluster-simple/user-data/user-data.sh")
 
-  vars {
-    cluster_asg_name = "${var.cluster_name}"
-    cluster_port     = "${module.couchbase_security_group_rules.rest_port}"
-
-    # We expose the Sync Gateway on all IPs but the Sync Gateway Admin should ONLY be accessible from localhost, as it
-    # provides admin access to ALL Sync Gateway data.
-
+  vars = {
+    cluster_asg_name             = var.cluster_name
+    cluster_port                 = module.couchbase_security_group_rules.rest_port
     sync_gateway_interface       = ":${module.sync_gateway_security_group_rules.interface_port}"
     sync_gateway_admin_interface = "127.0.0.1:${module.sync_gateway_security_group_rules.admin_interface_port}"
-
-    # Pass in the data about the EBS volumes so they can be mounted
-
-    data_volume_device_name  = "${var.data_volume_device_name}"
-    data_volume_mount_point  = "${var.data_volume_mount_point}"
-    index_volume_device_name = "${var.index_volume_device_name}"
-    index_volume_mount_point = "${var.index_volume_mount_point}"
-    volume_owner             = "${var.volume_owner}"
+    data_volume_device_name      = var.data_volume_device_name
+    data_volume_mount_point      = var.data_volume_mount_point
+    index_volume_device_name     = var.index_volume_device_name
+    index_volume_mount_point     = var.index_volume_mount_point
+    volume_owner                 = var.volume_owner
   }
+  # We expose the Sync Gateway on all IPs but the Sync Gateway Admin should ONLY be accessible from localhost, as it
+  # provides admin access to ALL Sync Gateway data.
+
+  # Pass in the data about the EBS volumes so they can be mounted
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -111,11 +113,11 @@ module "load_balancer" {
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/load-balancer?ref=v0.0.1"
   source = "./modules/load-balancer"
 
-  name       = "${var.cluster_name}"
-  vpc_id     = "${data.aws_vpc.default.id}"
-  subnet_ids = "${data.aws_subnet_ids.default.ids}"
+  name       = var.cluster_name
+  vpc_id     = data.aws_vpc.default.id
+  subnet_ids = data.aws_subnet_ids.default.ids
 
-  http_listener_ports            = ["${var.couchbase_load_balancer_port}", "${var.sync_gateway_load_balancer_port}"]
+  http_listener_ports            = [var.couchbase_load_balancer_port, var.sync_gateway_load_balancer_port]
   https_listener_ports_and_certs = []
 
   # To make testing easier, we allow inbound connections from any IP. In production usage, you may want to only allow
@@ -124,12 +126,13 @@ module "load_balancer" {
 
   allow_inbound_from_cidr_blocks = ["0.0.0.0/0"]
   internal                       = false
+
   # Since Sync Gateway and Couchbase Lite can have long running connections for changes feeds, we recommend setting the
   # idle timeout to the maximum value of 3,600 seconds (1 hour)
   # https://developer.couchbase.com/documentation/mobile/1.5/guides/sync-gateway/nginx/index.html#aws-elastic-load-balancer-elb
   idle_timeout = 3600
   tags = {
-    Name = "${var.cluster_name}"
+    Name = var.cluster_name
   }
 }
 
@@ -140,12 +143,12 @@ module "couchbase_target_group" {
   source = "./modules/load-balancer-target-group"
 
   target_group_name = "${var.cluster_name}-cb"
-  asg_name          = "${module.couchbase.asg_name}"
-  port              = "${module.couchbase_security_group_rules.rest_port}"
+  asg_name          = module.couchbase.asg_name
+  port              = module.couchbase_security_group_rules.rest_port
   health_check_path = "/ui/index.html"
-  vpc_id            = "${data.aws_vpc.default.id}"
+  vpc_id            = data.aws_vpc.default.id
 
-  listener_arns                   = ["${lookup(module.load_balancer.http_listener_arns, var.couchbase_load_balancer_port)}"]
+  listener_arns                   = [module.load_balancer.http_listener_arns[var.couchbase_load_balancer_port]]
   num_listener_arns               = 1
   listener_rule_starting_priority = 100
 
@@ -161,12 +164,12 @@ module "sync_gateway_target_group" {
   source = "./modules/load-balancer-target-group"
 
   target_group_name = "${var.cluster_name}-sg"
-  asg_name          = "${module.couchbase.asg_name}"
-  port              = "${module.sync_gateway_security_group_rules.interface_port}"
+  asg_name          = module.couchbase.asg_name
+  port              = module.sync_gateway_security_group_rules.interface_port
   health_check_path = "/"
-  vpc_id            = "${data.aws_vpc.default.id}"
+  vpc_id            = data.aws_vpc.default.id
 
-  listener_arns                   = ["${lookup(module.load_balancer.http_listener_arns, var.sync_gateway_load_balancer_port)}"]
+  listener_arns                   = [module.load_balancer.http_listener_arns[var.sync_gateway_load_balancer_port]]
   num_listener_arns               = 1
   listener_rule_starting_priority = 100
 }
@@ -182,7 +185,7 @@ module "couchbase_security_group_rules" {
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/couchbase-server-security-group-rules?ref=v0.0.1"
   source = "./modules/couchbase-server-security-group-rules"
 
-  security_group_id = "${module.couchbase.security_group_id}"
+  security_group_id = module.couchbase.security_group_id
 
   # To keep this example simple, we allow these client-facing ports to be accessed from any IP. In a production
   # deployment, you may want to lock these down just to trusted servers.
@@ -201,7 +204,7 @@ module "sync_gateway_security_group_rules" {
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/sync-gateway-security-group-rules?ref=v0.0.1"
   source = "./modules/sync-gateway-security-group-rules"
 
-  security_group_id = "${module.couchbase.security_group_id}"
+  security_group_id = module.couchbase.security_group_id
 
   # To keep this example simple, we allow these interface port to be accessed from any IP. In a production
   # deployment, you may want to lock this down just to trusted servers.
@@ -219,7 +222,7 @@ module "iam_policies" {
   # source = "git::git@github.com:gruntwork-io/terraform-aws-couchbase.git//modules/couchbase-server-security-group-rules?ref=v0.0.1"
   source = "./modules/couchbase-iam-policies"
 
-  iam_role_id = "${module.couchbase.iam_role_id}"
+  iam_role_id = module.couchbase.iam_role_id
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -254,7 +257,7 @@ data "aws_ami" "couchbase_ubuntu_example" {
 }
 
 data "template_file" "ami_id" {
-  template = "${var.ami_id == "" ? data.aws_ami.couchbase_ubuntu_example.id : var.ami_id}"
+  template = var.ami_id == null ? data.aws_ami.couchbase_ubuntu_example.id : var.ami_id
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -269,5 +272,6 @@ data "aws_vpc" "default" {
 }
 
 data "aws_subnet_ids" "default" {
-  vpc_id = "${data.aws_vpc.default.id}"
+  vpc_id = data.aws_vpc.default.id
 }
+
