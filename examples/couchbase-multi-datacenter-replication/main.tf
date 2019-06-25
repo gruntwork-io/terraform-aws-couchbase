@@ -12,6 +12,16 @@ terraform {
   required_version = ">= 0.12"
 }
 
+provider "aws" {
+  alias  = "primary"
+  region = var.primary_region
+}
+
+provider "aws" {
+  alias  = "replica"
+  region = var.replica_region
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # DEPLOY THE PRIMARY COUCHBASE CLUSTER
 # ---------------------------------------------------------------------------------------------------------------------

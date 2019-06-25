@@ -11,6 +11,16 @@
 # You must provide a value for each of these parameters.
 # ---------------------------------------------------------------------------------------------------------------------
 
+variable "primary_region" {
+  description = "The region to deploy the primary to"
+  type        = string
+}
+
+variable "replica_region" {
+  description = "The region to deploy the replica to"
+  type        = string
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # OPTIONAL PARAMETERS
 # These parameters have reasonable defaults.
