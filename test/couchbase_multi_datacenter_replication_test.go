@@ -1,17 +1,14 @@
 package test
 
 import (
-	"testing"
-	"path/filepath"
 	"fmt"
-	"sync"
-	"github.com/gruntwork-io/terratest/modules/test-structure"
+	"github.com/gruntwork-io/terratest/modules/aws"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/terraform"
-	"github.com/gruntwork-io/terratest/modules/aws"
-	"github.com/gruntwork-io/terratest/modules/files"
-	"os"
-	"github.com/gruntwork-io/terratest/modules/logger"
+	"github.com/gruntwork-io/terratest/modules/test-structure"
+	"path/filepath"
+	"sync"
+	"testing"
 )
 
 const clusterNamePrimaryVarName = "cluster_name_primary"
@@ -40,6 +37,15 @@ func TestIntegrationCouchbaseEnterpriseMultiDataCenterReplicationAmazonLinux(t *
 }
 
 func testCouchbaseMultiDataCenterReplication(t *testing.T, osName string, edition string) {
+	// For convenience - uncomment these as well as the "os" import
+	// when doing local testing if you need to skip any sections.
+	//os.Setenv("TERRATEST_REGION", "eu-west-1")
+	//os.Setenv("SKIP_setup_ami", "true")
+	//os.Setenv("SKIP_setup_deploy", "true")
+	//os.Setenv("SKIP_validation", "true")
+	//os.Setenv("SKIP_teardown", "true")
+	//os.Setenv("SKIP_logs", "true")
+
 	examplesFolder := test_structure.CopyTerraformFolderToTemp(t, "../", "examples")
 	couchbaseAmiDir := filepath.Join(examplesFolder, "couchbase-ami")
 	couchbaseMultiClusterDir := filepath.Join(examplesFolder, "couchbase-multi-datacenter-replication")
@@ -96,8 +102,6 @@ func testCouchbaseMultiDataCenterReplication(t *testing.T, osName string, editio
 		terraformOptions := test_structure.LoadTerraformOptions(t, couchbaseMultiClusterDir)
 		terraform.Destroy(t, terraformOptions)
 
-		restoreProvider(t, couchbaseMultiClusterDir)
-
 		amiIdPrimary := test_structure.LoadString(t, couchbaseMultiClusterDir, savedAmiIdPrimary)
 		amiIdReplica := test_structure.LoadString(t, couchbaseMultiClusterDir, savedAmiIdReplica)
 
@@ -127,17 +131,15 @@ func testCouchbaseMultiDataCenterReplication(t *testing.T, osName string, editio
 		uniqueIdPrimary := test_structure.LoadString(t, couchbaseMultiClusterDir, savedUniqueIdPrimary)
 		uniqueIdReplica := test_structure.LoadString(t, couchbaseMultiClusterDir, savedUniqueIdReplica)
 
-		overrideProvider(t, couchbaseMultiClusterDir, awsRegionPrimary, awsRegionReplica)
-
 		terraformOptions := &terraform.Options{
 			TerraformDir: couchbaseMultiClusterDir,
-			Vars: map[string]interface{} {
-				"aws_region_primary":       awsRegionPrimary,
-				"aws_region_replica":       awsRegionReplica,
-				"ami_id_primary":           amiIdPrimary,
-				"ami_id_replica":           amiIdReplica,
-				clusterNamePrimaryVarName:  formatCouchbaseClusterName("primary", uniqueIdPrimary),
-				clusterNameReplicaVarName:	formatCouchbaseClusterName("replica", uniqueIdReplica),
+			Vars: map[string]interface{}{
+				"primary_region":          awsRegionPrimary,
+				"replica_region":          awsRegionReplica,
+				"ami_id_primary":          amiIdPrimary,
+				"ami_id_replica":          amiIdReplica,
+				clusterNamePrimaryVarName: formatCouchbaseClusterName("primary", uniqueIdPrimary),
+				clusterNameReplicaVarName: formatCouchbaseClusterName("replica", uniqueIdReplica),
 			},
 		}
 
@@ -160,56 +162,4 @@ func testCouchbaseMultiDataCenterReplication(t *testing.T, osName string, editio
 
 		checkReplicationIsWorking(t, consoleUrlPrimary, consoleUrlReplica, "test-bucket", "test-bucket-replica")
 	})
-}
-
-const providerOverrideTemplate = `
-# This file temporarily overrides the providers at test time. The original providers file should be restored at the
-# end of the test!
-
-provider "aws" {
-  alias  = "primary"
-  region = "%s"
-}
-
-provider "aws" {
-  alias  = "replica"
-  region = "%s"
-}
-`
-
-// In order for the examples to work well with the Terraform Registry, where they are wrapped in a module, we cannot
-// define the AWS regions in those providers. This works OK for manual usage, where the user can specify the region
-// interactively, but not at test time. Therefore, as a workaround, we override the providers.tf file at test time
-// with the regions fully defined, and then put it back at the end of the test in the restoreProvider function.
-func overrideProvider(t *testing.T, couchbaseMultiClusterDir string, awsRegionPrimary string, awsRegionReplica string) {
-	providersFilePath := filepath.Join(couchbaseMultiClusterDir, providersFile)
-	providersFileBackupPath := filepath.Join(couchbaseMultiClusterDir, providersFileBackup)
-
-	logger.Logf(t, "Backing up %s to %s", providersFilePath, providersFileBackupPath)
-	if err := files.CopyFile(providersFilePath, providersFileBackupPath); err != nil {
-		t.Fatal(err)
-	}
-
-	newProvidersFileContents := fmt.Sprintf(providerOverrideTemplate, awsRegionPrimary, awsRegionReplica)
-
-	logger.Logf(t, "Creating override proviers file at %s with contents:\n%s", providersFilePath, newProvidersFileContents)
-	if err := files.WriteFileWithSamePermissions(providersFilePath, providersFilePath, []byte(newProvidersFileContents)); err != nil {
-		t.Fatal(err)
-	}
-}
-
-// See the overrideProvider method for details
-func restoreProvider(t *testing.T, couchbaseMultiClusterDir string) {
-	providersFilePath := filepath.Join(couchbaseMultiClusterDir, providersFile)
-	providersFileBackupPath := filepath.Join(couchbaseMultiClusterDir, providersFileBackup)
-
-	logger.Logf(t, "Restoring %s from %s", providersFilePath, providersFileBackupPath)
-	if err := files.CopyFile(providersFileBackupPath, providersFilePath); err != nil {
-		t.Fatal(err)
-	}
-
-	logger.Logf(t, "Deleting %s", providersFileBackupPath)
-	if err := os.Remove(providersFileBackupPath); err != nil {
-		t.Fatal(err)
-	}
 }

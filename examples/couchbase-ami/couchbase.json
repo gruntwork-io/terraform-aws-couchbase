@@ -108,13 +108,17 @@
     "inline": ["mkdir -p /tmp/terraform-aws-couchbase"]
   },{
     "type": "file",
-    "source": "{{template_dir}}/../../",
-    "destination": "/tmp/terraform-aws-couchbase"
+    "source": "{{template_dir}}/../../modules",
+    "destination": "/tmp/terraform-aws-couchbase/modules"
+  },{
+    "type": "file",
+    "source": "{{template_dir}}/sync_gateway.json",
+    "destination": "/tmp/terraform-aws-couchbase/sync_gateway.json"
   },{
     "type": "shell",
     "inline": [
       "/tmp/terraform-aws-couchbase/modules/install-couchbase-server/install-couchbase-server --edition {{user `edition`}}",
-      "/tmp/terraform-aws-couchbase/modules/install-sync-gateway/install-sync-gateway --edition {{user `edition`}} --config /tmp/terraform-aws-couchbase/examples/couchbase-ami/sync_gateway.json"
+      "/tmp/terraform-aws-couchbase/modules/install-sync-gateway/install-sync-gateway --edition {{user `edition`}} --config /tmp/terraform-aws-couchbase/sync_gateway.json"
     ]
   }],
   "post-processors": [{

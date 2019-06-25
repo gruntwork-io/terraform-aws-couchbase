@@ -11,13 +11,14 @@ output "sync_gateway_url" {
 }
 
 output "couchbase_data_nodes_cluster_asg_name" {
-  value = "${module.couchbase_data_nodes.asg_name}"
+  value = module.couchbase_data_nodes.asg_name
 }
 
 output "couchbase_index_query_search_nodes_cluster_asg_name" {
-  value = "${module.couchbase_index_query_search_nodes.asg_name}"
+  value = module.couchbase_index_query_search_nodes.asg_name
 }
 
 output "sync_gateway_cluster_asg_name" {
-  value = "${module.sync_gateway.asg_name}"
+  value = module.sync_gateway.asg_name
 }
+

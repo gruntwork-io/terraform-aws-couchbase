@@ -1,4 +1,6 @@
 [![Maintained by Gruntwork.io](https://img.shields.io/badge/maintained%20by-gruntwork.io-%235849a6.svg)](https://gruntwork.io/?ref=repo_aws_couchbase)
+![Terraform Version](https://img.shields.io/badge/tf-%3E%3D0.12.0-blue.svg)
+
 # Couchbase AWS Module
 
 This repo contains a Module for deploying [Couchbase](https://www.couchbase.com/) on [AWS](https://aws.amazon.com/) 
