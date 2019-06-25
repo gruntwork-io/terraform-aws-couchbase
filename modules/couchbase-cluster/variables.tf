@@ -122,10 +122,11 @@ variable "root_volume_iops" {
 
 variable "ebs_block_devices" {
   description = "A list of EBS volumes to attach to each EC2 Instance. Each item in the list should be an object with the keys 'device_name', 'volume_type', 'volume_size', 'iops', 'delete_on_termination', and 'encrypted', as defined here: https://www.terraform.io/docs/providers/aws/r/launch_configuration.html#block-devices. We recommend using one EBS Volume for the Couchbase data dir and another one for the index dir."
-  # We can't narrow the inner type down more than "any" because if we use object, then all the fields will be required
-  # (whereas some, such as encrypted, should be optional), and if we use map, all the values must be of the same type,
-  # whereas some here are strings, some are bools, and some are ints.
-  type    = list(any)
+  # We can't narrow the type down more than "any" because if we use list(object(...)), then all the fields in the
+  # object will be required (whereas some, such as encrypted, should be optional), and if we use list(map(...)), all
+  # the values in the map must be of the same type, whereas we need some to be strings, some to be bools, and some to
+  # be ints. So, we have to fall back to just any ugly "any."
+  type    = any
   default = []
   # Example:
   #
