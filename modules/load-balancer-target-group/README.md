@@ -27,7 +27,7 @@ module "couchbase" {
   # TODO: replace <VERSION> with the latest version from the releases page: https://github.com/gruntwork-io/terraform-aws-couchbase/releases
   source = "github.com/gruntwork/terraform-aws-couchbase//modules/couchbase-cluster?ref=<VERSION>"
   
-  cluster_name = "${var.cluster_name}"
+  cluster_name = var.cluster_name
   
   health_check_type = "ELB"
   
@@ -38,7 +38,7 @@ module "load_balancer" {
   # TODO: replace <VERSION> with the latest version from the releases page: https://github.com/gruntwork-io/terraform-aws-couchbase/releases
   source = "github.com/gruntwork/terraform-aws-couchbase//modules/load-balancer?ref=<VERSION>"
   
-  name = "${var.cluster_name}"
+  name = var.cluster_name
 
   http_listener_ports = [8091, 4984]
 
@@ -63,11 +63,11 @@ module "couchbase_target_group" {
   source = "github.com/gruntwork/terraform-aws-couchbase//modules/load-balancer-target-group?ref=<VERSION>"
 
   target_group_name = "${var.cluster_name}-cb"
-  asg_name          = "${module.couchbase.asg_name}"
+  asg_name          = module.couchbase.asg_name
   port              = 8091
   health_check_path = "/ui/index.html"
 
-  listener_arns                   = ["${lookup(module.load_balancer.http_listener_arns, 8091)}"]
+  listener_arns                   = [module.load_balancer.http_listener_arns[8091]]
   num_listener_arns               = 1
   listener_rule_starting_priority = 100
 
@@ -83,11 +83,11 @@ module "sync_gateway_target_group" {
   source = "github.com/gruntwork/terraform-aws-couchbase//modules/load-balancer-target-group?ref=<VERSION>"
   
   target_group_name = "${var.cluster_name}-sg"
-  asg_name          = "${module.couchbase.asg_name}"
+  asg_name          = module.couchbase.asg_name
   port              = 4985
   health_check_path = "/"
 
-  listener_arns                   = ["${lookup(module.load_balancer.http_listener_arns, 4984)}"]
+  listener_arns                   = [module.load_balancer.http_listener_arns[4984]]
   num_listener_arns               = 1
   listener_rule_starting_priority = 100
 

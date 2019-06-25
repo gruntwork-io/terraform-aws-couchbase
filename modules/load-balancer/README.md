@@ -44,7 +44,6 @@ module "load_balancer" {
     }
   ]
   
-  allow_
   inbound_from_cidr_blocks = ["0.0.0.0/0"]
 
   # ... See variables.tf for the other parameters you must define for this module

@@ -29,7 +29,7 @@ module "couchbase_iam_policies" {
   # TODO: replace <VERSION> with the latest version from the releases page: https://github.com/gruntwork-io/terraform-aws-couchbase/releases
   source = "github.com/gruntwork-io/terraform-aws-couchbase//modules/couchbase-iam-policies?ref=<VERSION>"
 
-  iam_role_id = "${module.couchbase.iam_role_id}"
+  iam_role_id = module.couchbase.iam_role_id
 }
 ```
 

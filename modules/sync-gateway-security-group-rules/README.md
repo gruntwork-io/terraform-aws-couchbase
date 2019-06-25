@@ -28,7 +28,7 @@ module "security_group_rules" {
   # TODO: replace <VERSION> with the latest version from the releases page: https://github.com/gruntwork-io/terraform-aws-couchbase/releases
   source = "github.com/gruntwork-io/terraform-aws-couchbase//modules/sync-gateway-security-group-rules?ref=<VERSION>"
 
-  security_group_id = "${module.sync_gateway.security_group_id}"
+  security_group_id = module.sync_gateway.security_group_id
   
   interface_port                 = 4984
   interface_port_cidr_blocks     = ["0.0.0.0/0"]
