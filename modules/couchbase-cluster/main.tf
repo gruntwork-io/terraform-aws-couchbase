@@ -35,9 +35,9 @@ resource "aws_autoscaling_group" "autoscaling_group" {
     for_each = var.tags
 
     content {
-      key                 = lookup(tag.value, "key")
-      value               = lookup(tag.value, "value")
-      propagate_at_launch = lookup(tag.value, "propagate_at_launch")
+      key                 = tag.value["key"]
+      value               = tag.value["value"]
+      propagate_at_launch = tag.value["propagate_at_launch"]
     }
   }
 }
@@ -71,9 +71,9 @@ resource "aws_launch_configuration" "launch_configuration" {
   dynamic "ebs_block_device" {
     for_each = var.ebs_block_devices
     content {
-      device_name           = lookup(ebs_block_device.value, "device_name")
-      volume_type           = lookup(ebs_block_device.value, "volume_type")
-      volume_size           = lookup(ebs_block_device.value, "volume_size")
+      device_name           = ebs_block_device.value["device_name"]
+      volume_type           = ebs_block_device.value["volume_type"]
+      volume_size           = ebs_block_device.value["volume_size"]
       iops                  = lookup(ebs_block_device.value, "iops", null)
       encrypted             = lookup(ebs_block_device.value, "encrypted", null)
       delete_on_termination = lookup(ebs_block_device.value, "delete_on_termination", null)
