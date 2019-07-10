@@ -1,22 +1,28 @@
 package test
 
 import (
-	"testing"
-	"path/filepath"
 	"fmt"
-	"github.com/gruntwork-io/terratest/modules/test-structure"
-	"github.com/gruntwork-io/terratest/modules/terraform"
-	"github.com/gruntwork-io/terratest/modules/random"
+	"path/filepath"
+	"testing"
+
 	"github.com/gruntwork-io/terratest/modules/aws"
+	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/gruntwork-io/terratest/modules/terraform"
+	"github.com/gruntwork-io/terratest/modules/test-structure"
 )
 
 const dataNodeClusterVarName = "couchbase_data_node_cluster_name"
 const indexQuerySearchClusterVarName = "couchbase_index_query_search_node_cluster_name"
 const syncGatewayClusterVarName = "sync_gateway_cluster_name"
 
-func TestIntegrationCouchbaseEnterpriseMultiClusterUbuntu(t *testing.T) {
+func TestIntegrationCouchbaseEnterpriseMultiClusterUbuntu16(t *testing.T) {
 	t.Parallel()
 	testCouchbaseMultiCluster(t, "ubuntu", "enterprise")
+}
+
+func TestIntegrationCouchbaseEnterpriseMultiClusterUbuntu18(t *testing.T) {
+	t.Parallel()
+	testCouchbaseMultiCluster(t, "ubuntu-18", "enterprise")
 }
 
 func TestIntegrationCouchbaseEnterpriseMultiClusterAmazonLinux(t *testing.T) {
@@ -65,11 +71,11 @@ func testCouchbaseMultiCluster(t *testing.T, osName string, edition string) {
 
 		terraformOptions := &terraform.Options{
 			TerraformDir: couchbaseMultiClusterDir,
-			Vars: map[string]interface{} {
+			Vars: map[string]interface{}{
 				"ami_id":                       amiId,
 				dataNodeClusterVarName:         formatCouchbaseClusterName("data", uniqueId),
 				indexQuerySearchClusterVarName: formatCouchbaseClusterName("search", uniqueId),
-				syncGatewayClusterVarName: 		formatCouchbaseClusterName("sync", uniqueId),
+				syncGatewayClusterVarName:      formatCouchbaseClusterName("sync", uniqueId),
 			},
 			EnvVars: map[string]string{
 				AWS_DEFAULT_REGION_ENV_VAR: awsRegion,
@@ -96,4 +102,3 @@ func testCouchbaseMultiCluster(t *testing.T, osName string, edition string) {
 		checkSyncGatewayWorking(t, syncGatewayUrl)
 	})
 }
-

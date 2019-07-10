@@ -25,6 +25,25 @@
     },
     "ssh_username": "ubuntu"
   },{
+    "name": "ubuntu-18-ami",
+    "ami_name": "{{user `base_ami_name`}}-ubuntu-18-example-{{isotime | clean_ami_name}}",
+    "ami_description": "An Ubuntu 18.04 AMI that has Couchbase installed.",
+    "instance_type": "t2.micro",
+    "region": "{{user `aws_region`}}",
+    "type": "amazon-ebs",
+    "source_ami_filter": {
+      "filters": {
+        "virtualization-type": "hvm",
+        "architecture": "x86_64",
+        "name": "ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-*",
+        "block-device-mapping.volume-type": "gp2",
+        "root-device-type": "ebs"
+      },
+      "owners": ["099720109477"],
+      "most_recent": true
+    },
+    "ssh_username": "ubuntu"
+  },{
     "name": "amazon-linux-ami",
     "ami_name": "{{user `base_ami_name`}}-amazon-linux-example-{{isotime | clean_ami_name}}",
     "ami_description": "An Amazon Linux 2 AMI that has Couchbase installed.",
@@ -54,6 +73,16 @@
       "/sys/fs/cgroup": "/sys/fs/cgroup"
     }
   },{
+    "name": "ubuntu-18-docker",
+    "type": "docker",
+    "image": "gruntwork/ubuntu-test:18.04",
+    "commit": true,
+    "run_command": ["-d", "-i", "-t", "{{.Image}}", "/sbin/init"],
+    "privileged": true,
+    "volumes": {
+      "/sys/fs/cgroup": "/sys/fs/cgroup"
+    }
+  },{
     "name": "amazon-linux-docker",
     "type": "docker",
     "image": "gruntwork/amazon-linux-test:2017.12",
@@ -75,10 +104,10 @@
     "type": "shell",
     "pause_before": "5s",
     "inline": [
-      "DEBIAN_FRONTEND=noninteractive apt-get update",
-      "apt-get install -y git"
+      "apt-get update",
+      "DEBIAN_FRONTEND=noninteractive apt-get install -y git"
     ],
-    "only": ["ubuntu-docker"]
+    "only": ["ubuntu-docker", "ubuntu-18-docker"]
   },{
     "type": "shell",
     "pause_before": "30s",
@@ -91,11 +120,11 @@
     "type": "shell",
     "pause_before": "30s",
     "inline": [
-      "DEBIAN_FRONTEND=noninteractive sudo apt-get update",
-      "sudo apt-get install -y jq curl git python-pip",
+      "sudo apt-get update",
+      "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y jq curl git python-pip",
       "sudo -H pip install --upgrade awscli"
     ],
-    "only": ["ubuntu-ami"]
+    "only": ["ubuntu-ami", "ubuntu-18-ami"]
   },{
     "type": "shell",
     "inline": [
@@ -126,6 +155,11 @@
     "repository": "gruntwork/couchbase-ubuntu-test",
     "tag": "latest",
     "only": ["ubuntu-docker"]
+  },{
+    "type": "docker-tag",
+    "repository": "gruntwork/couchbase-ubuntu-18-test",
+    "tag": "latest",
+    "only": ["ubuntu-18-docker"]
   },{
     "type": "docker-tag",
     "repository": "gruntwork/couchbase-amazon-linux-test",
