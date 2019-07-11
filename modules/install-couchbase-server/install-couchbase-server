@@ -68,15 +68,24 @@ function install_couchbase_on_ubuntu {
 
   log_info "Installing Couchbase $version ($edition edition) on Ubuntu"
 
-  local readonly filepath="couchbase-server-${edition}_${version}-ubuntu16.04_amd64.deb"
+  local readonly ubuntu_version="$(lsb_release -r -s)"
+  local readonly filepath="couchbase-server-${edition}_${version}-ubuntu${ubuntu_version}_amd64.deb"
   local readonly url="https://packages.couchbase.com/releases/$version/$filepath"
+
+  # NOTE: Couchbase only started publishing Ubuntu 18.04 deb packages for Enterprise edition version 6.0.2, which means
+  # that the vast majority of Couchbase server builds do not have official deb packages for 18.04. That said, the 16.04
+  # package has been verified to work, so we will fallback to using that if the 18.04 build is not available.
+  local readonly fallback_filepath="couchbase-server-${edition}_${version}-ubuntu16.04_amd64.deb"
+  local readonly fallback_url="https://packages.couchbase.com/releases/$version/$filepath"
 
   log_info "Installing Couchbase dependencies"
   sudo DEBIAN_FRONTEND=noninteractive apt-get update
   sudo apt-get install -y python-httplib2
 
   log_info "Downloading Couchbase from $url to $filepath"
-  curl --location --silent --fail --show-error -O "$url"
+  curl --location --silent --fail --show-error -O "$url" \
+    || log_warn "Failed to get Couchbase from $url. Trying $fallback_url." \
+       && curl --location --silent --fail --show-error -O "$fallback_url"
 
   os_validate_checksum "$filepath" "$checksum" "$checksum_type"
 
@@ -248,7 +257,7 @@ function install {
 
   log_info "Starting Couchbase install..."
 
-  if os_is_ubuntu "16.04"; then
+  if os_is_ubuntu "16.04" || os_is_ubuntu "18.04"; then
     install_couchbase_on_ubuntu "$edition" "$version" "$checksum" "$checksum_type"
   elif os_is_amazon_linux "2"; then
     install_couchbase_on_amazon_linux "$edition" "$version" "$checksum" "$checksum_type"
