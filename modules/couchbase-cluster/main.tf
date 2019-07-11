@@ -162,6 +162,13 @@ resource "aws_iam_instance_profile" "instance_profile" {
   lifecycle {
     create_before_destroy = true
   }
+
+  # IAM objects take time to propagate. This leads to subtle eventual consistency bugs where the ASG cannot be created
+  # because the IAM instance profile does not exist. We add a 15 second wait here to give the IAM instance profile a
+  # chance to propagate within AWS.
+  provisioner "local-exec" {
+    command = "echo 'Sleeping for 15 seconds to wait for IAM instance profile to be created'; sleep 15"
+  }
 }
 
 resource "aws_iam_role" "instance_role" {
@@ -173,6 +180,13 @@ resource "aws_iam_role" "instance_role" {
   # when you try to do a terraform destroy.
   lifecycle {
     create_before_destroy = true
+  }
+
+  # IAM objects take time to propagate. This leads to subtle eventual consistency bugs where the ASG cannot be created
+  # because the IAM role does not exist. We add a 15 second wait here to give the IAM role a chance to propagate within
+  # AWS.
+  provisioner "local-exec" {
+    command = "echo 'Sleeping for 15 seconds to wait for IAM role to be created'; sleep 15"
   }
 }
 
