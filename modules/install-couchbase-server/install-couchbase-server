@@ -45,7 +45,7 @@ function print_usage {
   echo
   echo "Usage: install-couchbase-server [options]"
   echo
-  echo "This script can be used to install Couchbase Server and its dependencies. This script has been tested with Ubuntu 16.04 and Amazon Linux 2."
+  echo "This script can be used to install Couchbase Server and its dependencies. This script has been tested with Ubuntu 16.04, 18.04, and Amazon Linux 2."
   echo
   echo "Options:"
   echo
@@ -147,7 +147,7 @@ function disable_transparent_huge_pages {
   elif os_is_amazon_linux; then
     sudo chkconfig disable-thp on
   else
-    log_error "This script only supports Ubuntu 16.04 and Amazon Linux 2."
+    log_error "This script only supports Ubuntu 16.04, 18.04, and Amazon Linux 2."
     exit 1
   fi
 }
