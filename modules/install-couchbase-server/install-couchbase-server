@@ -65,10 +65,11 @@ function install_couchbase_on_ubuntu {
   local readonly version="$2"
   local readonly checksum="$3"
   local readonly checksum_type="$4"
-
-  log_info "Installing Couchbase $version ($edition edition) on Ubuntu"
-
   local readonly ubuntu_version="$(lsb_release -r -s)"
+  local readonly dpkg_name="couchbase-server.deb"
+
+  log_info "Installing Couchbase $version ($edition edition) on Ubuntu $ubuntu_version"
+
   local readonly filepath="couchbase-server-${edition}_${version}-ubuntu${ubuntu_version}_amd64.deb"
   local readonly url="https://packages.couchbase.com/releases/$version/$filepath"
 
@@ -83,23 +84,21 @@ function install_couchbase_on_ubuntu {
   sudo apt-get install -y python-httplib2
 
   log_info "Downloading Couchbase from $url to $filepath"
-  if curl --location --silent --fail --show-error -O "$url"; then
-    os_validate_checksum "$filepath" "$checksum" "$checksum_type"
-  else
+  if ! curl --location --silent --fail --show-error -o "$dpkg_name" "$url"; then
     log_warn "Failed to get Couchbase from $url. Trying $fallback_url."
-    curl --location --silent --fail --show-error -O "$fallback_url"
-    os_validate_checksum "$fallback_filepath" "$checksum" "$checksum_type"
+    curl --location --silent --fail --show-error -o "$dpkg_name" "$fallback_url"
   fi
 
+  os_validate_checksum "$dpkg_name" "$checksum" "$checksum_type"
 
   # Install Couchbase, but configure it to NOT start on boot. This allows the run-couchbase-server script to configure
   # Couchbase, including what ports to use, and THEN boot it up.
-  log_info "Installing Couchbase from $filepath"
-  sudo INSTALL_DONT_START_SERVER=1 dpkg -i "$filepath"
+  log_info "Installing Couchbase from $dpkg_name"
+  sudo INSTALL_DONT_START_SERVER=1 dpkg -i "$dpkg_name"
   sudo systemctl disable couchbase-server
 
-  log_info "Cleaning up $filepath"
-  rm -f "$filepath"
+  log_info "Cleaning up $dpkg_name"
+  rm -f "$dpkg_name"
 }
 
 function install_couchbase_on_amazon_linux {
