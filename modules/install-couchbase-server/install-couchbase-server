@@ -83,11 +83,14 @@ function install_couchbase_on_ubuntu {
   sudo apt-get install -y python-httplib2
 
   log_info "Downloading Couchbase from $url to $filepath"
-  curl --location --silent --fail --show-error -O "$url" \
-    || log_warn "Failed to get Couchbase from $url. Trying $fallback_url." \
-       && curl --location --silent --fail --show-error -O "$fallback_url"
+  if curl --location --silent --fail --show-error -O "$url"; then
+    os_validate_checksum "$filepath" "$checksum" "$checksum_type"
+  else
+    log_warn "Failed to get Couchbase from $url. Trying $fallback_url."
+    curl --location --silent --fail --show-error -O "$fallback_url"
+    os_validate_checksum "$fallback_filepath" "$checksum" "$checksum_type"
+  fi
 
-  os_validate_checksum "$filepath" "$checksum" "$checksum_type"
 
   # Install Couchbase, but configure it to NOT start on boot. This allows the run-couchbase-server script to configure
   # Couchbase, including what ports to use, and THEN boot it up.
