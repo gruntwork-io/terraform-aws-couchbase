@@ -76,7 +76,7 @@ function install_couchbase_on_ubuntu {
   # that the vast majority of Couchbase server builds do not have official deb packages for 18.04. That said, the 16.04
   # package has been verified to work, so we will fallback to using that if the 18.04 build is not available.
   local readonly fallback_filepath="couchbase-server-${edition}_${version}-ubuntu16.04_amd64.deb"
-  local readonly fallback_url="https://packages.couchbase.com/releases/$version/$filepath"
+  local readonly fallback_url="https://packages.couchbase.com/releases/$version/$fallback_filepath"
 
   log_info "Installing Couchbase dependencies"
   sudo DEBIAN_FRONTEND=noninteractive apt-get update
