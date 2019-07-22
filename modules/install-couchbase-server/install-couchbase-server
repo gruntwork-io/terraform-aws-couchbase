@@ -84,7 +84,7 @@ function install_couchbase_on_ubuntu {
   sudo apt-get install -y python-httplib2
 
   log_info "Downloading Couchbase from $url to $filepath"
-  if ! curl --location --silent --fail --show-error -o "$dpkg_name" "$url"; then
+  if [[ "$(curl --location --silent --fail --show-error -o "$dpkg_name" -w "%{http_code}" "$url")" == "404" ]]; then
     log_warn "Failed to get Couchbase from $url. Trying $fallback_url."
     curl --location --silent --fail --show-error -o "$dpkg_name" "$fallback_url"
   fi
