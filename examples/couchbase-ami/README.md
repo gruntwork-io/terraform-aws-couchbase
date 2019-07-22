@@ -23,7 +23,7 @@ To build the Couchbase AMI:
 1. Configure your AWS credentials using one of the [options supported by the AWS 
    SDK](http://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html). Usually, the easiest option is to
    set the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables.
-1. Update the `variables` section of the `couchbase.json` to specify the AWS region and Couchbase
+1. Update the `variables` section of the `couchbase.json` Packer template to specify the AWS region and Couchbase
    version you wish to use.
 1. To build an Ubuntu AMI for Couchbase Enterprise: `packer build -only=ubuntu-ami -var edition=enterprise couchbase.json`.
 1. To build an Ubuntu AMI for Couchbase Community: `packer build -only=ubuntu-ami -var edition=community couchbase.json`.
