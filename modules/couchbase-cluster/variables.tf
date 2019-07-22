@@ -164,6 +164,12 @@ variable "instance_profile_path" {
   default     = "/"
 }
 
+variable "instance_role_path" {
+  description = "Path in which to create the IAM instance role."
+  type        = string
+  default     = "/"
+}
+
 variable "instance_permissions_boundary" {
   description = "The ARN of the policy that is used to set the permissions boundary for the instance profile role"
   type        = string

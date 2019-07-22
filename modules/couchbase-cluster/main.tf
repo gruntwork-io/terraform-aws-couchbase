@@ -167,7 +167,7 @@ resource "aws_iam_instance_profile" "instance_profile" {
 resource "aws_iam_role" "instance_role" {
   name_prefix          = var.cluster_name
   assume_role_policy   = data.aws_iam_policy_document.instance_role.json
-  path                 = var.instance_profile_path
+  path                 = var.instance_role_path
   permissions_boundary = var.instance_permissions_boundary
 
   # aws_iam_instance_profile.instance_profile in this module sets create_before_destroy to true, which means
