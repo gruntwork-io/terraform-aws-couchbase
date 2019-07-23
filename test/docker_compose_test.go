@@ -1,31 +1,33 @@
 package test
 
 import (
-	"testing"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
-	"os"
-	"github.com/gruntwork-io/terratest/modules/test-structure"
-	"github.com/gruntwork-io/terratest/modules/random"
-	"github.com/gruntwork-io/terratest/modules/logger"
+	"testing"
+
 	"github.com/gruntwork-io/terratest/modules/docker"
+	"github.com/gruntwork-io/terratest/modules/logger"
+	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/gruntwork-io/terratest/modules/test-structure"
 )
 
 func TestUnitCouchbaseInDocker(t *testing.T) {
 	t.Parallel()
 
 	basicTestCases := []struct {
-		testName string
-		examplesFolderName string
-		osName string
-		edition string
-		clusterSize int
-		couchbaseWebConsolePort int
+		testName                  string
+		examplesFolderName        string
+		osName                    string
+		edition                   string
+		clusterSize               int
+		couchbaseWebConsolePort   int
 		syncGatewayWebConsolePort int
-	} {
-		{"TestUnitCouchbaseCommunitySingleClusterUbuntuInDocker","couchbase-cluster-simple", "ubuntu", "community", 2, 8091, 4984},
-		{"TestUnitCouchbaseEnterpriseMultiClusterAmazonLinuxInDocker", "couchbase-cluster-mds", "amazon-linux", "enterprise", 3,7091, 3984},
+	}{
+		{"TestUnitCouchbaseCommunitySingleClusterUbuntu16InDocker", "couchbase-cluster-simple", "ubuntu", "community", 2, 8091, 4984},
+		{"TestUnitCouchbaseCommunitySingleClusterUbuntu18InDocker", "couchbase-cluster-simple", "ubuntu-18", "community", 2, 8091, 4984},
+		{"TestUnitCouchbaseEnterpriseMultiClusterAmazonLinuxInDocker", "couchbase-cluster-mds", "amazon-linux", "enterprise", 3, 7091, 3984},
 	}
 
 	for _, testCase := range basicTestCases {
@@ -39,15 +41,16 @@ func TestUnitCouchbaseInDocker(t *testing.T) {
 	}
 
 	replicationTestCases := []struct {
-		testName string
-		examplesFolderName string
-		osName string
-		edition string
-		clusterSize int
+		testName                    string
+		examplesFolderName          string
+		osName                      string
+		edition                     string
+		clusterSize                 int
 		couchbaseWebConsolePortEast int
 		couchbaseWebConsolePortWest int
-	} {
-		{"TestUnitCouchbaseEnterpriseMultiDataCenterUbuntuInDocker", "couchbase-multi-datacenter-replication", "ubuntu", "enterprise", 2,6091, 5091},
+	}{
+		{"TestUnitCouchbaseEnterpriseMultiDataCenterUbuntu16InDocker", "couchbase-multi-datacenter-replication", "ubuntu", "enterprise", 2, 6091, 5091},
+		{"TestUnitCouchbaseEnterpriseMultiDataCenterUbuntu18InDocker", "couchbase-multi-datacenter-replication", "ubuntu-18", "enterprise", 2, 6091, 5091},
 	}
 
 	for _, testCase := range replicationTestCases {
@@ -70,10 +73,10 @@ func skipInCircleCi(t *testing.T) {
 func testCouchbaseInDockerBasic(t *testing.T, examplesFolderName string, osName string, edition string, clusterSize int, couchbaseWebConsolePort int, syncGatewayWebConsolePort int) {
 	uniqueId := random.UniqueId()
 	envVars := map[string]string{
-		"OS_NAME": osName,
+		"OS_NAME":             osName,
 		"CONTAINER_BASE_NAME": fmt.Sprintf("couchbase-%s", uniqueId),
-		"WEB_CONSOLE_PORT": strconv.Itoa(couchbaseWebConsolePort),
-		"SYNC_GATEWAY_PORT": strconv.Itoa(syncGatewayWebConsolePort),
+		"WEB_CONSOLE_PORT":    strconv.Itoa(couchbaseWebConsolePort),
+		"SYNC_GATEWAY_PORT":   strconv.Itoa(syncGatewayWebConsolePort),
 	}
 
 	tmpExamplesDir := test_structure.CopyTerraformFolderToTemp(t, "../", "examples")
@@ -81,7 +84,7 @@ func testCouchbaseInDockerBasic(t *testing.T, examplesFolderName string, osName 
 	couchbaseSingleClusterDockerDir := filepath.Join(tmpExamplesDir, examplesFolderName, "local-test")
 
 	test_structure.RunTestStage(t, "setup_image", func() {
-		buildCouchbaseWithPacker(t, fmt.Sprintf("%s-docker", osName), "couchbase","us-east-1", couchbaseAmiDir, edition)
+		buildCouchbaseWithPacker(t, fmt.Sprintf("%s-docker", osName), "couchbase", "us-east-1", couchbaseAmiDir, edition)
 	})
 
 	defer test_structure.RunTestStage(t, "teardown", func() {
@@ -109,8 +112,8 @@ func testCouchbaseInDockerBasic(t *testing.T, examplesFolderName string, osName 
 func testCouchbaseInDockerReplication(t *testing.T, examplesFolderName string, osName string, edition string, clusterSize int, couchbaseWebConsolePortEast int, couchbaseWebConsolePortWest int) {
 	uniqueId := random.UniqueId()
 	envVars := map[string]string{
-		"OS_NAME": osName,
-		"CONTAINER_BASE_NAME": fmt.Sprintf("couchbase-%s", uniqueId),
+		"OS_NAME":               osName,
+		"CONTAINER_BASE_NAME":   fmt.Sprintf("couchbase-%s", uniqueId),
 		"WEB_CONSOLE_EAST_PORT": strconv.Itoa(couchbaseWebConsolePortEast),
 		"WEB_CONSOLE_WEST_PORT": strconv.Itoa(couchbaseWebConsolePortWest),
 	}
@@ -120,7 +123,7 @@ func testCouchbaseInDockerReplication(t *testing.T, examplesFolderName string, o
 	couchbaseSingleClusterDockerDir := filepath.Join(tmpExamplesDir, examplesFolderName, "local-test")
 
 	test_structure.RunTestStage(t, "setup_image", func() {
-		buildCouchbaseWithPacker(t, fmt.Sprintf("%s-docker", osName), "couchbase","us-east-1", couchbaseAmiDir, edition)
+		buildCouchbaseWithPacker(t, fmt.Sprintf("%s-docker", osName), "couchbase", "us-east-1", couchbaseAmiDir, edition)
 	})
 
 	test_structure.RunTestStage(t, "setup_docker", func() {

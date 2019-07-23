@@ -11,9 +11,14 @@ import (
 
 const couchbaseClusterVarName = "cluster_name"
 
-func TestIntegrationCouchbaseCommunitySingleClusterUbuntu(t *testing.T) {
+func TestIntegrationCouchbaseCommunitySingleClusterUbuntu16(t *testing.T) {
 	t.Parallel()
 	testCouchbaseSingleCluster(t, "ubuntu", "community")
+}
+
+func TestIntegrationCouchbaseCommunitySingleClusterUbuntu18(t *testing.T) {
+	t.Parallel()
+	testCouchbaseSingleCluster(t, "ubuntu-18", "community")
 }
 
 func TestIntegrationCouchbaseCommunitySingleClusterAmazonLinux(t *testing.T) {
@@ -21,9 +26,14 @@ func TestIntegrationCouchbaseCommunitySingleClusterAmazonLinux(t *testing.T) {
 	testCouchbaseSingleCluster(t, "amazon-linux", "community")
 }
 
-func TestIntegrationCouchbaseEnterpriseSingleClusterUbuntu(t *testing.T) {
+func TestIntegrationCouchbaseEnterpriseSingleClusterUbuntu16(t *testing.T) {
 	t.Parallel()
 	testCouchbaseSingleCluster(t, "ubuntu", "enterprise")
+}
+
+func TestIntegrationCouchbaseEnterpriseSingleClusterUbuntu18(t *testing.T) {
+	t.Parallel()
+	testCouchbaseSingleCluster(t, "ubuntu-18", "enterprise")
 }
 
 func TestIntegrationCouchbaseEnterpriseSingleClusterAmazonLinux(t *testing.T) {
