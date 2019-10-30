@@ -1,0 +1,135 @@
+:type: service
+:name: Amazon EKS
+:description: Deploy Kubernetes on top of Amazon EC2 Kubernetes Service (EKS)
+:icon: /_docs/eks-architecture.png
+:category: docker-orchestration
+:cloud: aws
+:tags: docker, orchestration, kubernetes, containers
+:license: gruntwork
+:built-with: terraform, bash, python, go
+
+// AsciiDoc TOC settings
+:toc:
+:toc-placement!:
+:toc-title:
+
+// GitHub specific settings. See https://gist.github.com/dcode/0cfbf2699a1fe9b46ff04c41721dda74 for details.
+ifdef::env-github[]
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+endif::[]
+
+= Amazon EKS
+
+image:https://img.shields.io/badge/maintained%20by-gruntwork.io-%235849a6.svg[link="https://gruntwork.io/?ref=repo_aws_eks"]
+image:https://img.shields.io/badge/tf-%3E%3D0.12.0-blue.svg[Terraform version]
+
+This repo contains a Module for running Kubernetes clusters on https://aws.amazon.com[AWS] using https://docs.aws.amazon.com/eks/latest/userguide/clusters.html[Elastic Kubernetes Service (EKS)] with
+https://www.terraform.io[Terraform].
+
+image::images/eks-architecture.png?raw=true[EKS architecture]
+
+toc::[]
+
+
+
+
+== Features
+
+* Deploy a fully-managed control plane
+* Deploy worker nodes in an Auto Scaling Group
+* Zero-downtime, rolling deployment for updating worker nodes
+* IAM to RBAC mapping
+* Auto scaling and auto healing
+* Fine-grained IAM roles for Pods
+* Deploy Helm securely with automated TLS certificate management
+* Heterogeneous worker groups
+* ALB ingress controller support
+* VPC tagging
+* External DNS integration with Route 53
+
+
+
+
+== Learn
+
+NOTE: This repo is a part of https://gruntwork.io/infrastructure-as-code-library/[the Gruntwork Infrastructure as Code
+Library], a collection of reusable, battle-tested, production ready infrastructure code. If you've never used the Infrastructure as Code Library before, make sure to read https://gruntwork.io/guides/foundations/how-to-use-gruntwork-infrastructure-as-code-library/[How to use the Gruntwork Infrastructure as Code Library]!
+
+=== Core concepts
+
+* https://gruntwork.io/guides/kubernetes/how-to-deploy-production-grade-kubernetes-cluster-aws/#core_concepts[Kubernetes and EKS core concepts]: learn about Kubernetes architecture (control plane, worker nodes), access control (authentication, authorization), resources (pods, controllers, services, config, secrets), and more.
+* https://training.gruntwork.io/eks[A crash course on EKS]: a series of training videos that teach you how to use EKS.
+* _https://www.manning.com/books/kubernetes-in-action[Kubernetes in Action]_: the best book we've found for getting up and running with Kubernetes.
+
+=== Repo organization
+
+* link:/modules[modules]: the main implementation code for this repo, broken down into multiple standalone, orthogonal submodules.
+* link:/examples[examples]: This folder contains working examples of how to use the submodules.
+* link:/test[test]: Automated tests for the modules and examples.
+
+=== Gruntwork analysis
+
+* link:https://www.gruntwork.io/example[Docker orchestration comparison: EKS vs ECS vs Nomad]: A detailed comparison off Docker orchestration tools, showing you the trade-offs between EKS, ECS, and Nomad.
+* link:/_docs/faq.md#why-kubernetes[Why Kubernetes]: Learn why you may want to use Kubernetes in the first place.
+* link:/_docs/faq.md#auth-to-eks[Why EKS]: Learn why you may want to use EKS to run a Kubernetes cluster.
+
+
+
+
+== Deploy
+
+=== Non-production deployment (quick start for learning)
+
+If you just want to try this repo out for experimenting and learning, check out the following resources:
+
+* link:/examples[examples folder]: The `examples` folder contains sample code optimized for learning, experimenting, and testing (but not production usage).
+
+=== Production deployment
+
+If you want to deploy this repo in production, check out the following resources:
+
+* https://gruntwork.io/guides/kubernetes/how-to-deploy-production-grade-kubernetes-cluster-aws/#deployment_walkthrough[How to deploy a production-grade Kubernetes cluster on AWS]: A step-by-step guide for deploying a production-grade EKS cluster on AWS using the code in this repo.
+* https://github.com/gruntwork-io/infrastructure-modules-multi-account-acme/tree/master/services/eks-cluster[eks-cluster in the Acme example Reference Architecture]: Production-ready sample code from the Acme Reference Architecture examples.
+
+
+
+
+== Manage
+
+=== Day-to-day operations
+
+* link:/_docs/faq.md#auth-to-eks[How to authenticate to EKS]
+* link:/_docs/faq.md#auth-to-eks[How to manage IAM roles and RBAC]
+* link:/_docs/faq.md#auth-to-eks[How to deploy services on EKS]
+
+=== Major changes
+
+* link:/_docs/faq.md#auth-to-eks[How to upgrade an EKS cluster]
+* link:/_docs/faq.md#auth-to-eks[How to deal with an outage]
+
+
+
+
+== Support
+
+If you need help with this repo or anything else related to infrastructure or DevOps, Gruntwork offers https://gruntwork.io/support/[Commercial Support] via Slack, email, and phone/video. If you're already a Gruntwork customer, hop on Slack and ask away! If not, https://www.gruntwork.io/pricing/[subscribe now]. If you're not sure, feel free to email us at link:mailto:support@gruntwork.io[support@gruntwork.io].
+
+
+
+
+== Contributions
+
+Contributions to this repo are very welcome and appreciated! If you find a bug or want to add a new feature or even contribute an entirely new module, we are very happy to accept pull requests, provide feedback, and run your changes through our automated test suite.
+
+Please see https://gruntwork.io/guides/foundations/how-to-use-gruntwork-infrastructure-as-code-library/#contributing-to-the-gruntwork-infrastructure-as-code-library[Contributing to the Gruntwork Infrastructure as Code Library] for instructions.
+
+
+
+
+== License
+
+Please see link:LICENSE.txt[LICENSE.txt] for details on how the code in this repo is licensed.
