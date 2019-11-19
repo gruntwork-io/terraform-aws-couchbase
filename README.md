@@ -61,6 +61,9 @@ of how to use modules maintained by Gruntwork!
 
 ### Repo organization
 
+Check out [How to use this repo](https://github.com/hashicorp/terraform-aws-couchbase/tree/master/core-concepts.md#how-to-use-this-repo): 
+for an overview.
+
 * [modules](https://github.com/hashicorp/terraform-aws-couchbase/tree/master/modules): the main implementation code for this repo, broken down into multiple standalone, orthogonal submodules.
 * [examples](https://github.com/hashicorp/terraform-aws-couchbase/tree/master/examples): This folder contains working examples of how to use the submodules.
 * [test](https://github.com/hashicorp/terraform-aws-couchbase/tree/master/test): Automated tests for the modules and examples.
@@ -76,6 +79,8 @@ of how to use modules maintained by Gruntwork!
 If you just want to try this repo out for experimenting and learning, check out the following resources:
 
 * [examples folder](https://github.com/hashicorp/terraform-aws-couchbase/tree/master/examples): The `examples` folder contains sample code optimized for learning, experimenting, and testing (but not production usage).
+* [quick start](https://github.com/hashicorp/terraform-aws-couchbase/tree/master/core-concepts.md#quick-start): A quick
+  start guide for this repo.
 
 ### Production deployment
 
