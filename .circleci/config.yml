@@ -44,7 +44,8 @@ jobs:
 
       # Install external dependencies
       - run: DEBIAN_FRONTEND=noninteractive sudo apt-get update && sudo apt-get install -y python-pip
-      - run: pip install pre-commit awscli
+      # Oct 26, 2019: Install the last known working version of pre-commit
+      - run: pip install pre-commit==1.11.2 awscli
 
       # Fail the build if the pre-commit hooks don't pass. Note: if you run "pre-commit install" locally in the roo repo
       # folder, these hooks will execute automatically every time before you commit, ensuring the build never fails at this step!

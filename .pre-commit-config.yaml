@@ -1,5 +1,5 @@
 repos:
-  - repo: git@github.com:gruntwork-io/module-ci.git
-    sha: v0.7.1
+  - repo: https://github.com/gruntwork-io/pre-commit
+    rev: v0.0.2
     hooks:
       - id: terraform-fmt
