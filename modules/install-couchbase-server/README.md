@@ -72,9 +72,14 @@ Example:
 
 The `install-couchbase-server` script does the following:
 
-1. [Install Couchbase binaries and scripts](#install-couchbase-binaries-and-scripts)
-1. [Update swap settings](#update-swap-settings)
-1. [Disable transparent huge pages](#disable-transparent-huge-pages)
+- [Couchbase Server Install Script](#couchbase-server-install-script)
+  - [Quick start](#quick-start)
+  - [Command line Arguments](#command-line-arguments)
+  - [How it works](#how-it-works)
+    - [Install Couchbase binaries and scripts](#install-couchbase-binaries-and-scripts)
+    - [Update swap settings](#update-swap-settings)
+  - [Disable transparent huge pages](#disable-transparent-huge-pages)
+  - [Why use Git to install this code?](#why-use-git-to-install-this-code)
 
 
 ### Install Couchbase binaries and scripts
@@ -105,5 +110,3 @@ Disable transparent huge pages on your OS. See [Disabling Transparent Huge Pages
 
 We needed an easy way to install these scripts that satisfied a number of requirements, including working on a variety 
 of operating systems and supported versioning. Our current solution is to use `git`, but this may change in the future.
-See [Package Managers](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/_docs/package-managers.md) 
-for a full discussion of the requirements, trade-offs, and why we picked `git`.
