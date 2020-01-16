@@ -72,14 +72,9 @@ Example:
 
 The `install-couchbase-server` script does the following:
 
-- [Couchbase Server Install Script](#couchbase-server-install-script)
-  - [Quick start](#quick-start)
-  - [Command line Arguments](#command-line-arguments)
-  - [How it works](#how-it-works)
-    - [Install Couchbase binaries and scripts](#install-couchbase-binaries-and-scripts)
-    - [Update swap settings](#update-swap-settings)
-  - [Disable transparent huge pages](#disable-transparent-huge-pages)
-  - [Why use Git to install this code?](#why-use-git-to-install-this-code)
+  1. [Install Couchbase binaries and scripts](#install-couchbase-binaries-and-scripts)
+  1. [Update swap settings](#update-swap-settings)
+  1. [Disable transparent huge pages](#disable-transparent-huge-pages)
 
 
 ### Install Couchbase binaries and scripts
