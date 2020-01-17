@@ -72,9 +72,9 @@ Example:
 
 The `install-couchbase-server` script does the following:
 
-  1. [Install Couchbase binaries and scripts](#install-couchbase-binaries-and-scripts)
-  1. [Update swap settings](#update-swap-settings)
-  1. [Disable transparent huge pages](#disable-transparent-huge-pages)
+1. [Install Couchbase binaries and scripts](#install-couchbase-binaries-and-scripts)
+1. [Update swap settings](#update-swap-settings)
+1. [Disable transparent huge pages](#disable-transparent-huge-pages)
 
 
 ### Install Couchbase binaries and scripts
@@ -105,3 +105,4 @@ Disable transparent huge pages on your OS. See [Disabling Transparent Huge Pages
 
 We needed an easy way to install these scripts that satisfied a number of requirements, including working on a variety 
 of operating systems and supported versioning. Our current solution is to use `git`, but this may change in the future.
+See [Package Managers](https://github.com/hashicorp/terraform-aws-consul/blob/master/_docs/package-managers.md)
