@@ -7,7 +7,7 @@
   },
   "builders": [{
     "name": "ubuntu-ami",
-    "ami_name": "{{user `base_ami_name`}}-ubuntu-example-{{isotime | clean_ami_name}}",
+    "ami_name": "{{user `base_ami_name`}}-ubuntu-example-{{isotime | clean_resource_name}}",
     "ami_description": "An Ubuntu 16.04 AMI that has Couchbase installed.",
     "instance_type": "t2.micro",
     "region": "{{user `aws_region`}}",
@@ -26,7 +26,7 @@
     "ssh_username": "ubuntu"
   },{
     "name": "ubuntu-18-ami",
-    "ami_name": "{{user `base_ami_name`}}-ubuntu-18-example-{{isotime | clean_ami_name}}",
+    "ami_name": "{{user `base_ami_name`}}-ubuntu-18-example-{{isotime | clean_resource_name}}",
     "ami_description": "An Ubuntu 18.04 AMI that has Couchbase installed.",
     "instance_type": "t2.micro",
     "region": "{{user `aws_region`}}",
@@ -45,7 +45,7 @@
     "ssh_username": "ubuntu"
   },{
     "name": "amazon-linux-ami",
-    "ami_name": "{{user `base_ami_name`}}-amazon-linux-example-{{isotime | clean_ami_name}}",
+    "ami_name": "{{user `base_ami_name`}}-amazon-linux-example-{{isotime | clean_resource_name}}",
     "ami_description": "An Amazon Linux 2 AMI that has Couchbase installed.",
     "instance_type": "t2.micro",
     "region": "{{user `aws_region`}}",
