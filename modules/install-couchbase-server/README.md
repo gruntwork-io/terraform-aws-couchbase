@@ -105,5 +105,4 @@ Disable transparent huge pages on your OS. See [Disabling Transparent Huge Pages
 
 We needed an easy way to install these scripts that satisfied a number of requirements, including working on a variety 
 of operating systems and supported versioning. Our current solution is to use `git`, but this may change in the future.
-See [Package Managers](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/_docs/package-managers.md) 
-for a full discussion of the requirements, trade-offs, and why we picked `git`.
+See [Package Managers](https://github.com/hashicorp/terraform-aws-consul/blob/master/_docs/package-managers.md)
