@@ -15,11 +15,13 @@ terraform {
 provider "aws" {
   alias  = "primary"
   region = var.primary_region
+  version = "2.47.0"
 }
 
 provider "aws" {
   alias  = "replica"
   region = var.replica_region
+  version = "2.47.0"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
