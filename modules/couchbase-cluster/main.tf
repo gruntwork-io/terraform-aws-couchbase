@@ -17,9 +17,10 @@ resource "aws_autoscaling_group" "autoscaling_group" {
   launch_configuration = aws_launch_configuration.launch_configuration.name
   vpc_zone_identifier  = var.subnet_ids
 
-  min_size             = var.min_size
-  max_size             = var.max_size
-  termination_policies = var.termination_policies
+  min_size              = var.min_size
+  max_size              = var.max_size
+  termination_policies  = var.termination_policies
+  protect_from_scale_in = var.protect_from_scale_in
 
   health_check_type         = var.health_check_type
   health_check_grace_period = var.health_check_grace_period
