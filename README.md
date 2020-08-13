@@ -15,8 +15,8 @@
 [![Maintained by Gruntwork.io](https://img.shields.io/badge/maintained%20by-gruntwork.io-%235849a6.svg)](https://gruntwork.io/?ref=repo_aws_couchbase)
 ![Terraform Version](https://img.shields.io/badge/tf-%3E%3D0.12.0-blue.svg)
 
-This repo contains a set of modules for deploying [Couchbase](https://www.couchbase.com/) on 
-[AWS](https://aws.amazon.com/) using [Terraform](https://www.terraform.io/) and [Packer](https://www.packer.io/). 
+This repo contains a set of modules for deploying [Couchbase](https://www.couchbase.com/) on
+[AWS](https://aws.amazon.com/) using [Terraform](https://www.terraform.io/) and [Packer](https://www.packer.io/).
 Couchbase is a distributed NoSQL document database. This module supports running Couchbase as a single cluster:
 
 ![Couchbase single-cluster architecture](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/_docs/couchbase-single-cluster-architecture.png?raw=true)
@@ -26,14 +26,12 @@ Or as multiple clusters for the various Couchbase services (data, management, se
 ![Couchbase multi-cluster architecture](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/_docs/couchbase-multi-cluster-architecture.png?raw=true)
 
 
-
-
 ## Features
 
 * Deploy Couchbase and Sync Gateway.
 * Automatic bootstrapping.
 * Cross-region replication
-* Multi-dimensional scaling, allowing you to separately scale data, management, search, index, query, and Sync 
+* Multi-dimensional scaling, allowing you to separately scale data, management, search, index, query, and Sync
   Gateway nodes.
 * Auto healing.
 * Web console UI.
@@ -55,13 +53,13 @@ of how to use modules maintained by Gruntwork!
   guides for administrators, developers, SQL developers, and mobile developers.
 * [Couchbase tutorials](https://docs.couchbase.com/tutorials/index.html): hands-on guides for getting started with
   Couchbase.
-* [Couchbase Security](https://docs.couchbase.com/server/6.0/learn/security/security-overview.html): overview of how to 
+* [Couchbase Security](https://docs.couchbase.com/server/6.0/learn/security/security-overview.html): overview of how to
   secure your Couchbase clusters.
 
 
 ### Repo organization
 
-Check out [How to use this repo](https://github.com/hashicorp/terraform-aws-couchbase/tree/master/core-concepts.md#how-to-use-this-repo): 
+Check out [How to use this repo](https://github.com/hashicorp/terraform-aws-couchbase/tree/master/core-concepts.md#how-to-use-this-repo):
 for an overview.
 
 * [modules](https://github.com/hashicorp/terraform-aws-couchbase/tree/master/modules): the main implementation code for this repo, broken down into multiple standalone, orthogonal submodules.
@@ -88,14 +86,13 @@ If you want to deploy this repo in production, check out the following resources
 
 * [Couchbase deployment guidelines](https://docs.couchbase.com/server/6.0/install/install-production-deployment.html):
   A guide on how to configure Couchbase for production. All of these settings are exposed by the modules in the
-  `modules` folder. 
+  `modules` folder.
 * [Security options](https://github.com/hashicorp/terraform-aws-couchbase/tree/master/modules/couchbase-cluster/README.md#security):
   The security options you can configure using these modules.
 * [Credentials](https://github.com/hashicorp/terraform-aws-couchbase/tree/master/modules/run-couchbase-server/README.md#passing-credentials-securely):
   How to pass credentials securely to your Couchbase server.
 * [Memory settings](https://github.com/hashicorp/terraform-aws-couchbase/tree/master/modules/run-couchbase-server/README.md#memory-settings):
   How to configure memory settings in your Couchbase server.
-  
 
 
 
