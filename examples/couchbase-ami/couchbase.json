@@ -105,7 +105,7 @@
     "pause_before": "5s",
     "inline": [
       "apt-get update",
-      "DEBIAN_FRONTEND=noninteractive apt-get install -y git"
+      "DEBIAN_FRONTEND=noninteractive apt-get install -y git lsb-release"
     ],
     "only": ["ubuntu-docker", "ubuntu-18-docker"]
   },{
