@@ -52,6 +52,42 @@ resource "aws_alb_listener_rule" "http_path" {
     target_group_arn = aws_alb_target_group.tg.arn
     type             = "forward"
   }
+
+  dynamic "condition" {
+    for_each = [for condition in var.routing_condition : condition.values if condition.field == "path_pattern"]
+    content {
+      path_pattern {
+        values = condition.value
+      }
+    }
+  }
+
+  dynamic "condition" {
+    for_each = [for condition in var.routing_condition : condition.values if condition.field == "host_header"]
+    content {
+      host_header {
+        values = condition.value
+      }
+    }
+  }
+
+  dynamic "condition" {
+    for_each = [for condition in var.routing_condition : condition.values if condition.field == "http_request_method"]
+    content {
+      http_request_method {
+        values = condition.value
+      }
+    }
+  }
+
+  dynamic "condition" {
+    for_each = [for condition in var.routing_condition : condition.values if condition.field == "source_ip"]
+    content {
+      source_ip {
+        values = condition.value
+      }
+    }
+  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

@@ -48,6 +48,21 @@ variable "vpc_id" {
 # These parameters have reasonable defaults.
 # ---------------------------------------------------------------------------------------------------------------------
 
+variable "routing_condition" {
+  description = "This variable defines the paths or domain names that will be routed to the servers. By default, we route all paths and domain names to the servers. To override this, you should pass in a list of maps, where each map has the keys field and values. The field can be one of: path_pattern, host_header, http_request_method, or source_ip. The values are an array of values for that field. See the Condition Blocks documentation for the syntax to use: https://www.terraform.io/docs/providers/aws/r/lb_listener_rule.html."
+  type = list(object({
+    field  = string
+    values = list(string)
+  }))
+
+  default = [
+    {
+      field  = "path_pattern"
+      values = ["*"]
+    },
+  ]
+}
+
 variable "protocol" {
   description = "The protocol to use to talk to the servers. Must be one of: HTTP, HTTPS."
   type        = string
