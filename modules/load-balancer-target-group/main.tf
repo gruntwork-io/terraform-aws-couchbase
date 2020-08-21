@@ -52,14 +52,6 @@ resource "aws_alb_listener_rule" "http_path" {
     target_group_arn = aws_alb_target_group.tg.arn
     type             = "forward"
   }
-
-  dynamic "condition" {
-    for_each = var.routing_condition
-    content {
-      field  = condition.value["field"]
-      values = condition.value["values"]
-    }
-  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
