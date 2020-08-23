@@ -106,10 +106,11 @@ function install_couchbase_on_amazon_linux {
   local readonly version="$2"
   local readonly checksum="$3"
   local readonly checksum_type="$4"
+  local readonly base_os_version="$5"
 
   log_info "Installing Couchbase $version ($edition edition) on Amazon Linux"
 
-  local readonly filepath="couchbase-server-${edition}-${version}-centos6.x86_64.rpm"
+  local readonly filepath="couchbase-server-${edition}-${version}-${base_os_version}.x86_64.rpm"
   local readonly url="https://packages.couchbase.com/releases/$version/$filepath"
 
   log_info "Installing Couchbase dependencies"
@@ -262,7 +263,8 @@ function install {
   if os_is_ubuntu "16.04" || os_is_ubuntu "18.04"; then
     install_couchbase_on_ubuntu "$edition" "$version" "$checksum" "$checksum_type"
   elif os_is_amazon_linux "2"; then
-    install_couchbase_on_amazon_linux "$edition" "$version" "$checksum" "$checksum_type"
+    [[ $version > 5.1.1 ]] && base_os_version="amzn2" || base_os_version="centos6"
+    install_couchbase_on_amazon_linux "$edition" "$version" "$checksum" "$checksum_type" "$base_os_version"
   else
     log_error "This script only supports Ubuntu 16.04 and Amazon Linux 2."
     exit 1
