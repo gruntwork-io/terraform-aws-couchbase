@@ -23,7 +23,7 @@ func checkCouchbaseConsoleIsRunning(t *testing.T, clusterUrl string) {
 
 	webConsoleUrl := fmt.Sprintf("%s/ui/index.html", clusterUrl)
 	http_helper.HttpGetWithRetryWithCustomValidation(t, webConsoleUrl, maxRetries, sleepBetweenRetries, func(status int, body string) bool {
-		return status == 200 && strings.Contains(body, "Couchbase Console")
+		return status == 200 && strings.Contains(body, "Couchbase Server")
 	})
 }
 
@@ -90,7 +90,7 @@ func (testData TestData) String() string {
 
 type CouchbaseTestDataResponse struct {
 	Meta CouchbaseMeta `json:"meta"`
-	Json TestData `json:"json"`
+	Json string `json:"json"`
 }
 
 type CouchbaseMeta struct {
@@ -245,6 +245,7 @@ func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key stri
 		return body, nil
 	})
 
+	// Unmarshal the surrounding data
 	var value CouchbaseTestDataResponse
 	if err := json.Unmarshal([]byte(body), &value); err != nil {
 		t.Fatalf("Failed to parse body '%s' for key %s in bucket %s: %v", body, key, bucketName, err)
@@ -252,7 +253,13 @@ func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key stri
 
 	logger.Logf(t, "Got back %v for key %s from bucket %s", value, key, bucketName)
 
-	return value.Json
+	// The data we wrote comes back as a string, but inside that string is JSON, so now we unmarshal that
+	var testData TestData
+	if err := json.Unmarshal([]byte(value.Json), &testData); err != nil {
+		t.Fatalf("Failed to parse Json param '%s' for key %s in bucket %s: %v", value.Json, key, bucketName, err)
+	}
+
+	return testData
 }
 
 func checkSyncGatewayWorking(t *testing.T, syncGatewayUrl string) {
