@@ -240,8 +240,8 @@ function add_server_to_cluster {
 
   server_add_args+=("server-add")
   server_add_args+=("--cluster=$cluster_url")
-  server_add_args+=("--user=$cluster_username")
-  server_add_args+=("--pass=$cluster_password")
+  server_add_args+=("--username=$cluster_username")
+  server_add_args+=("--password=$cluster_password")
   server_add_args+=("--server-add=$node_url")
   server_add_args+=("--server-add-username=$cluster_username")
   server_add_args+=("--server-add-password=$cluster_password")
