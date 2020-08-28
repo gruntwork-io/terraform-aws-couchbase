@@ -17,7 +17,7 @@ This script assumes you installed it, plus all of its dependencies (including Sy
 [install-sync-gateway module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/install-sync-gateway). 
 As part of the installation process, we recommend that you create a [Sync Gateway JSON config 
 file](https://developer.couchbase.com/documentation/mobile/1.5/guides/sync-gateway/config-properties/index.html) and 
-install it using the `--config` option of the `install-sync-gteway` script.
+install it using the `--config` option of the `install-sync-gateway` script.
 
 You may want some of the configs, such as the IPs of the Couchbase servers, to be filled in dynamically, when the 
 server is booting up. You can do this using the `run-sync-gateway` script! Simply leave placeholders in your
