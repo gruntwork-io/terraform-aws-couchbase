@@ -85,7 +85,7 @@ function install_couchbase_on_ubuntu {
 
   log_info "Installing Couchbase dependencies"
   sudo DEBIAN_FRONTEND=noninteractive apt-get update
-  sudo apt-get install -y python-httplib2
+  sudo apt-get install -y python-httplib2 bzip2
 
   log_info "Downloading Couchbase from $url to $filepath"
   if [[ "$(curl --location --silent --fail --show-error -o "$dpkg_name" -w "%{http_code}" "$url")" == "404" ]]; then
@@ -118,7 +118,7 @@ function install_couchbase_on_amazon_linux {
 
   log_info "Installing Couchbase dependencies"
   sudo yum update -y
-  sudo yum install -y openssl
+  sudo yum install -y openssl bzip2
 
   log_info "Downloading Couchbase from $url to $filepath"
   curl --location --silent --fail --show-error -O "$url"
