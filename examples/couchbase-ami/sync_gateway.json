@@ -7,6 +7,7 @@
       "username": "<DB_USERNAME>",
       "password": "<DB_PASSWORD>",
       "bucket": "<BUCKET_NAME>",
+      "num_index_replicas": 0,
       "users": {"GUEST": {"disabled": false, "admin_channels": ["*"]}}
     }
   },
