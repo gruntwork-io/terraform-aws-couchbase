@@ -1,12 +1,14 @@
 package test
 
 import (
+	"os"
+	"path/filepath"
+	"testing"
+
 	"github.com/gruntwork-io/terratest/modules/aws"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/terraform"
-	"github.com/gruntwork-io/terratest/modules/test-structure"
-	"path/filepath"
-	"testing"
+	test_structure "github.com/gruntwork-io/terratest/modules/test-structure"
 )
 
 const couchbaseClusterVarName = "cluster_name"

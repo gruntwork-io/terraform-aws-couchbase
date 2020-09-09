@@ -4,13 +4,13 @@ defaults: &defaults
   machine:
     image: circleci/classic:201711-01
   environment:
-    GRUNTWORK_INSTALLER_VERSION: v0.0.21
-    TERRATEST_LOG_PARSER_VERSION: v0.13.24
-    MODULE_CI_VERSION: v0.13.15
+    GRUNTWORK_INSTALLER_VERSION: v0.0.29
+    TERRATEST_LOG_PARSER_VERSION: v0.29.0
+    MODULE_CI_VERSION: v0.28.1
     TERRAFORM_VERSION: 0.12.29
     TERRAGRUNT_VERSION: NONE
     PACKER_VERSION: 1.4.1
-    GOLANG_VERSION: 1.11
+    GOLANG_VERSION: 1.13
 
 version: 2
 jobs:
@@ -26,21 +26,16 @@ jobs:
       - restore_cache:
           keys:
             - v2-external-dep
-            - v2-dep-{{ checksum "test/Gopkg.lock" }}
       # Use the Gruntwork Installer to install the gruntwork-module-circleci-helpers
       - run: curl -Ls https://raw.githubusercontent.com/gruntwork-io/gruntwork-installer/master/bootstrap-gruntwork-installer.sh | bash /dev/stdin --version "${GRUNTWORK_INSTALLER_VERSION}"
       - run: gruntwork-install --module-name "gruntwork-module-circleci-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "${MODULE_CI_VERSION}"
       - run: gruntwork-install --binary-name "terratest_log_parser" --repo "https://github.com/gruntwork-io/terratest" --tag "${TERRATEST_LOG_PARSER_VERSION}"
-      - run: configure-environment-for-gruntwork-module --circle-ci-2-machine-executor --terraform-version ${TERRAFORM_VERSION} --terragrunt-version ${TERRAGRUNT_VERSION} --packer-version ${PACKER_VERSION} --use-go-dep --go-version ${GOLANG_VERSION} --go-src-path test
+      - run: configure-environment-for-gruntwork-module --terraform-version ${TERRAFORM_VERSION} --terragrunt-version ${TERRAGRUNT_VERSION} --packer-version ${PACKER_VERSION} --go-version ${GOLANG_VERSION}
       - save_cache:
           key: v2-external-dep
           paths:
             - $HOME/terraform
             - $HOME/packer
-      - save_cache:
-          key: v2-dep-{{ checksum "test/Gopkg.lock" }}
-          paths:
-            - $HOME/.go_workspace/src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/test/vendor
 
       # Install external dependencies
       - run: DEBIAN_FRONTEND=noninteractive sudo apt-get update && sudo apt-get install -y python-pip
@@ -83,7 +78,7 @@ jobs:
       - run: gruntwork-install --module-name "gruntwork-module-circleci-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "${MODULE_CI_VERSION}"
       - run: gruntwork-install --module-name "build-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "${MODULE_CI_VERSION}"
       - run: gruntwork-install --module-name "aws-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "${MODULE_CI_VERSION}"
-      - run: configure-environment-for-gruntwork-module --circle-ci-2-machine-executor --go-src-path test --use-go-dep --terraform-version NONE --terragrunt-version NONE --glide-version NONE
+      - run: configure-environment-for-gruntwork-module --terraform-version NONE --terragrunt-version NONE
 
       - run: ~/project/.circleci/publish-amis.sh "ubuntu-ami"
       - run: ~/project/.circleci/publish-amis.sh "amazon-linux-ami"
