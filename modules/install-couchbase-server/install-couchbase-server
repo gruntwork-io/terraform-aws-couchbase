@@ -24,13 +24,13 @@ readonly DEFAULT_EDITION="$ENTERPRISE_EDITION"
 readonly DEFAULT_COUCHBASE_ENTERPRISE_VERSION="6.6.0"
 readonly DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_UBUNTU_18_04="8e7fd5434537094be2fbdfedf3ab5005f0f7d5b9d0578f59ce540b424215b728"
 readonly DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_UBUNTU_16_04="9f666b2e39c11b17a9cc74c00967d97efeab08e23b93e8bbdec582ce009c65c9"
-readonly DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_AMAZON_LINUX="bb5e6bc0733b1b547e68ba99acd896de44783e1e2b3fdb6b0e54645c734a0876"
+readonly DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_AMAZON_LINUX="91fd6bc72db44e59a12a2945944a698f782b621cf757ab95248f831a16b2c73a"
 
 # Get these from the downloads section of the Couchbase website: https://www.couchbase.com/downloads
 readonly DEFAULT_COUCHBASE_COMMUNITY_VERSION="6.5.1"
 readonly DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_UBUNTU_18_04="c4951cdab01759020444e4648023721ae3a333257591252475d34d5fc6ac8857"
 readonly DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_UBUNTU_16_04="baf65fb9cbcec87783d4e9c3ec067143a42cdeef13a884e1f917e8d2f14044b7"
-readonly DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_AMAZON_LINUX="d782e0c3f86edb9bcced582060977e329aef4dcf71ceac8a485c5f01de39808d"
+readonly DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_AMAZON_LINUX="93a99222c2df857ebc08e60e85b5a3378b63d574ed24f33066542934ce60bf74"
 
 readonly SHA256_CHECKSUM_TYPE="sha256"
 readonly MD5_CHECKSUM_TYPE="md5"
@@ -113,7 +113,7 @@ function install_couchbase_on_amazon_linux {
 
   log_info "Installing Couchbase $version ($edition edition) on Amazon Linux"
 
-  local readonly filepath="couchbase-server-${edition}-${version}-centos6.x86_64.rpm"
+  local readonly filepath="couchbase-server-${edition}-${version}-centos7.x86_64.rpm"
   local readonly url="https://packages.couchbase.com/releases/$version/$filepath"
 
   log_info "Installing Couchbase dependencies"
@@ -293,4 +293,3 @@ function install {
 }
 
 install "$@"
-
