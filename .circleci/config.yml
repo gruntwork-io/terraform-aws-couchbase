@@ -10,7 +10,7 @@ defaults: &defaults
     TERRAFORM_VERSION: 0.12.29
     TERRAGRUNT_VERSION: NONE
     PACKER_VERSION: 1.4.1
-    GOLANG_VERSION: 1.13
+    GOLANG_VERSION: 1.14
 
 version: 2
 jobs:

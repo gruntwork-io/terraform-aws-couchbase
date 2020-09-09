@@ -1,7 +1,6 @@
 package test
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
