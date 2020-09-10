@@ -113,17 +113,17 @@ function install_sync_gateway_on_amazon_linux {
   log_info "Installing SyncGateway from $filepath"
   sudo rpm --install "$filepath"
 
-  # These commands sometimes exit with an error for no obvious reason, so we just ignore the error...
+  # These commands sometimes fail and exit with an error for no obvious reason. Moreover, it appears that the
+  # sync_gateway process can't be stopped cleanly using service, so we subsequently use pkill.
   set +e
   sudo chkconfig sync_gateway off
   sudo service sync_gateway stop
+  sudo pkill sync_gateway
   set -e
 
-  # Remove the original log paths to reduce confusion
-  sudo rm -rf /var/log/sync_gateway
-
   # Create systemd unit to run Sync Gateway. The installer creates an init.d script, but that doesn't work correctly
-  # in Docker, and it doesn't auto-restart Sync Gateway if it crashes, so this is a more effective option.
+  # in Docker, and it doesn't auto-restart Sync Gateway if it crashes, so this is a more
+  # effective option.
   log_info "Creating systemd unit for Sync Gateway in $DEFAULT_SYNC_GATEWAY_SYSTEMD_UNIT_PATH."
   sudo tee "$DEFAULT_SYNC_GATEWAY_SYSTEMD_UNIT_PATH" > /dev/null << EOF
 [Unit]
@@ -154,6 +154,9 @@ TimeoutSec=60
 [Install]
 WantedBy=multi-user.target
 EOF
+
+  # Remove the original log paths to reduce confusion
+  sudo rm -rf /var/log/sync_gateway
 
   log_info "Cleaning up $filepath"
   rm -f "$filepath"

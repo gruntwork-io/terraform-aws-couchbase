@@ -141,7 +141,7 @@
     "destination": "/tmp/terraform-aws-couchbase/modules"
   },{
     "type": "file",
-    "source": "{{template_dir}}/sync_gateway.json",
+    "source": "{{template_dir}}/sync_gateway_{{user `edition`}}.json",
     "destination": "/tmp/terraform-aws-couchbase/sync_gateway.json"
   },{
     "type": "shell",
