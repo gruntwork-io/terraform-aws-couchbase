@@ -85,9 +85,9 @@ func testCouchbaseSingleClusterDnsTls(t *testing.T, osName string, edition strin
 			},
 		}
 
-		terraform.InitAndApply(t, terraformOptions)
-
 		test_structure.SaveTerraformOptions(t, couchbaseSingleClusterDnsTlsDir, terraformOptions)
+
+		terraform.InitAndApply(t, terraformOptions)
 	})
 
 	test_structure.RunTestStage(t, "validation", func() {
