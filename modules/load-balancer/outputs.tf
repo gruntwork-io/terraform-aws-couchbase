@@ -15,7 +15,7 @@ output "domain_names" {
 }
 
 output "http_listener_arns" {
-  value = zipmap(var.http_listener_ports, aws_alb_listener.http.*.arn)
+  value = local.http_listener_arns
 }
 
 data "template_file" "https_listener_ports" {
@@ -24,23 +24,18 @@ data "template_file" "https_listener_ports" {
 }
 
 output "https_listener_arns" {
-  value = zipmap(
-    data.template_file.https_listener_ports.*.rendered,
-    aws_alb_listener.https.*.arn
-  )
+  value = local.https_listener_arns
 }
 
 output "all_listener_arns" {
-  value = merge(
-    zipmap(var.http_listener_ports, aws_alb_listener.http.*.arn),
-    zipmap(
-      data.template_file.https_listener_ports.*.rendered,
-      aws_alb_listener.https.*.arn
-    )
-  )
+  value = merge(local.http_listener_arns, local.https_listener_arns)
 }
 
 output "security_group_id" {
   value = aws_security_group.sg.id
 }
 
+locals {
+  http_listener_arns  = { for listener in aws_alb_listener.http[*] : listener.port => listener.arn }
+  https_listener_arns = { for listener in aws_alb_listener.https[*] : listener.port => listener.arn }
+}

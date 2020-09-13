@@ -54,10 +54,38 @@ resource "aws_alb_listener_rule" "http_path" {
   }
 
   dynamic "condition" {
-    for_each = var.routing_condition
+    for_each = [for condition in var.routing_condition : condition.values if condition.field == "path-pattern"]
     content {
-      field  = condition.value["field"]
-      values = condition.value["values"]
+      path_pattern {
+        values = condition.value
+      }
+    }
+  }
+
+  dynamic "condition" {
+    for_each = [for condition in var.routing_condition : condition.values if condition.field == "host-header"]
+    content {
+      host_header {
+        values = condition.value
+      }
+    }
+  }
+
+  dynamic "condition" {
+    for_each = [for condition in var.routing_condition : condition.values if condition.field == "http-request-method"]
+    content {
+      http_request_method {
+        values = condition.value
+      }
+    }
+  }
+
+  dynamic "condition" {
+    for_each = [for condition in var.routing_condition : condition.values if condition.field == "source-ip"]
+    content {
+      source_ip {
+        values = condition.value
+      }
     }
   }
 }

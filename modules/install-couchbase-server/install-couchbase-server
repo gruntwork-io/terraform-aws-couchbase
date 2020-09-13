@@ -20,13 +20,17 @@ readonly ENTERPRISE_EDITION="enterprise"
 readonly COMMUNITY_EDITION="community"
 readonly DEFAULT_EDITION="$ENTERPRISE_EDITION"
 
-readonly DEFAULT_COUCHBASE_ENTERPRISE_VERSION="5.1.1"
-readonly DEFAULT_COUCHBASE_ENTERPRISE_SHA256_CHECKSUM_UBUNTU_16_04="058acc6567db7acd8dcb80aa55a7a1de1b318848255bcb2878b285c0e52ecc8c"
-readonly DEFAULT_COUCHBASE_ENTERPRISE_SHA256_CHECKSUM_AMAZON_LINUX="0360be31f20709af2a74f602ad7c81fbfd8f40fe9bf671b167f1cc6260cdcc38"
+# Get these from the downloads section of the Couchbase website: https://www.couchbase.com/downloads
+readonly DEFAULT_COUCHBASE_ENTERPRISE_VERSION="6.6.0"
+readonly DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_UBUNTU_18_04="8e7fd5434537094be2fbdfedf3ab5005f0f7d5b9d0578f59ce540b424215b728"
+readonly DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_UBUNTU_16_04="9f666b2e39c11b17a9cc74c00967d97efeab08e23b93e8bbdec582ce009c65c9"
+readonly DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_AMAZON_LINUX="91fd6bc72db44e59a12a2945944a698f782b621cf757ab95248f831a16b2c73a"
 
-readonly DEFAULT_COUCHBASE_COMMUNITY_VERSION="5.0.1"
-readonly DEFAULT_COUCHBASE_COMMUNITY_MD5_CHECKSUM_UBUNTU_16_04="efd890ccaea2a83020c11746315a404f"
-readonly DEFAULT_COUCHBASE_COMMUNITY_MD5_CHECKSUM_AMAZON_LINUX="1c2bfda713f939911494b31727d7eb30"
+# Get these from the downloads section of the Couchbase website: https://www.couchbase.com/downloads
+readonly DEFAULT_COUCHBASE_COMMUNITY_VERSION="6.5.1"
+readonly DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_UBUNTU_18_04="c4951cdab01759020444e4648023721ae3a333257591252475d34d5fc6ac8857"
+readonly DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_UBUNTU_16_04="baf65fb9cbcec87783d4e9c3ec067143a42cdeef13a884e1f917e8d2f14044b7"
+readonly DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_AMAZON_LINUX="93a99222c2df857ebc08e60e85b5a3378b63d574ed24f33066542934ce60bf74"
 
 readonly SHA256_CHECKSUM_TYPE="sha256"
 readonly MD5_CHECKSUM_TYPE="md5"
@@ -81,7 +85,7 @@ function install_couchbase_on_ubuntu {
 
   log_info "Installing Couchbase dependencies"
   sudo DEBIAN_FRONTEND=noninteractive apt-get update
-  sudo apt-get install -y python-httplib2
+  sudo apt-get install -y python-httplib2 bzip2
 
   log_info "Downloading Couchbase from $url to $filepath"
   if [[ "$(curl --location --silent --fail --show-error -o "$dpkg_name" -w "%{http_code}" "$url")" == "404" ]]; then
@@ -109,12 +113,12 @@ function install_couchbase_on_amazon_linux {
 
   log_info "Installing Couchbase $version ($edition edition) on Amazon Linux"
 
-  local readonly filepath="couchbase-server-${edition}-${version}-centos6.x86_64.rpm"
+  local readonly filepath="couchbase-server-${edition}-${version}-centos7.x86_64.rpm"
   local readonly url="https://packages.couchbase.com/releases/$version/$filepath"
 
   log_info "Installing Couchbase dependencies"
   sudo yum update -y
-  sudo yum install -y openssl
+  sudo yum install -y openssl bzip2
 
   log_info "Downloading Couchbase from $url to $filepath"
   curl --location --silent --fail --show-error -O "$url"
@@ -248,12 +252,24 @@ function install {
   if [[ -z "$version" ]]; then
     if [[ "$edition" == "$COMMUNITY_EDITION" ]]; then
       version="$DEFAULT_COUCHBASE_COMMUNITY_VERSION"
-      checksum=$(os_is_amazon_linux && echo -n "$DEFAULT_COUCHBASE_COMMUNITY_MD5_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_COUCHBASE_COMMUNITY_MD5_CHECKSUM_UBUNTU_16_04")
-      checksum_type="$MD5_CHECKSUM_TYPE"
+      checksum_type="$SHA256_CHECKSUM_TYPE"
+      if os_is_ubuntu "16.04"; then
+        checksum="$DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_UBUNTU_16_04"
+      elif os_is_ubuntu "18.04"; then
+        checksum="$DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_UBUNTU_18_04"
+      else
+        checksum="$DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_AMAZON_LINUX"
+      fi
     else
       version="$DEFAULT_COUCHBASE_ENTERPRISE_VERSION"
-      checksum=$(os_is_amazon_linux && echo -n "$DEFAULT_COUCHBASE_ENTERPRISE_SHA256_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_COUCHBASE_ENTERPRISE_SHA256_CHECKSUM_UBUNTU_16_04")
       checksum_type="$SHA256_CHECKSUM_TYPE"
+      if os_is_ubuntu "16.04"; then
+        checksum="$DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_UBUNTU_16_04"
+      elif os_is_ubuntu "18.04"; then
+        checksum="$DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_UBUNTU_18_04"
+      else
+        checksum="$DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_AMAZON_LINUX"
+      fi
     fi
   fi
 
@@ -277,4 +293,3 @@ function install {
 }
 
 install "$@"
-

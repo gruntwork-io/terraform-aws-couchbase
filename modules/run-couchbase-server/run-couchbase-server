@@ -231,17 +231,26 @@ function add_server_to_cluster {
   local readonly cluster_name="$2"
   local readonly cluster_username="$3"
   local readonly cluster_password="$4"
-  local readonly node_url="$5"
+  local node_url="$5"
   local readonly node_services="$6"
 
   wait_for_cluster_to_be_initialized "$cluster_url" "$cluster_name" "$cluster_username" "$cluster_password"
 
   local server_add_args=()
 
+  if [[ "$node_url" != http* && "$node_url" != couchbase* ]]; then
+    # Default to http; otherwise, Couchbase will try TLS, which won't work if we haven't explicitly configured TLS!
+    # From the docs (https://docs.couchbase.com/server/current/cli/cbcli/couchbase-cli-server-add.html):
+    # --server-add <servers>
+    #   A comma separated list of servers to add to the cluster. The each server in the list should be identified by a
+    #   hostname or IP address. If a scheme is not provided it will use https://
+    node_url="http://$node_url"
+  fi
+
   server_add_args+=("server-add")
   server_add_args+=("--cluster=$cluster_url")
-  server_add_args+=("--user=$cluster_username")
-  server_add_args+=("--pass=$cluster_password")
+  server_add_args+=("--username=$cluster_username")
+  server_add_args+=("--password=$cluster_password")
   server_add_args+=("--server-add=$node_url")
   server_add_args+=("--server-add-username=$cluster_username")
   server_add_args+=("--server-add-password=$cluster_password")
