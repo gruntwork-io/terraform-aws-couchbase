@@ -1,18 +1,19 @@
 package test
 
 import (
-	"fmt"
-	"time"
-	"github.com/stretchr/testify/assert"
-	"testing"
-	"strings"
 	"encoding/json"
-	"github.com/gruntwork-io/terratest/modules/http-helper"
+	"fmt"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/gruntwork-io/terratest/modules/aws"
+	http_helper "github.com/gruntwork-io/terratest/modules/http-helper"
 	"github.com/gruntwork-io/terratest/modules/logger"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/retry"
 	"github.com/gruntwork-io/terratest/modules/terraform"
+	"github.com/stretchr/testify/assert"
 )
 
 const AWS_DEFAULT_REGION_ENV_VAR = "AWS_DEFAULT_REGION"
@@ -22,8 +23,8 @@ func checkCouchbaseConsoleIsRunning(t *testing.T, clusterUrl string) {
 	sleepBetweenRetries := 5 * time.Second
 
 	webConsoleUrl := fmt.Sprintf("%s/ui/index.html", clusterUrl)
-	http_helper.HttpGetWithRetryWithCustomValidation(t, webConsoleUrl, maxRetries, sleepBetweenRetries, func(status int, body string) bool {
-		return status == 200 && strings.Contains(body, "Couchbase Console")
+	http_helper.HttpGetWithRetryWithCustomValidation(t, webConsoleUrl, nil, maxRetries, sleepBetweenRetries, func(status int, body string) bool {
+		return status == 200 && strings.Contains(body, "Couchbase Server")
 	})
 }
 
@@ -34,8 +35,8 @@ type ServerNodeResponse struct {
 }
 
 type ServerNode struct {
-	Status string `json:"status"`
-	Hostname string `json:"hostname"`
+	Status            string `json:"status"`
+	Hostname          string `json:"hostname"`
 	ClusterMembership string `json:"clusterMembership"`
 }
 
@@ -44,7 +45,7 @@ func checkCouchbaseClusterIsInitialized(t *testing.T, clusterUrl string, expecte
 	sleepBetweenRetries := 5 * time.Second
 	serverNodeUrl := fmt.Sprintf("%s/pools/nodes", clusterUrl)
 
-	http_helper.HttpGetWithRetryWithCustomValidation(t, serverNodeUrl, maxRetries, sleepBetweenRetries, func(status int, body string) bool {
+	http_helper.HttpGetWithRetryWithCustomValidation(t, serverNodeUrl, nil, maxRetries, sleepBetweenRetries, func(status int, body string) bool {
 		if status != 200 {
 			logger.Logf(t, "Expected a 200 OK from %s but got %d", serverNodeUrl, status)
 			return false
@@ -81,7 +82,7 @@ func checkCouchbaseClusterIsInitialized(t *testing.T, clusterUrl string, expecte
 
 type TestData struct {
 	Foo string `json:"foo"`
-	Bar int `json:"bar"`
+	Bar int    `json:"bar"`
 }
 
 func (testData TestData) String() string {
@@ -90,14 +91,14 @@ func (testData TestData) String() string {
 
 type CouchbaseTestDataResponse struct {
 	Meta CouchbaseMeta `json:"meta"`
-	Json TestData `json:"json"`
+	Json string        `json:"json"`
 }
 
 type CouchbaseMeta struct {
-	Id string `json:"id"`
-	Rev string `json:"rev"`
-	Expiration int `json:"expiration"`
-	Flags int `json:"flags"`
+	Id         string `json:"id"`
+	Rev        string `json:"rev"`
+	Expiration int    `json:"expiration"`
+	Flags      int    `json:"flags"`
 }
 
 func checkCouchbaseDataNodesWorking(t *testing.T, dataNodesUrl string) {
@@ -144,11 +145,11 @@ func createBucket(t *testing.T, clusterUrl string, bucketName string) {
 	// https://developer.couchbase.com/documentation/server/3.x/admin/REST/rest-bucket-create.html
 	createBucketUrl := fmt.Sprintf("%s/pools/default/buckets", clusterUrl)
 	postParams := map[string][]string{
-		"name": {bucketName},
-		"bucketType": {"couchbase"},
-		"authType": {"sasl"},
+		"name":         {bucketName},
+		"bucketType":   {"couchbase"},
+		"authType":     {"sasl"},
 		"saslPassword": {passwordForTest},
-		"ramQuotaMB": {"100"},
+		"ramQuotaMB":   {"100"},
 	}
 
 	retry.DoWithRetry(t, description, maxRetries, sleepBetweenRetries, func() (string, error) {
@@ -217,6 +218,7 @@ func writeToBucket(t *testing.T, clusterUrl string, bucketName string, key strin
 
 	logger.Logf(t, out)
 }
+
 // Read from a Couchbase bucket. Note that we do NOT use any Couchbase SDK here because this test runs against a
 // Dockerized cluster, and the SDK does not work with Dockerized clusters, as it tries to use IPs that are only
 // accessible from inside a Docker container. Therefore, we just use the HTTP API directly. For more info, search for
@@ -232,7 +234,7 @@ func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key stri
 
 	logger.Logf(t, description)
 	body := retry.DoWithRetry(t, description, maxRetries, timeBetweenRetries, func() (string, error) {
-		statusCode, body, err := http_helper.HttpGetE(t, bucketUrl)
+		statusCode, body, err := http_helper.HttpGetE(t, bucketUrl, nil)
 
 		if err != nil {
 			return "", err
@@ -245,6 +247,7 @@ func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key stri
 		return body, nil
 	})
 
+	// Unmarshal the surrounding data
 	var value CouchbaseTestDataResponse
 	if err := json.Unmarshal([]byte(body), &value); err != nil {
 		t.Fatalf("Failed to parse body '%s' for key %s in bucket %s: %v", body, key, bucketName, err)
@@ -252,7 +255,13 @@ func readFromBucket(t *testing.T, clusterUrl string, bucketName string, key stri
 
 	logger.Logf(t, "Got back %v for key %s from bucket %s", value, key, bucketName)
 
-	return value.Json
+	// The data we wrote comes back as a string, but inside that string is JSON, so now we unmarshal that
+	var testData TestData
+	if err := json.Unmarshal([]byte(value.Json), &testData); err != nil {
+		t.Fatalf("Failed to parse Json param '%s' for key %s in bucket %s: %v", value.Json, key, bucketName, err)
+	}
+
+	return testData
 }
 
 func checkSyncGatewayWorking(t *testing.T, syncGatewayUrl string) {
@@ -260,7 +269,7 @@ func checkSyncGatewayWorking(t *testing.T, syncGatewayUrl string) {
 	maxRetries := 200
 	sleepBetweenRetries := 5 * time.Second
 
-	http_helper.HttpGetWithRetryWithCustomValidation(t, syncGatewayUrl, maxRetries, sleepBetweenRetries, func(status int, body string) bool {
+	http_helper.HttpGetWithRetryWithCustomValidation(t, syncGatewayUrl, nil, maxRetries, sleepBetweenRetries, func(status int, body string) bool {
 		return status == 200 && strings.Contains(body, `"state":"Online"`)
 	})
 }

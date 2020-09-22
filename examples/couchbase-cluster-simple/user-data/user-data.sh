@@ -57,7 +57,7 @@ function create_test_resources {
 
   run_couchbase_cli_with_retry \
     "Create RBAC user $user_name" \
-    "SUCCESS: RBAC user set" \
+    "SUCCESS:" \
     "$max_retries" \
     "$sleep_between_retries_sec" \
     "user-manage" \
@@ -75,7 +75,7 @@ function create_test_resources {
 
   run_couchbase_cli_with_retry \
     "Create bucket $bucket_name" \
-    "SUCCESS: Bucket created" \
+    "SUCCESS:" \
     "$max_retries" \
     "$sleep_between_retries_sec" \
     "bucket-create" \

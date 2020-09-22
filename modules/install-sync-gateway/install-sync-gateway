@@ -19,13 +19,15 @@ readonly ENTERPRISE_EDITION="enterprise"
 readonly COMMUNITY_EDITION="community"
 readonly DEFAULT_EDITION="$ENTERPRISE_EDITION"
 
-readonly DEFAULT_SYNC_GATEWAY_ENTERPRISE_VERSION="2.0.0"
-readonly DEFAULT_SYNC_GATEWAY_ENTERPRISE_MD5_CHECKSUM_UBUNTU_16_04="a11cf149a7f64acb7368e1a18c85ebe7"
-readonly DEFAULT_SYNC_GATEWAY_ENTERPRISE_MD5_CHECKSUM_AMAZON_LINUX="d2f77e426e299fa08857e4cf7dbe4d77"
+# Get these from the downloads section of the Couchbase website: https://www.couchbase.com/downloads
+readonly DEFAULT_SYNC_GATEWAY_ENTERPRISE_VERSION="2.7.3"
+readonly DEFAULT_SYNC_GATEWAY_ENTERPRISE_CHECKSUM_UBUNTU="64868af179f4cd4aaf753054dc24c246d05e2df14aec80af591f0ffbb41f456b"
+readonly DEFAULT_SYNC_GATEWAY_ENTERPRISE_CHECKSUM_AMAZON_LINUX="be7da0c542b6eab3bea7bf56acfc7fb104c712b2d861077e6f30842e066617ef"
 
-readonly DEFAULT_SYNC_GATEWAY_COMMUNITY_VERSION="2.0.0"
-readonly DEFAULT_SYNC_GATEWAY_COMMUNITY_MD5_CHECKSUM_UBUNTU_16_04="9549ae33868e21f94bf2a6ef73e8eb0b"
-readonly DEFAULT_SYNC_GATEWAY_COMMUNITY_MD5_CHECKSUM_AMAZON_LINUX="a4a6e56b6ea5444e723a001eb5bad04a"
+# Get these from the downloads section of the Couchbase website: https://www.couchbase.com/downloads
+readonly DEFAULT_SYNC_GATEWAY_COMMUNITY_VERSION="2.7.3"
+readonly DEFAULT_SYNC_GATEWAY_COMMUNITY_CHECKSUM_UBUNTU="4e0306d06840c8e5a6df6984cb47feb5706df5a11058e4253eaab9d9a9044d18"
+readonly DEFAULT_SYNC_GATEWAY_COMMUNITY_CHECKSUM_AMAZON_LINUX="068a52128ed92b4781bd07a2ca962d44f2e13c7c1ba45071af233913fe5fd40e"
 
 readonly SHA256_CHECKSUM_TYPE="sha256"
 readonly MD5_CHECKSUM_TYPE="md5"
@@ -111,17 +113,17 @@ function install_sync_gateway_on_amazon_linux {
   log_info "Installing SyncGateway from $filepath"
   sudo rpm --install "$filepath"
 
-  # These commands sometimes exit with an error for no obvious reason, so we just ignore the error...
+  # These commands sometimes fail and exit with an error for no obvious reason. Moreover, it appears that the
+  # sync_gateway process can't be stopped cleanly using service, so we subsequently use pkill.
   set +e
   sudo chkconfig sync_gateway off
   sudo service sync_gateway stop
+  sudo pkill sync_gateway
   set -e
 
-  # Remove the original log paths to reduce confusion
-  sudo rm -rf /var/log/sync_gateway
-
   # Create systemd unit to run Sync Gateway. The installer creates an init.d script, but that doesn't work correctly
-  # in Docker, and it doesn't auto-restart Sync Gateway if it crashes, so this is a more effective option.
+  # in Docker, and it doesn't auto-restart Sync Gateway if it crashes, so this is a more
+  # effective option.
   log_info "Creating systemd unit for Sync Gateway in $DEFAULT_SYNC_GATEWAY_SYSTEMD_UNIT_PATH."
   sudo tee "$DEFAULT_SYNC_GATEWAY_SYSTEMD_UNIT_PATH" > /dev/null << EOF
 [Unit]
@@ -152,6 +154,9 @@ TimeoutSec=60
 [Install]
 WantedBy=multi-user.target
 EOF
+
+  # Remove the original log paths to reduce confusion
+  sudo rm -rf /var/log/sync_gateway
 
   log_info "Cleaning up $filepath"
   rm -f "$filepath"
@@ -246,12 +251,12 @@ function install {
   if [[ -z "$version" ]]; then
     if [[ "$edition" == "$COMMUNITY_EDITION" ]]; then
       version="$DEFAULT_SYNC_GATEWAY_COMMUNITY_VERSION"
-      checksum=$(os_is_amazon_linux && echo -n "$DEFAULT_SYNC_GATEWAY_COMMUNITY_MD5_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_SYNC_GATEWAY_COMMUNITY_MD5_CHECKSUM_UBUNTU_16_04")
-      checksum_type="$MD5_CHECKSUM_TYPE"
+      checksum=$(os_is_amazon_linux && echo -n "$DEFAULT_SYNC_GATEWAY_COMMUNITY_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_SYNC_GATEWAY_COMMUNITY_CHECKSUM_UBUNTU")
+      checksum_type="$SHA256_CHECKSUM_TYPE"
     else
       version="$DEFAULT_SYNC_GATEWAY_ENTERPRISE_VERSION"
-      checksum=$(os_is_amazon_linux && echo -n "$DEFAULT_SYNC_GATEWAY_ENTERPRISE_MD5_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_SYNC_GATEWAY_ENTERPRISE_MD5_CHECKSUM_UBUNTU_16_04")
-      checksum_type="$MD5_CHECKSUM_TYPE"
+      checksum=$(os_is_amazon_linux && echo -n "$DEFAULT_SYNC_GATEWAY_ENTERPRISE_CHECKSUM_AMAZON_LINUX" || echo -n "$DEFAULT_SYNC_GATEWAY_ENTERPRISE_CHECKSUM_UBUNTU")
+      checksum_type="$SHA256_CHECKSUM_TYPE"
     fi
   fi
 
@@ -274,4 +279,3 @@ function install {
 }
 
 install "$@"
-

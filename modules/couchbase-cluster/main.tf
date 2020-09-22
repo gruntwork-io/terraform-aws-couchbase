@@ -41,6 +41,12 @@ resource "aws_autoscaling_group" "autoscaling_group" {
       propagate_at_launch = tag.value["propagate_at_launch"]
     }
   }
+
+  # When using `aws_autoscaling_attachment` resources to manage target group and loadbalancer attachments, we need to
+  # ignore changes to these properties as they are updated in the cloud and not terraform.
+  lifecycle {
+    ignore_changes = [load_balancers, target_group_arns]
+  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
