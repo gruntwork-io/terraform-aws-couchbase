@@ -5,11 +5,11 @@ defaults: &defaults
     image: circleci/classic:201711-01
   environment:
     GRUNTWORK_INSTALLER_VERSION: v0.0.29
-    TERRATEST_LOG_PARSER_VERSION: v0.29.0
-    MODULE_CI_VERSION: v0.28.1
-    TERRAFORM_VERSION: 0.12.29
+    TERRATEST_LOG_PARSER_VERSION: v0.30.10
+    MODULE_CI_VERSION: v0.29.0
+    TERRAFORM_VERSION: 0.13.4
     TERRAGRUNT_VERSION: NONE
-    PACKER_VERSION: 1.4.1
+    PACKER_VERSION: 1.6.4
     GOLANG_VERSION: 1.14
 
 version: 2
@@ -23,19 +23,10 @@ jobs:
       - run: echo 'export PATH=$HOME/.local/bin:$HOME/terraform:$HOME/packer:$PATH' >> $BASH_ENV
 
       # Install Gruntwork and HashiCorp dependencies
-      - restore_cache:
-          keys:
-            - v2-external-dep
-      # Use the Gruntwork Installer to install the gruntwork-module-circleci-helpers
       - run: curl -Ls https://raw.githubusercontent.com/gruntwork-io/gruntwork-installer/master/bootstrap-gruntwork-installer.sh | bash /dev/stdin --version "${GRUNTWORK_INSTALLER_VERSION}"
       - run: gruntwork-install --module-name "gruntwork-module-circleci-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "${MODULE_CI_VERSION}"
       - run: gruntwork-install --binary-name "terratest_log_parser" --repo "https://github.com/gruntwork-io/terratest" --tag "${TERRATEST_LOG_PARSER_VERSION}"
       - run: configure-environment-for-gruntwork-module --terraform-version ${TERRAFORM_VERSION} --terragrunt-version ${TERRAGRUNT_VERSION} --packer-version ${PACKER_VERSION} --go-version ${GOLANG_VERSION}
-      - save_cache:
-          key: v2-external-dep
-          paths:
-            - $HOME/terraform
-            - $HOME/packer
 
       # Install external dependencies
       - run: DEBIAN_FRONTEND=noninteractive sudo apt-get update && sudo apt-get install -y python-pip
