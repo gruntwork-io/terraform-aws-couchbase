@@ -1,16 +1,16 @@
 package test
 
 import (
-	"testing"
 	"fmt"
-	"time"
-	"net/http"
-	"net/url"
-	"io/ioutil"
-	"strings"
+	"github.com/gruntwork-io/terratest/modules/aws"
 	"github.com/gruntwork-io/terratest/modules/logger"
 	"github.com/gruntwork-io/terratest/modules/packer"
-	"github.com/gruntwork-io/terratest/modules/aws"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"strings"
+	"testing"
+	"time"
 )
 
 // The username and password we use in all the examples, mocks, and tests
@@ -49,17 +49,16 @@ func buildCouchbaseWithPackerE(t *testing.T, builderName string, baseAmiName str
 
 	options := &packer.Options{
 		Template: templatePath,
-		Only: builderName,
+		Only:     builderName,
 		Vars: map[string]string{
-			"aws_region": awsRegion,
+			"aws_region":    awsRegion,
 			"base_ami_name": baseAmiName,
-			"edition": edition,
+			"edition":       edition,
 		},
 	}
 
 	return packer.BuildAmiE(t, options)
 }
-
 
 func HttpPostForm(t *testing.T, postUrl string, postParams url.Values) (int, string, error) {
 	logger.Logf(t, "Making an HTTP POST call to URL %s with body %v", postUrl, postParams)
