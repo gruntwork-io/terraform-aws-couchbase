@@ -11,69 +11,56 @@ defaults: &defaults
     TERRAGRUNT_VERSION: NONE
     PACKER_VERSION: 1.6.4
     GOLANG_VERSION: 1.14
-
 version: 2
 jobs:
   test:
     <<: *defaults
     steps:
       - checkout
-
       # The weird way you have to set PATH in Circle 2.0
       - run: echo 'export PATH=$HOME/.local/bin:$HOME/terraform:$HOME/packer:$PATH' >> $BASH_ENV
-
       # Install Gruntwork and HashiCorp dependencies
       - run: curl -Ls https://raw.githubusercontent.com/gruntwork-io/gruntwork-installer/master/bootstrap-gruntwork-installer.sh | bash /dev/stdin --version "${GRUNTWORK_INSTALLER_VERSION}"
       - run: gruntwork-install --module-name "gruntwork-module-circleci-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "${MODULE_CI_VERSION}"
       - run: gruntwork-install --binary-name "terratest_log_parser" --repo "https://github.com/gruntwork-io/terratest" --tag "${TERRATEST_LOG_PARSER_VERSION}"
       - run: configure-environment-for-gruntwork-module --terraform-version ${TERRAFORM_VERSION} --terragrunt-version ${TERRAGRUNT_VERSION} --packer-version ${PACKER_VERSION} --go-version ${GOLANG_VERSION}
-
       # Install external dependencies
       - run: DEBIAN_FRONTEND=noninteractive sudo apt-get update && sudo apt-get install -y python-pip
       # Oct 26, 2019: Install the last known working version of pre-commit. Also, we have to pin the version of a
       # transient dependency that is being pulled in (cfgv) which released a new version that is no longer compatible
       # with any python < 3.6.
       - run: pip install pre-commit==1.11.2 cfgv==2.0.1 awscli
-
       # Fail the build if the pre-commit hooks don't pass. Note: if you run "pre-commit install" locally in the roo repo
       # folder, these hooks will execute automatically every time before you commit, ensuring the build never fails at this step!
       - run: pre-commit install
       - run: pre-commit run --all-files
-
       # Run the tests
       - run:
           name: run tests
           command: |
             mkdir -p /tmp/logs
             set -o pipefail && run-go-tests --path test --timeout 90m | tee /tmp/logs/all.log
-
       - run:
           command: terratest_log_parser --testlog /tmp/logs/all.log --outputdir /tmp/logs
           when: always
-
       - store_artifacts:
           path: /tmp/logs
       - store_test_results:
           path: /tmp/logs
-
   release:
     <<: *defaults
     steps:
       - checkout
-
       # The weird way you have to set PATH in Circle 2.0
       - run: echo 'export PATH=$HOME/.local/bin:$HOME/terraform:$HOME/packer:$PATH' >> $BASH_ENV
-
       # Use the Gruntwork Installer to install the gruntwork-module-circleci-helpers
       - run: curl -Ls https://raw.githubusercontent.com/gruntwork-io/gruntwork-installer/master/bootstrap-gruntwork-installer.sh | bash /dev/stdin --version "${GRUNTWORK_INSTALLER_VERSION}"
       - run: gruntwork-install --module-name "gruntwork-module-circleci-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "${MODULE_CI_VERSION}"
       - run: gruntwork-install --module-name "build-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "${MODULE_CI_VERSION}"
       - run: gruntwork-install --module-name "aws-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "${MODULE_CI_VERSION}"
       - run: configure-environment-for-gruntwork-module --terraform-version NONE --terragrunt-version NONE
-
       - run: ~/project/.circleci/publish-amis.sh "ubuntu-ami"
       - run: ~/project/.circleci/publish-amis.sh "amazon-linux-ami"
-
 workflows:
   version: 2
   test:
@@ -86,6 +73,8 @@ workflows:
               only: /.*/
             tags:
               only: /.*/
+          context:
+            - Gruntwork Admin
       - release:
           requires:
             - test
@@ -95,3 +84,5 @@ workflows:
               only: /^v.*/
             branches:
               ignore: /.*/
+          context:
+            - Gruntwork Admin
