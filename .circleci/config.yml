@@ -86,3 +86,4 @@ workflows:
               ignore: /.*/
           context:
             - Gruntwork Admin
+            - Gruntwork AMI Publishing
