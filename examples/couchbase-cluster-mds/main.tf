@@ -45,7 +45,7 @@ module "couchbase_data_nodes" {
     {
       device_name = var.data_volume_device_name
       volume_type = "gp2"
-      volume_size = 50
+      volume_size = var.data_volume_size
     },
   ]
 
@@ -102,7 +102,7 @@ module "couchbase_index_query_search_nodes" {
     {
       device_name = var.index_volume_device_name
       volume_type = "gp2"
-      volume_size = 50
+      volume_size = var.index_volume_size
     },
   ]
 
@@ -192,6 +192,7 @@ data "template_file" "user_data_couchbase_data_nodes" {
     # Pass in the data about the EBS volumes so they can be mounted
     data_volume_device_name = var.data_volume_device_name
     data_volume_mount_point = var.data_volume_mount_point
+    data_volume_size        = var.data_volume_size
     volume_owner            = var.volume_owner
 
     # Use a small amount of memory so this example can fit on a t2.micro. In production settings, you'll want to run
@@ -212,6 +213,7 @@ data "template_file" "user_data_couchbase_index_query_search_nodes" {
     # Pass in the data about the EBS volumes so they can be mounted
     index_volume_device_name = var.index_volume_device_name
     index_volume_mount_point = var.index_volume_mount_point
+    index_volume_size        = var.index_volume_size
     volume_owner             = var.volume_owner
   }
 }

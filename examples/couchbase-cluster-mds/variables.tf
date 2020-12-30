@@ -59,6 +59,12 @@ variable "data_volume_mount_point" {
   default     = "/couchbase-data"
 }
 
+variable "data_volume_size" {
+  description = "The data node ebs volume size"
+  type        = number
+  default     = 200
+}
+
 variable "index_volume_device_name" {
   description = "The device name to use for the EBS Volume used for the index directory on Couchbase nodes."
   type        = string
@@ -69,6 +75,12 @@ variable "index_volume_mount_point" {
   description = "The mount point (folder path) to use for the EBS Volume used for the index directory on Couchbase nodes."
   type        = string
   default     = "/couchbase-index"
+}
+
+variable "index_volume_size" {
+  description = "The search/index node ebs volume size. When using nitro based instance types this size needs to be unique"
+  type        = number
+  default     = 53
 }
 
 variable "volume_owner" {
