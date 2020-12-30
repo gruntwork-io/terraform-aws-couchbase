@@ -12,10 +12,11 @@ source "/opt/couchbase-commons/mount-volume.sh"
 function mount_volumes {
   local readonly data_volume_device_name="$1"
   local readonly data_volume_mount_point="$2"
-  local readonly volume_owner="$3"
+  local readonly data_volume_size="$3"
+  local readonly volume_owner="$4"
 
   echo "Mounting EBS Volume for the data directory"
-  mount_volume "$data_volume_device_name" "$data_volume_mount_point" "$volume_owner"
+  mount_volume "$data_volume_device_name" "$data_volume_mount_point" "$data_volume_size" "$volume_owner"
 }
 
 function run_couchbase {
@@ -95,10 +96,11 @@ function run {
   local readonly cluster_port="$2"
   local readonly data_volume_device_name="$3"
   local readonly data_volume_mount_point="$4"
-  local readonly volume_owner="$5"
-  local readonly data_ramsize="$6"
-  local readonly index_ramsize="$7"
-  local readonly fts_ramsize="$8"
+  local readonly data_volume_size="$5"
+  local readonly volume_owner="$6"
+  local readonly data_ramsize="$7"
+  local readonly index_ramsize="$8"
+  local readonly fts_ramsize="$9"
 
   # To keep this example simple, we are hard-coding all credentials in this file in plain text. You should NOT do this
   # in production usage!!! Instead, you should use tools such as Vault, Keywhiz, or KMS to fetch the credentials at
@@ -106,7 +108,7 @@ function run {
   local readonly cluster_username="admin"
   local readonly cluster_password="password"
 
-  mount_volumes "$data_volume_device_name" "$data_volume_mount_point" "$volume_owner"
+  mount_volumes "$data_volume_device_name" "$data_volume_mount_point" "$data_volume_size" "$volume_owner"
   run_couchbase "$cluster_asg_name" "$cluster_username" "$cluster_password" "$cluster_port" "$data_volume_mount_point" "$data_ramsize" "$index_ramsize" "$fts_ramsize"
 
   local node_hostname
@@ -133,6 +135,7 @@ run \
   "${cluster_port}" \
   "${data_volume_device_name}" \
   "${data_volume_mount_point}" \
+  "${data_volume_size}" \
   "${volume_owner}" \
   "${data_ramsize}" \
   "${index_ramsize}" \
