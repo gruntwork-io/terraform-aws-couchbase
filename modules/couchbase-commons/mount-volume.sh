@@ -11,9 +11,9 @@ function mount_volume {
   local device_name="$1"
   local readonly mount_point="$2"
   local readonly ebs_size="$3"
-  local readonly owner="$3"
-  local readonly file_system_type="${4:-ext4}"
-  local readonly mount_options="${5:-defaults,nofail}"
+  local readonly owner="$4"
+  local readonly file_system_type="${5:-ext4}"
+  local readonly mount_options="${6:-defaults,nofail}"
   local readonly fs_tab_path="/etc/fstab"
 
   # check if the expected device name exists
