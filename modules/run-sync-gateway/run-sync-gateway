@@ -182,7 +182,7 @@ function wait_for_couchbase_clusters {
   fi
 
   local databases
-  databases=($(cat "$config" | jq -c '.databases | .[]?'))
+  databases=($(cat "$config"| sed '/"import_filter": `/,/`/d' | sed '/"sync": `/,/`/d' | sed 's/"num_index_replicas": 0,/"num_index_replicas": 0/g' | jq -c '.databases | .[]?'))
 
   if [[ -z "${databases[@]}" ]]; then
     log_warn "No databases found in $config. Nothing to wait for."
