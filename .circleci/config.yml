@@ -8,10 +8,11 @@ env: &env
     GRUNTWORK_INSTALLER_VERSION: v0.0.29
     TERRATEST_LOG_PARSER_VERSION: v0.30.10
     MODULE_CI_VERSION: v0.29.0
-    TERRAFORM_VERSION: 0.13.4
+    TERRAFORM_VERSION: 0.14.8
     TERRAGRUNT_VERSION: NONE
     PACKER_VERSION: 1.6.4
-    GOLANG_VERSION: 1.14
+    GOLANG_VERSION: 1.16
+    GO111MODULE: auto
 install_gruntwork_utils: &install_gruntwork_utils
   name: install gruntwork utils
   command: |

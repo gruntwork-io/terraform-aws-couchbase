@@ -3,6 +3,6 @@ module github.com/gruntwork-io/terraform-aws-couchbase/test
 go 1.14
 
 require (
-	github.com/gruntwork-io/terratest v0.29.0
+	github.com/gruntwork-io/terratest v0.31.3
 	github.com/stretchr/testify v1.6.1
 )
