@@ -50,7 +50,7 @@ function print_usage {
   echo
   echo "Usage: install-sync-gateway [options]"
   echo
-  echo "This script can be used to install Couchbase Sync Gateway and its dependencies. This script has been tested with Ubuntu 16.04, 18.04, and Amazon Linux 2."
+  echo "This script can be used to install Couchbase Sync Gateway and its dependencies. This script has been tested with Ubuntu 20.04/18.04, and Amazon Linux 2."
   echo
   echo "Options:"
   echo
@@ -262,12 +262,12 @@ function install {
 
   log_info "Starting Sync Gateway install..."
 
-  if os_is_ubuntu "16.04" || os_is_ubuntu "18.04"; then
+  if os_is_ubuntu "20.04" || os_is_ubuntu "18.04"; then
     install_sync_gateway_on_ubuntu "$edition" "$version" "$checksum" "$checksum_type"
   elif os_is_amazon_linux "2"; then
     install_sync_gateway_on_amazon_linux "$edition" "$version" "$checksum" "$checksum_type"
   else
-    log_error "This script only supports Ubuntu 16.04, 18.04, and Amazon Linux 2."
+    log_error "This script only supports Ubuntu 20.04/18.04, and Amazon Linux 2."
     exit 1
   fi
 

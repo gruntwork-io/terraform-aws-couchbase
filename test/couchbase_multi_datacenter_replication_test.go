@@ -27,9 +27,9 @@ const savedUniqueIdReplica = "UniqueIdReplica"
 const providersFile = "providers.tf"
 const providersFileBackup = "providers.tf.bak"
 
-func TestIntegrationCouchbaseEnterpriseMultiDataCenterReplicationUbuntu16(t *testing.T) {
+func TestIntegrationCouchbaseEnterpriseMultiDataCenterReplicationUbuntu20(t *testing.T) {
 	t.Parallel()
-	testCouchbaseMultiDataCenterReplication(t, "ubuntu", "enterprise")
+	testCouchbaseMultiDataCenterReplication(t, "ubuntu-20", "enterprise")
 }
 
 func TestIntegrationCouchbaseEnterpriseMultiDataCenterReplicationUbuntu18(t *testing.T) {

@@ -15,9 +15,9 @@ const dataNodeClusterVarName = "couchbase_data_node_cluster_name"
 const indexQuerySearchClusterVarName = "couchbase_index_query_search_node_cluster_name"
 const syncGatewayClusterVarName = "sync_gateway_cluster_name"
 
-func TestIntegrationCouchbaseEnterpriseMultiClusterUbuntu16(t *testing.T) {
+func TestIntegrationCouchbaseEnterpriseMultiClusterUbuntu20(t *testing.T) {
 	t.Parallel()
-	testCouchbaseMultiCluster(t, "ubuntu", "enterprise")
+	testCouchbaseMultiCluster(t, "ubuntu-20", "enterprise")
 }
 
 func TestIntegrationCouchbaseEnterpriseMultiClusterUbuntu18(t *testing.T) {

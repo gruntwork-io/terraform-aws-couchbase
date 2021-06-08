@@ -19,7 +19,7 @@ function print_usage {
   echo
   echo "Usage: run-replication [options]"
   echo
-  echo "Kick off replication of a bucket between two Couchbase clusters. This will add the destination cluster as a remote endpoint using the couchbase-cli xdcr-setup command and start replication of the specified bucket using the couchbase-cli xdcr-replicate command. This script is idempotent, so you can run it multiple times with different buckets. This script has been tested with Ubuntu 16.04 and Amazon Linux 2."
+  echo "Kick off replication of a bucket between two Couchbase clusters. This will add the destination cluster as a remote endpoint using the couchbase-cli xdcr-setup command and start replication of the specified bucket using the couchbase-cli xdcr-replicate command. This script is idempotent, so you can run it multiple times with different buckets. This script has been tested with Ubuntu 20.04/18.04 and Amazon Linux 2."
   echo
   echo "Options:"
   echo

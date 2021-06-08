@@ -27,8 +27,8 @@ To deploy a Couchbase Cluster:
    `variables.tf`: `aws_region_primary` and `aws_region_replica`:
 
     ```
-    packer build -var aws_region=us-east-1 -only=ubuntu-ami couchbase.json
-    packer build -var aws_region=us-west-1 -only=ubuntu-ami couchbase.json
+    packer build -var aws_region=us-east-1 -only=ubuntu-20-ami couchbase.json
+    packer build -var aws_region=us-west-1 -only=ubuntu-20-ami couchbase.json
     ```
 
 1. Install [Terraform](https://www.terraform.io/).

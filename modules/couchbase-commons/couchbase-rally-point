@@ -15,7 +15,7 @@ function print_usage {
   echo
   echo "Usage: couchbase-rally-point [options]"
   echo
-  echo "This script can be used to automatically determine the 'rally point' for a Couchbase cluster. The rally point is the 'leader' that should be responsible for initializing the cluster and replication. This script has been tested with Ubuntu 16.04 and Amazon Linux 2."
+  echo "This script can be used to automatically determine the 'rally point' for a Couchbase cluster. The rally point is the 'leader' that should be responsible for initializing the cluster and replication. This script has been tested with Ubuntu 20.04/18.04 and Amazon Linux 2."
   echo
   echo "Options:"
   echo

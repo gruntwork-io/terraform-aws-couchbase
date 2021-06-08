@@ -35,7 +35,7 @@ function print_usage {
   echo
   echo "Usage: run-couchbase-server [options]"
   echo
-  echo "This script can be used to configure and initialize a Couchbase Server. This script has been tested with Ubuntu 16.04 and Amazon Linux 2."
+  echo "This script can be used to configure and initialize a Couchbase Server. This script has been tested with Ubuntu 20.04/18.04 and Amazon Linux 2."
   echo
   echo "Required arguments:"
   echo

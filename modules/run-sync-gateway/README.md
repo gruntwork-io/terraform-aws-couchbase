@@ -3,7 +3,8 @@
 This folder contains a script for configuring and running Sync Gateway on an [AWS](https://aws.amazon.com/) server. This 
 script has been tested on the following operating systems:
 
-* Ubuntu 16.04
+* Ubuntu 20.04
+* Ubuntu 18.04
 * Amazon Linux 2
 
 There is a good chance it will work on other flavors of Debian, CentOS, and RHEL as well.
@@ -70,7 +71,7 @@ Run `run-sync-gateway --help` to see all available arguments.
 ```
 Usage: run-sync-gateway [options]
 
-This script can be used to configure and run Couchbase Sync Gateway. This script has been tested with Ubuntu 16.04 and Amazon Linux 2.
+This script can be used to configure and run Couchbase Sync Gateway. This script has been tested with Ubuntu 20.04/18.04 and Amazon Linux 2.
 
 Options:
 

@@ -7,7 +7,8 @@ multiple times with different buckets.
 
 This script has been tested on the following operating systems:
 
-* Ubuntu 16.04
+* Ubuntu 20.04
+* Ubuntu 18.04
 * Amazon Linux 2
 
 There is a good chance it will work on other flavors of Debian, CentOS, and RHEL as well.
@@ -63,7 +64,7 @@ Run `run-replication --help` to see all available arguments.
 ```
 Usage: run-replication [options]
 
-Kick off replication of a bucket between two Couchbase clusters. This will add the destination cluster as a remote endpoint using the couchbase-cli xdcr-setup command and start replication of the specified bucket using the couchbase-cli xdcr-replicate command. This script is idempotent, so you can run it multiple times with different buckets. This script has been tested with Ubuntu 16.04 and Amazon Linux 2.
+Kick off replication of a bucket between two Couchbase clusters. This will add the destination cluster as a remote endpoint using the couchbase-cli xdcr-setup command and start replication of the specified bucket using the couchbase-cli xdcr-replicate command. This script is idempotent, so you can run it multiple times with different buckets. This script has been tested with Ubuntu 20.04/18.04 and Amazon Linux 2.
 
 Options:
 
@@ -97,4 +98,3 @@ Example:
     --setup-arg xdcr-encryption-type=half \
     --replicate-arg enable-compression=1
 ```
-

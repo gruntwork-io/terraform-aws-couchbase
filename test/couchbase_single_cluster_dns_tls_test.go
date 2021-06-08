@@ -17,9 +17,9 @@ const domainNameForTest = "gruntwork.in"
 // filter them down to the real public hosted zone for domainNameForTest.
 var domainNameTags = map[string]string{"original": "true"}
 
-func TestIntegrationCouchbaseCommunitySingleClusterDnsTlsUbuntu16(t *testing.T) {
+func TestIntegrationCouchbaseCommunitySingleClusterDnsTlsUbuntu20(t *testing.T) {
 	t.Parallel()
-	testCouchbaseSingleClusterDnsTls(t, "ubuntu", "community")
+	testCouchbaseSingleClusterDnsTls(t, "ubuntu-20", "community")
 }
 
 func TestIntegrationCouchbaseCommunitySingleClusterDnsTlsUbuntu18(t *testing.T) {

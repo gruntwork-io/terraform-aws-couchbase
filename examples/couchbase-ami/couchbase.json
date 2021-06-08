@@ -6,9 +6,9 @@
     "base_ami_name": "couchbase"
   },
   "builders": [{
-    "name": "ubuntu-ami",
-    "ami_name": "{{user `base_ami_name`}}-ubuntu-example-{{isotime | clean_resource_name}}",
-    "ami_description": "An Ubuntu 16.04 AMI that has Couchbase installed.",
+    "name": "ubuntu-20-ami",
+    "ami_name": "{{user `base_ami_name`}}-ubuntu-20-example-{{isotime | clean_resource_name}}",
+    "ami_description": "An Ubuntu 20.04 AMI that has Couchbase installed.",
     "instance_type": "t2.micro",
     "region": "{{user `aws_region`}}",
     "type": "amazon-ebs",
@@ -16,7 +16,7 @@
       "filters": {
         "virtualization-type": "hvm",
         "architecture": "x86_64",
-        "name": "*ubuntu-xenial-16.04-amd64-server-*",
+        "name": "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*",
         "block-device-mapping.volume-type": "gp2",
         "root-device-type": "ebs"
       },
@@ -121,10 +121,10 @@
     "pause_before": "30s",
     "inline": [
       "sudo apt-get update",
-      "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y jq curl git python-pip",
-      "sudo -H pip install --upgrade awscli"
+      "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y jq curl git python3-pip",
+      "sudo -H pip3 install --upgrade awscli"
     ],
-    "only": ["ubuntu-ami", "ubuntu-18-ami"]
+    "only": ["ubuntu-20-ami", "ubuntu-18-ami"]
   },{
     "type": "shell",
     "inline": [

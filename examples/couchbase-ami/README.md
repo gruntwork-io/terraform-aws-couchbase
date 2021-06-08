@@ -7,8 +7,9 @@ modules with [Packer](https://www.packer.io/) to create [Amazon Machine
 Images (AMIs)](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) that have 
 [Couchbase](https://www.couchbase.com/), [Sync Gateway](https://developer.couchbase.com/documentation/mobile/current/guides/sync-gateway/index.html), 
 and their dependencies installed on top of:
- 
-1. Ubuntu 16.04
+
+1. Ubuntu 20.04
+1. Ubuntu 18.04
 1. Amazon Linux 2
 
 
@@ -25,8 +26,8 @@ To build the Couchbase AMI:
    set the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables.
 1. Update the `variables` section of the `couchbase.json` Packer template to specify the AWS region and Couchbase
    version you wish to use.
-1. To build an Ubuntu AMI for Couchbase Enterprise: `packer build -only=ubuntu-ami -var edition=enterprise couchbase.json`.
-1. To build an Ubuntu AMI for Couchbase Community: `packer build -only=ubuntu-ami -var edition=community couchbase.json`.
+1. To build an Ubuntu AMI for Couchbase Enterprise: `packer build -only=ubuntu-20-ami -var edition=enterprise couchbase.json`.
+1. To build an Ubuntu AMI for Couchbase Community: `packer build -only=ubuntu-20-ami -var edition=community couchbase.json`.
 1. To build an Amazon Linux AMI for Couchbase Enterprise: `packer build -only=amazon-linux-ami -var edition=enterprise couchbase.json`.
 1. To build an Amazon Linux AMI for Couchbase Community: `packer build -only=amazon-linux-ami -var edition=community couchbase.json`.
 

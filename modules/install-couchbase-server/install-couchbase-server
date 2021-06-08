@@ -23,13 +23,13 @@ readonly DEFAULT_EDITION="$ENTERPRISE_EDITION"
 # Get these from the downloads section of the Couchbase website: https://www.couchbase.com/downloads
 readonly DEFAULT_COUCHBASE_ENTERPRISE_VERSION="6.6.0"
 readonly DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_UBUNTU_18_04="8e7fd5434537094be2fbdfedf3ab5005f0f7d5b9d0578f59ce540b424215b728"
-readonly DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_UBUNTU_16_04="9f666b2e39c11b17a9cc74c00967d97efeab08e23b93e8bbdec582ce009c65c9"
+readonly DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_UBUNTU_20_04="9f666b2e39c11b17a9cc74c00967d97efeab08e23b93e8bbdec582ce009c65c9"
 readonly DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_AMAZON_LINUX="91fd6bc72db44e59a12a2945944a698f782b621cf757ab95248f831a16b2c73a"
 
 # Get these from the downloads section of the Couchbase website: https://www.couchbase.com/downloads
 readonly DEFAULT_COUCHBASE_COMMUNITY_VERSION="6.5.1"
 readonly DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_UBUNTU_18_04="c4951cdab01759020444e4648023721ae3a333257591252475d34d5fc6ac8857"
-readonly DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_UBUNTU_16_04="baf65fb9cbcec87783d4e9c3ec067143a42cdeef13a884e1f917e8d2f14044b7"
+readonly DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_UBUNTU_20_04="baf65fb9cbcec87783d4e9c3ec067143a42cdeef13a884e1f917e8d2f14044b7"
 readonly DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_AMAZON_LINUX="93a99222c2df857ebc08e60e85b5a3378b63d574ed24f33066542934ce60bf74"
 
 readonly SHA256_CHECKSUM_TYPE="sha256"
@@ -49,7 +49,7 @@ function print_usage {
   echo
   echo "Usage: install-couchbase-server [options]"
   echo
-  echo "This script can be used to install Couchbase Server and its dependencies. This script has been tested with Ubuntu 16.04, 18.04, and Amazon Linux 2."
+  echo "This script can be used to install Couchbase Server and its dependencies. This script has been tested with Ubuntu 20.04/18.04, and Amazon Linux 2."
   echo
   echo "Options:"
   echo
@@ -64,35 +64,61 @@ function print_usage {
   echo "  install-couchbase-server --edition $DEFAULT_EDITION"
 }
 
+function download_couchbase_on_ubuntu {
+  local -r edition="$1"
+  local -r version="$2"
+  local -r out_name="$3"
+  local -r ubuntu_version="$(lsb_release -r -s)"
+
+  # NOTE: Couchbase only started publishing Ubuntu 20.04 deb packages for Enterprise edition version 6.6.2, and 18.04
+  # deb packages for Enterprise edition version 6.0.2, which means that the vast majority of Couchbase server builds do
+  # not have official deb packages for 20.04 or 18.04. So we will fallback each version until we reach 16.04, which is
+  # the last Ubuntu version that has published packages for most Couchbase versions.
+  local -a ubuntu_versions=("$ubuntu_version")
+  if [[ "$ubuntu_version" == "20.04" ]]; then
+    ubuntu_versions+=("18.04" "16.04")
+  elif [[ "$ubuntu_version" == "18.04" ]]; then
+    ubuntu_versions+=("16.04")
+  fi
+
+  local filepath
+  local url
+  for try_ubuntu_version in "${ubuntu_versions[@]}"
+  do
+    filepath="couchbase-server-${edition}_${version}-ubuntu${try_ubuntu_version}_amd64.deb"
+    url="https://packages.couchbase.com/releases/$version/$filepath"
+
+    log_info "Downloading Couchbase from $url to $filepath"
+    if [[ "$(curl --location --silent --fail --show-error -o "$out_name" -w "%{http_code}" "$url")" == "404" ]]; then
+      log_warn "Failed to get Couchbase from $url."
+    else
+      return
+    fi
+  done
+
+  # If we make it here, it means none of the Ubuntu versions in the array worked.
+  log_error "No more Ubuntu versions available to try. Cannot retrieve Couchbase."
+  exit 1
+}
+
 function install_couchbase_on_ubuntu {
-  local readonly edition="$1"
-  local readonly version="$2"
-  local readonly checksum="$3"
-  local readonly checksum_type="$4"
-  local readonly ubuntu_version="$(lsb_release -r -s)"
-  local readonly dpkg_name="couchbase-server.deb"
+  local -r edition="$1"
+  local -r version="$2"
+  local -r checksum="$3"
+  local -r checksum_type="$4"
+  local -r ubuntu_version="$(lsb_release -r -s)"
+  local -r dpkg_name="couchbase-server.deb"
 
   log_info "Installing Couchbase $version ($edition edition) on Ubuntu $ubuntu_version"
 
-  local readonly filepath="couchbase-server-${edition}_${version}-ubuntu${ubuntu_version}_amd64.deb"
-  local readonly url="https://packages.couchbase.com/releases/$version/$filepath"
-
-  # NOTE: Couchbase only started publishing Ubuntu 18.04 deb packages for Enterprise edition version 6.0.2, which means
-  # that the vast majority of Couchbase server builds do not have official deb packages for 18.04. That said, the 16.04
-  # package has been verified to work, so we will fallback to using that if the 18.04 build is not available.
-  local readonly fallback_filepath="couchbase-server-${edition}_${version}-ubuntu16.04_amd64.deb"
-  local readonly fallback_url="https://packages.couchbase.com/releases/$version/$fallback_filepath"
-
   log_info "Installing Couchbase dependencies"
   sudo DEBIAN_FRONTEND=noninteractive apt-get update
-  sudo apt-get install -y python-httplib2 bzip2
-
-  log_info "Downloading Couchbase from $url to $filepath"
-  if [[ "$(curl --location --silent --fail --show-error -o "$dpkg_name" -w "%{http_code}" "$url")" == "404" ]]; then
-    log_warn "Failed to get Couchbase from $url. Trying $fallback_url."
-    curl --location --silent --fail --show-error -o "$dpkg_name" "$fallback_url"
+  sudo apt-get install -y python3-httplib2 bzip2
+  if [[ "$ubuntu_version" != "20.04" ]]; then
+    sudo apt-get install -y python-httplib2
   fi
 
+  download_couchbase_on_ubuntu "$edition" "$version" "$dpkg_name"
   os_validate_checksum "$dpkg_name" "$checksum" "$checksum_type"
 
   # Install Couchbase, but configure it to NOT start on boot. This allows the run-couchbase-server script to configure
@@ -106,15 +132,15 @@ function install_couchbase_on_ubuntu {
 }
 
 function install_couchbase_on_amazon_linux {
-  local readonly edition="$1"
-  local readonly version="$2"
-  local readonly checksum="$3"
-  local readonly checksum_type="$4"
+  local -r edition="$1"
+  local -r version="$2"
+  local -r checksum="$3"
+  local -r checksum_type="$4"
 
   log_info "Installing Couchbase $version ($edition edition) on Amazon Linux"
 
-  local readonly filepath="couchbase-server-${edition}-${version}-centos7.x86_64.rpm"
-  local readonly url="https://packages.couchbase.com/releases/$version/$filepath"
+  local -r filepath="couchbase-server-${edition}-${version}-centos7.x86_64.rpm"
+  local -r url="https://packages.couchbase.com/releases/$version/$filepath"
 
   log_info "Installing Couchbase dependencies"
   sudo yum update -y
@@ -151,7 +177,7 @@ function disable_transparent_huge_pages {
   elif os_is_amazon_linux; then
     sudo chkconfig disable-thp on
   else
-    log_error "This script only supports Ubuntu 16.04, 18.04, and Amazon Linux 2."
+    log_error "This script only supports Ubuntu 20.04/18.04, and Amazon Linux 2."
     exit 1
   fi
 }
@@ -159,7 +185,7 @@ function disable_transparent_huge_pages {
 # A swappiness of 0 or 1 is recommended for Couchbase servers.
 # https://developer.couchbase.com/documentation/server/current/install/install-swap-space.html
 function update_swappiness {
-  local readonly swappiness="$1"
+  local -r swappiness="$1"
 
   log_info "Updating OS swappiness settings to $swappiness in $SWAPPINESS_CONFIG_FILE"
 
@@ -167,24 +193,24 @@ function update_swappiness {
 }
 
 function install_couchbase_scripts {
-  local readonly dest_dir="$1"
+  local -r dest_dir="$1"
 
-  local readonly run_couchbase_src="$SCRIPT_DIR/../run-couchbase-server/run-couchbase-server"
-  local readonly run_couchbase_dest="$dest_dir/run-couchbase-server"
+  local -r run_couchbase_src="$SCRIPT_DIR/../run-couchbase-server/run-couchbase-server"
+  local -r run_couchbase_dest="$dest_dir/run-couchbase-server"
   log_info "Copying $run_couchbase_src to $run_couchbase_dest"
   sudo cp "$run_couchbase_src" "$run_couchbase_dest"
   sudo chmod +x "$run_couchbase_dest"
 
-  local readonly run_replication_src="$SCRIPT_DIR/../run-replication/run-replication"
-  local readonly run_replication_dest="$dest_dir/run-replication"
+  local -r run_replication_src="$SCRIPT_DIR/../run-replication/run-replication"
+  local -r run_replication_dest="$dest_dir/run-replication"
   log_info "Copying $run_replication_src to $run_replication_dest"
   sudo cp "$run_replication_src" "$run_replication_dest"
   sudo chmod +x "$run_replication_dest"
 }
 
 function install_couchbase_commons {
-  local readonly src_dir="$1"
-  local readonly dest_dir="$2"
+  local -r src_dir="$1"
+  local -r dest_dir="$2"
 
   log_info "Copying $src_dir to $dest_dir"
   sudo cp -r "$src_dir" "$dest_dir"
@@ -253,8 +279,8 @@ function install {
     if [[ "$edition" == "$COMMUNITY_EDITION" ]]; then
       version="$DEFAULT_COUCHBASE_COMMUNITY_VERSION"
       checksum_type="$SHA256_CHECKSUM_TYPE"
-      if os_is_ubuntu "16.04"; then
-        checksum="$DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_UBUNTU_16_04"
+      if os_is_ubuntu "20.04"; then
+        checksum="$DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_UBUNTU_20_04"
       elif os_is_ubuntu "18.04"; then
         checksum="$DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_UBUNTU_18_04"
       else
@@ -263,8 +289,8 @@ function install {
     else
       version="$DEFAULT_COUCHBASE_ENTERPRISE_VERSION"
       checksum_type="$SHA256_CHECKSUM_TYPE"
-      if os_is_ubuntu "16.04"; then
-        checksum="$DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_UBUNTU_16_04"
+      if os_is_ubuntu "20.04"; then
+        checksum="$DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_UBUNTU_20_04"
       elif os_is_ubuntu "18.04"; then
         checksum="$DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_UBUNTU_18_04"
       else
@@ -275,12 +301,12 @@ function install {
 
   log_info "Starting Couchbase install..."
 
-  if os_is_ubuntu "16.04" || os_is_ubuntu "18.04"; then
+  if os_is_ubuntu "20.04" || os_is_ubuntu "18.04"; then
     install_couchbase_on_ubuntu "$edition" "$version" "$checksum" "$checksum_type"
   elif os_is_amazon_linux "2"; then
     install_couchbase_on_amazon_linux "$edition" "$version" "$checksum" "$checksum_type"
   else
-    log_error "This script only supports Ubuntu 16.04 and Amazon Linux 2."
+    log_error "This script only supports Ubuntu 20.04/18.04 and Amazon Linux 2."
     exit 1
   fi
 
