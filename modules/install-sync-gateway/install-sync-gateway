@@ -66,15 +66,15 @@ function print_usage {
 }
 
 function install_sync_gateway_on_ubuntu {
-  local readonly edition="$1"
-  local readonly version="$2"
-  local readonly checksum="$3"
-  local readonly checksum_type="$4"
+  local -r edition="$1"
+  local -r version="$2"
+  local -r checksum="$3"
+  local -r checksum_type="$4"
 
   log_info "Installing Sync Gateway $version ($edition edition) on Ubuntu"
 
-  local readonly filepath="couchbase-sync-gateway-${edition}_${version}_x86_64.deb"
-  local readonly url="https://packages.couchbase.com/releases/couchbase-sync-gateway/$version/$filepath"
+  local -r filepath="couchbase-sync-gateway-${edition}_${version}_x86_64.deb"
+  local -r url="https://packages.couchbase.com/releases/couchbase-sync-gateway/$version/$filepath"
 
   log_info "Downloading Sync Gateway from $url to $filepath"
   curl --location --silent --fail --show-error -O "$url"
@@ -93,15 +93,15 @@ function install_sync_gateway_on_ubuntu {
 }
 
 function install_sync_gateway_on_amazon_linux {
-  local readonly edition="$1"
-  local readonly version="$2"
-  local readonly checksum="$3"
-  local readonly checksum_type="$4"
+  local -r edition="$1"
+  local -r version="$2"
+  local -r checksum="$3"
+  local -r checksum_type="$4"
 
   log_info "Installing Couchbase $version ($edition edition) on Amazon Linux"
 
-  local readonly filepath="couchbase-sync-gateway-${edition}_${version}_x86_64.rpm"
-  local readonly url="https://packages.couchbase.com/releases/couchbase-sync-gateway/$version/$filepath"
+  local -r filepath="couchbase-sync-gateway-${edition}_${version}_x86_64.rpm"
+  local -r url="https://packages.couchbase.com/releases/couchbase-sync-gateway/$version/$filepath"
 
   log_info "Downloading Sync Gateway from $url to $filepath"
   curl --location --silent --fail --show-error -O "$url"
@@ -163,7 +163,7 @@ EOF
 }
 
 function install_config {
-  local readonly config="$1"
+  local -r config="$1"
 
   if [[ ! -z "$config" ]]; then
     log_info "Configuring Sync Gateway to use config file $config by copying it to $DEFAULT_SYNC_GATEWAY_CONFIG_PATH"
@@ -172,9 +172,9 @@ function install_config {
 }
 
 function install_run_sync_gateway_script {
-  local readonly dest_dir="$1"
-  local readonly src="$SCRIPT_DIR/../run-sync-gateway/run-sync-gateway"
-  local readonly dest="$dest_dir/run-sync-gateway"
+  local -r dest_dir="$1"
+  local -r src="$SCRIPT_DIR/../run-sync-gateway/run-sync-gateway"
+  local -r dest="$dest_dir/run-sync-gateway"
 
   log_info "Copying $src to $dest"
   sudo cp "$src" "$dest"
@@ -182,8 +182,8 @@ function install_run_sync_gateway_script {
 }
 
 function install_bash_commons {
-  local readonly src_dir="$1"
-  local readonly dest_dir="$2"
+  local -r src_dir="$1"
+  local -r dest_dir="$2"
 
   log_info "Copying $src_dir to $dest_dir"
   sudo cp -r "$src_dir" "$dest_dir"

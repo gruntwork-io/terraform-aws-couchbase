@@ -48,12 +48,12 @@ function print_usage {
 # comma-separated list, with the given port number attached to each. Parse out the public hostnames if
 # use_public_hostname is true and private hostnames otherwise.
 function get_hostnames {
-  local readonly instances_response="$1"
-  local readonly use_public_hostname="$2"
-  local readonly port="$3"
+  local -r instances_response="$1"
+  local -r use_public_hostname="$2"
+  local -r port="$3"
 
-  local readonly hostname_param=$([[ "$use_public_hostname" == "true" ]] && echo "PublicDnsName" || echo "PrivateDnsName")
-  local readonly port_param=$([[ -z "$port" ]] && echo "" || echo ":$port")
+  local -r hostname_param=$([[ "$use_public_hostname" == "true" ]] && echo "PublicDnsName" || echo "PrivateDnsName")
+  local -r port_param=$([[ -z "$port" ]] && echo "" || echo ":$port")
 
   local hostnames
   hostnames=($(echo "$instances_response" | jq -r ".Reservations[].Instances[].$hostname_param"))
@@ -70,25 +70,25 @@ function get_hostnames {
 }
 
 function update_config_path {
-  local readonly config_path="$1"
-  local readonly systemd_unit_path="$2"
+  local -r config_path="$1"
+  local -r systemd_unit_path="$2"
 
   log_info "Setting Sync Gateway systemd unit $systemd_unit_path config path to $config_path"
   file_replace_or_append_text "^Environment=\"CONFIG=.*\"$" "Environment=\"CONFIG=$config_path\"" "$systemd_unit_path"
 }
 
 function update_config_path_in_initd {
-  local readonly config_path="$1"
-  local readonly initd_unit_path="$2"
+  local -r config_path="$1"
+  local -r initd_unit_path="$2"
 
   log_info "Setting Sync Gateway init.d unit $initd_unit_path config path to $config_path"
   file_replace_or_append_text "^CONFIG=.*$" "CONFIG=$config_path" "$initd_unit_path"
 }
 
 function auto_fill_config {
-  local readonly config="$1"
+  local -r config="$1"
   shift 1
-  local readonly auto_fill=($@)
+  local -r auto_fill=($@)
 
   if [[ -z "${auto_fill[@]}" ]]; then
     log_info "No auto-fill params specified."
@@ -102,10 +102,10 @@ function auto_fill_config {
 }
 
 function auto_fill_config_asg {
-  local readonly config="$1"
-  local readonly use_public_hostname="$2"
+  local -r config="$1"
+  local -r use_public_hostname="$2"
   shift 2
-  local readonly auto_fill_asg=($@)
+  local -r auto_fill_asg=($@)
 
   if [[ -z "${auto_fill_asg[@]}" ]]; then
     log_info "No ASG auto-fill params specified."
@@ -123,25 +123,25 @@ function auto_fill_config_asg {
 }
 
 function auto_fill_param {
-  local readonly config="$1"
-  local readonly param="$2"
+  local -r config="$1"
+  local -r param="$2"
 
   # The param is of the format KEY=VALUE.
-  local readonly placeholder_name="$(string_strip_suffix "$param" "=*")"
-  local readonly placeholder_value="$(string_strip_prefix "$param" "*=")"
+  local -r placeholder_name="$(string_strip_suffix "$param" "=*")"
+  local -r placeholder_value="$(string_strip_prefix "$param" "*=")"
 
   log_info "Replacing the '$placeholder_name' placeholder in $config with $placeholder_value"
   file_replace_text "$placeholder_name" "$placeholder_value" "$config"
 }
 
 function auto_fill_asg_param {
-  local readonly config="$1"
-  local readonly use_public_hostname="$2"
-  local readonly param="$3"
-  local readonly aws_region="$4"
+  local -r config="$1"
+  local -r use_public_hostname="$2"
+  local -r param="$3"
+  local -r aws_region="$4"
 
   # The param is of the format KEY=ASG_NAME:PORT (note that :PORT is optional).
-  local readonly placeholder_name="$(string_strip_suffix "$param" "=*")"
+  local -r placeholder_name="$(string_strip_suffix "$param" "=*")"
   local asg_name="$(string_strip_prefix "$param" "*=")"
   local port=""
 
@@ -159,7 +159,7 @@ function auto_fill_asg_param {
   assert_not_empty_or_null "$hostnames" "Unable to parse host names for ASG $asg_name in $aws_region"
 
   # https://developer.couchbase.com/documentation/mobile/1.5/guides/sync-gateway/config-properties/index.html#1.5/databases-foo_db-server
-  local readonly placeholder_value="http://$hostnames"
+  local -r placeholder_value="http://$hostnames"
 
   log_info "Replacing the '$placeholder_name' placeholder in $config with $placeholder_value"
   file_replace_text "$placeholder_name" "$placeholder_value" "$config"
@@ -173,8 +173,8 @@ function start_sync_gateway {
 }
 
 function wait_for_couchbase_clusters {
-  local readonly config="$1"
-  local readonly skip_wait="$2"
+  local -r config="$1"
+  local -r skip_wait="$2"
 
   if [[ "$skip_wait" == "true" ]]; then
     log_info "The --skip-wait flag is set, so will start Sync Gateway without waiting for all Couchbase servers to be healthy."
@@ -193,11 +193,11 @@ function wait_for_couchbase_clusters {
 
   local database
   for database in "${databases[@]}"; do
-    local readonly cluster_url=$(echo "$database" | jq -r '.server')
-    local readonly cluster_url_single=$(echo "$cluster_url" | cut -f1 -d ",")
-    local readonly cluster_username=$(echo "$database" | jq -r '.username')
-    local readonly cluster_password=$(echo "$database" | jq -r '.password')
-    local readonly bucket=$(echo "$database" | jq -r '.bucket')
+    local -r cluster_url=$(echo "$database" | jq -r '.server')
+    local -r cluster_url_single=$(echo "$cluster_url" | cut -f1 -d ",")
+    local -r cluster_username=$(echo "$database" | jq -r '.username')
+    local -r cluster_password=$(echo "$database" | jq -r '.password')
+    local -r bucket=$(echo "$database" | jq -r '.bucket')
 
     wait_for_couchbase_cluster "$cluster_url_single" "$cluster_username" "$cluster_password"
 

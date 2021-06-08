@@ -13,7 +13,7 @@ readonly COUCHBASE_CLI="$COUCHBASE_BIN_DIR/couchbase-cli"
 
 # Run the Couchbase CLI
 function run_couchbase_cli {
-  local readonly args=($@)
+  local -r args=($@)
 
   # The Couchbase CLI may exit with an error, but we almost always want to ignore that and make decision based on
   # stdout instead, so we temporarily disable exit on error
@@ -25,12 +25,12 @@ function run_couchbase_cli {
 
 # Run the Couchbase CLI and retry until its stdout contains the expected message or max retries is exceeded.
 function run_couchbase_cli_with_retry {
-  local readonly cmd_description="$1"
-  local readonly expected_message="$2"
-  local readonly max_retries="$3"
-  local readonly sleep_between_retries_sec="$4"
+  local -r cmd_description="$1"
+  local -r expected_message="$2"
+  local -r max_retries="$3"
+  local -r sleep_between_retries_sec="$4"
   shift 4
-  local readonly args=($@)
+  local -r args=($@)
 
   for (( i=0; i<"$max_retries"; i++ )); do
     local out
@@ -51,9 +51,9 @@ function run_couchbase_cli_with_retry {
 
 # Returns true (0) if the Couchbase cluster has already been initialized and false otherwise.
 function cluster_is_initialized {
-  local readonly cluster_url="$1"
-  local readonly cluster_username="$2"
-  local readonly cluster_password="$3"
+  local -r cluster_url="$1"
+  local -r cluster_username="$2"
+  local -r cluster_password="$3"
 
   local cluster_status
   cluster_status=$(get_cluster_status "$cluster_url" "$cluster_username" "$cluster_password")
@@ -65,9 +65,9 @@ function cluster_is_initialized {
 # process is running and responding to queries; it does NOT check if the Couchbase server has joined the cluster and is
 # active.
 function couchbase_is_running {
-  local readonly node_url="$1"
-  local readonly username="$2"
-  local readonly password="$3"
+  local -r node_url="$1"
+  local -r username="$2"
+  local -r password="$3"
 
   set +e
   local cluster_status
@@ -86,9 +86,9 @@ function couchbase_is_running {
 #
 # Otherwise, returns error text (e.g., "unknown pool") from the server-list command.
 function get_cluster_status {
-  local readonly cluster_url="$1"
-  local readonly cluster_username="$2"
-  local readonly cluster_password="$3"
+  local -r cluster_url="$1"
+  local -r cluster_username="$2"
+  local -r cluster_password="$3"
 
   log_info "Looking up server status in $cluster_url"
 
@@ -105,10 +105,10 @@ function get_cluster_status {
 # cluster. Note that this does NOT necessarily mean the new node is active; in order for the node to be active, you
 # not only need to add it, but also rebalance the cluster. See also node_is_active_in_cluster.
 function node_is_added_to_cluster {
-  local readonly cluster_url="$1"
-  local readonly cluster_username="$2"
-  local readonly cluster_password="$3"
-  local readonly node_url="$4"
+  local -r cluster_url="$1"
+  local -r cluster_username="$2"
+  local -r cluster_password="$3"
+  local -r node_url="$4"
 
   local cluster_status
   cluster_status=$(get_cluster_status "$cluster_url" "$cluster_username" "$cluster_password")
@@ -119,10 +119,10 @@ function node_is_added_to_cluster {
 # Returns true if the node with the given hostname has already been added (via the server-add command) to the Couchbase
 # cluster and is active (via the rebalance command).
 function node_is_active_in_cluster {
-  local readonly cluster_url="$1"
-  local readonly cluster_username="$2"
-  local readonly cluster_password="$3"
-  local readonly node_url="$4"
+  local -r cluster_url="$1"
+  local -r cluster_username="$2"
+  local -r cluster_password="$3"
+  local -r node_url="$4"
 
   local cluster_status
   cluster_status=$(get_cluster_status "$cluster_url" "$cluster_username" "$cluster_password")
@@ -132,9 +132,9 @@ function node_is_active_in_cluster {
 
 # Returns true (0) if the cluster is balanced and false (1) otherwise
 function cluster_is_balanced {
-  local readonly cluster_url="$1"
-  local readonly cluster_username="$2"
-  local readonly cluster_password="$3"
+  local -r cluster_url="$1"
+  local -r cluster_username="$2"
+  local -r cluster_password="$3"
 
   log_info "Checking if cluster $cluster_url is currently rebalancing..."
 
@@ -155,10 +155,10 @@ function cluster_is_balanced {
 
 # Return true (0) if the given bucket exists in the given cluster and false (0) otherwise
 function has_bucket {
-  local readonly cluster_url="$1"
-  local readonly cluster_username="$2"
-  local readonly cluster_password="$3"
-  local readonly bucket_name="$4"
+  local -r cluster_url="$1"
+  local -r cluster_username="$2"
+  local -r cluster_password="$3"
+  local -r bucket_name="$4"
 
   log_info "Checking if bucket $bucket_name exists in $cluster_url"
 
@@ -190,12 +190,12 @@ function has_bucket {
 
 # Wait until the specified cluster is initialized and not rebalancing
 function wait_for_couchbase_cluster {
-  local readonly cluster_url="$1"
-  local readonly cluster_username="$2"
-  local readonly cluster_password="$3"
+  local -r cluster_url="$1"
+  local -r cluster_username="$2"
+  local -r cluster_password="$3"
 
-  local readonly retries=200
-  local readonly sleep_between_retries=5
+  local -r retries=200
+  local -r sleep_between_retries=5
 
   for (( i=0; i<"$retries"; i++ )); do
     if cluster_is_ready "$cluster_url" "$cluster_username" "$cluster_password"; then
@@ -213,9 +213,9 @@ function wait_for_couchbase_cluster {
 
 # Return true (0) if the cluster is initialized and not rebalancing and false (1) otherwise
 function cluster_is_ready {
-  local readonly cluster_url="$1"
-  local readonly cluster_username="$2"
-  local readonly cluster_password="$3"
+  local -r cluster_url="$1"
+  local -r cluster_username="$2"
+  local -r cluster_password="$3"
 
   if ! cluster_is_initialized "$cluster_url" "$cluster_username" "$cluster_password"; then
     log_warn "Cluster $cluster_url is not yet initialized."
@@ -232,13 +232,13 @@ function cluster_is_ready {
 
 # Wait until the specified bucket exists in the specified cluster
 function wait_for_bucket {
-  local readonly cluster_url="$1"
-  local readonly cluster_username="$2"
-  local readonly cluster_password="$3"
-  local readonly bucket="$4"
+  local -r cluster_url="$1"
+  local -r cluster_username="$2"
+  local -r cluster_password="$3"
+  local -r bucket="$4"
 
-  local readonly retries=200
-  local readonly sleep_between_retries=5
+  local -r retries=200
+  local -r sleep_between_retries=5
 
   for (( i=0; i<"$retries"; i++ )); do
     if has_bucket "$cluster_url" "$cluster_username" "$cluster_password" "$bucket"; then
@@ -261,9 +261,9 @@ function wait_for_bucket {
 # the lowest Instance ID (alphabetically). This way, all servers will always select the same server as the rally point.
 # If the rally point server dies, all servers will then select the next oldest launch time / lowest Instance ID.
 function get_rally_point_hostname {
-  local readonly aws_region="$1"
-  local readonly asg_name="$2"
-  local readonly use_public_hostname="$3"
+  local -r aws_region="$1"
+  local -r asg_name="$2"
+  local -r use_public_hostname="$3"
 
   log_info "Looking up rally point for ASG $asg_name in $aws_region"
 

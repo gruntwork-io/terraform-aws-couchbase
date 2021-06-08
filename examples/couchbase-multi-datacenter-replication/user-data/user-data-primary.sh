@@ -9,10 +9,10 @@ exec > >(tee /opt/couchbase/var/lib/couchbase/logs/mock-user-data.log|logger -t 
 source "/opt/couchbase-commons/couchbase-common.sh"
 
 function run_couchbase {
-  local readonly cluster_asg_name="$1"
-  local readonly cluster_username="$2"
-  local readonly cluster_password="$3"
-  local readonly cluster_port="$4"
+  local -r cluster_asg_name="$1"
+  local -r cluster_username="$2"
+  local -r cluster_password="$3"
+  local -r cluster_port="$4"
 
   echo "Starting Couchbase data nodes"
 
@@ -28,15 +28,15 @@ function run_couchbase {
 }
 
 function create_test_resources {
-  local readonly cluster_username="$1"
-  local readonly cluster_password="$2"
-  local readonly cluster_port="$3"
-  local readonly user_name="$4"
-  local readonly user_password="$5"
-  local readonly bucket_name="$6"
+  local -r cluster_username="$1"
+  local -r cluster_password="$2"
+  local -r cluster_port="$3"
+  local -r user_name="$4"
+  local -r user_password="$5"
+  local -r bucket_name="$6"
 
-  local readonly max_retries=120
-  local readonly sleep_between_retries_sec=5
+  local -r max_retries=120
+  local -r sleep_between_retries_sec=5
 
   echo "Creating user $user_name"
 
@@ -73,15 +73,15 @@ function create_test_resources {
 }
 
 function start_replication {
-  local readonly cluster_username="$1"
-  local readonly cluster_password="$2"
-  local readonly cluster_port="$3"
-  local readonly src_bucket_name="$4"
-  local readonly dest_cluster_name="$5"
-  local readonly dest_cluster_username="$6"
-  local readonly dest_cluster_password="$7"
-  local readonly replication_dest_cluster_aws_region="$8"
-  local readonly dest_bucket_name="$9"
+  local -r cluster_username="$1"
+  local -r cluster_password="$2"
+  local -r cluster_port="$3"
+  local -r src_bucket_name="$4"
+  local -r dest_cluster_name="$5"
+  local -r dest_cluster_username="$6"
+  local -r dest_cluster_password="$7"
+  local -r replication_dest_cluster_aws_region="$8"
+  local -r dest_bucket_name="$9"
 
   echo "Looking up hostname for Couchbase cluster $dest_cluster_name in $replication_dest_cluster_aws_region"
 
@@ -104,16 +104,16 @@ function start_replication {
 }
 
 function run {
-  local readonly cluster_asg_name="$1"
-  local readonly cluster_port="$2"
-  local readonly replication_dest_cluster_name="$3"
-  local readonly replication_dest_cluster_aws_region="$4"
+  local -r cluster_asg_name="$1"
+  local -r cluster_port="$2"
+  local -r replication_dest_cluster_name="$3"
+  local -r replication_dest_cluster_aws_region="$4"
 
   # To keep this example simple, we are hard-coding all credentials in this file in plain text. You should NOT do this
   # in production usage!!! Instead, you should use tools such as Vault, Keywhiz, or KMS to fetch the credentials at
   # runtime and only ever have the plaintext version in memory.
-  local readonly cluster_username="admin"
-  local readonly cluster_password="password"
+  local -r cluster_username="admin"
+  local -r cluster_password="password"
 
   run_couchbase "$cluster_asg_name" "$cluster_username" "$cluster_password" "$cluster_port"
 
@@ -127,12 +127,12 @@ function run {
     # To keep this example simple, we are hard-coding all credentials in this file in plain text. You should NOT do this
     # in production usage!!! Instead, you should use tools such as Vault, Keywhiz, or KMS to fetch the credentials at
     # runtime and only ever have the plaintext version in memory.
-    local readonly test_user_name="test-user"
-    local readonly test_user_password="password"
-    local readonly test_bucket_name="test-bucket"
-    local readonly dest_cluster_username="admin"
-    local readonly dest_cluster_password="password"
-    local readonly dest_bucket_name="test-bucket-replica"
+    local -r test_user_name="test-user"
+    local -r test_user_password="password"
+    local -r test_bucket_name="test-bucket"
+    local -r dest_cluster_username="admin"
+    local -r dest_cluster_password="password"
+    local -r dest_bucket_name="test-bucket-replica"
 
     create_test_resources "$cluster_username" "$cluster_password" "$cluster_port" "$test_user_name" "$test_user_password" "$test_bucket_name"
     start_replication "$cluster_username" "$cluster_password" "$cluster_port" "$test_bucket_name" "$replication_dest_cluster_name" "$dest_cluster_username" "$dest_cluster_password" "$replication_dest_cluster_aws_region" "$dest_bucket_name"
@@ -145,4 +145,3 @@ run \
   "${cluster_port}" \
   "${replication_dest_cluster_name}" \
   "${replication_dest_cluster_aws_region}"
-

@@ -1,5 +1,5 @@
 #!/bin/bash
-# A simple helper for mounting EBS volumes 
+# A simple helper for mounting EBS volumes
 
 set -e
 
@@ -8,12 +8,12 @@ source "/opt/gruntwork/bash-commons/log.sh"
 # This method is used to configure a new EBS volume. It formats the specified device name using ext4 and mounts it at
 # the given mount point, with the given OS user as owner.
 function mount_volume {
-  local readonly device_name="$1"
-  local readonly mount_point="$2"
-  local readonly owner="$3"
-  local readonly file_system_type="${4:-ext4}"
-  local readonly mount_options="${5:-defaults,nofail}"
-  local readonly fs_tab_path="/etc/fstab"
+  local -r device_name="$1"
+  local -r mount_point="$2"
+  local -r owner="$3"
+  local -r file_system_type="${4:-ext4}"
+  local -r mount_options="${5:-defaults,nofail}"
+  local -r fs_tab_path="/etc/fstab"
 
   case "$file_system_type" in
     "ext4")

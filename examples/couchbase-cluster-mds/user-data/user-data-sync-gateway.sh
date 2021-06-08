@@ -7,13 +7,13 @@ set -e
 exec > >(tee /opt/couchbase/var/lib/couchbase/logs/mock-user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
 function run_sync_gateway {
-  local readonly cluster_asg_name="$1"
-  local readonly cluster_port="$2"
-  local readonly sync_gateway_interface="$3"
-  local readonly sync_gateway_admin_interface="$4"
-  local readonly bucket="$5"
-  local readonly username="$6"
-  local readonly password="$7"
+  local -r cluster_asg_name="$1"
+  local -r cluster_port="$2"
+  local -r sync_gateway_interface="$3"
+  local -r sync_gateway_admin_interface="$4"
+  local -r bucket="$5"
+  local -r username="$6"
+  local -r password="$7"
 
   echo "Starting Sync Gateway"
 
@@ -29,19 +29,19 @@ function run_sync_gateway {
 }
 
 function run {
-  local readonly cluster_asg_name="$1"
-  local readonly cluster_port="$2"
-  local readonly sync_gateway_interface="$3"
-  local readonly sync_gateway_admin_interface="$4"
+  local -r cluster_asg_name="$1"
+  local -r cluster_port="$2"
+  local -r sync_gateway_interface="$3"
+  local -r sync_gateway_admin_interface="$4"
 
   # To keep this example simple, we are hard-coding all credentials in this file in plain text. You should NOT do this
   # in production usage!!! Instead, you should use tools such as Vault, Keywhiz, or KMS to fetch the credentials at
   # runtime and only ever have the plaintext version in memory.
-  local readonly cluster_username="admin"
-  local readonly cluster_password="password"
-  local readonly test_user_name="test-user"
-  local readonly test_user_password="password"
-  local readonly test_bucket_name="test-bucket"
+  local -r cluster_username="admin"
+  local -r cluster_password="password"
+  local -r test_user_name="test-user"
+  local -r test_user_password="password"
+  local -r test_bucket_name="test-bucket"
 
   run_sync_gateway "$cluster_asg_name" "$cluster_port" "$sync_gateway_interface" "$sync_gateway_admin_interface" "$test_bucket_name" "$test_user_name" "$test_user_password"
 }
@@ -52,4 +52,3 @@ run \
   "${cluster_port}" \
   "${sync_gateway_interface}" \
   "${sync_gateway_admin_interface}"
-

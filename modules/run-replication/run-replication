@@ -55,15 +55,15 @@ function print_usage {
 }
 
 function create_replication_cluster_reference {
-  local readonly src_cluster_hostname="$1"
-  local readonly src_cluster_username="$2"
-  local readonly src_cluster_password="$3"
-  local readonly dest_cluster_name="$4"
-  local readonly dest_cluster_hostname="$5"
-  local readonly dest_cluster_username="$6"
-  local readonly dest_cluster_password="$7"
+  local -r src_cluster_hostname="$1"
+  local -r src_cluster_username="$2"
+  local -r src_cluster_password="$3"
+  local -r dest_cluster_name="$4"
+  local -r dest_cluster_hostname="$5"
+  local -r dest_cluster_username="$6"
+  local -r dest_cluster_password="$7"
   shift 7
-  local readonly setup_args=($@)
+  local -r setup_args=($@)
 
   if replication_cluster_reference_exists "$src_cluster_hostname" "$src_cluster_username" "$src_cluster_password"; then
     log_info "Remote cluster reference $dest_cluster_name already exists. Will not add it again."
@@ -100,10 +100,10 @@ function create_replication_cluster_reference {
 }
 
 function replication_cluster_reference_exists {
-  local readonly src_cluster_hostname="$1"
-  local readonly src_cluster_username="$2"
-  local readonly src_cluster_password="$3"
-  local readonly dest_cluster_name="$4"
+  local -r src_cluster_hostname="$1"
+  local -r src_cluster_username="$2"
+  local -r src_cluster_password="$3"
+  local -r dest_cluster_name="$4"
 
   local args=()
   args+=("xdcr-setup")
@@ -128,14 +128,14 @@ function replication_cluster_reference_exists {
 }
 
 function setup_replication_for_bucket {
-  local readonly src_cluster_hostname="$1"
-  local readonly src_cluster_username="$2"
-  local readonly src_cluster_password="$3"
-  local readonly src_cluster_bucket_name="$4"
-  local readonly dest_cluster_name="$5"
-  local readonly dest_cluster_bucket_name="$6"
+  local -r src_cluster_hostname="$1"
+  local -r src_cluster_username="$2"
+  local -r src_cluster_password="$3"
+  local -r src_cluster_bucket_name="$4"
+  local -r dest_cluster_name="$5"
+  local -r dest_cluster_bucket_name="$6"
   shift 6
-  local readonly replicate_args=($@)
+  local -r replicate_args=($@)
 
   if replication_for_bucket_exists "$src_cluster_hostname" "$src_cluster_username" "$src_cluster_password" "$src_cluster_bucket_name" "$dest_cluster_bucket_name"; then
     log_info "Replication for bucket $src_cluster_bucket_name in this cluster to bucket $dest_cluster_bucket_name in cluster $dest_cluster_name already exists. Will not add it again."
@@ -171,11 +171,11 @@ function setup_replication_for_bucket {
 }
 
 function replication_for_bucket_exists {
-  local readonly src_cluster_hostname="$1"
-  local readonly src_cluster_username="$2"
-  local readonly src_cluster_password="$3"
-  local readonly src_bucket_name="$4"
-  local readonly dest_bucket_name="$5"
+  local -r src_cluster_hostname="$1"
+  local -r src_cluster_username="$2"
+  local -r src_cluster_password="$3"
+  local -r src_bucket_name="$4"
+  local -r dest_bucket_name="$5"
 
   local args=()
   args+=("xdcr-replicate")

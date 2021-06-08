@@ -9,20 +9,20 @@ exec > >(tee /opt/couchbase/var/lib/couchbase/logs/mock-user-data.log|logger -t 
 source "/opt/couchbase-commons/mount-volume.sh"
 
 function mount_volumes {
-  local readonly index_volume_device_name="$1"
-  local readonly index_volume_mount_point="$2"
-  local readonly volume_owner="$3"
+  local -r index_volume_device_name="$1"
+  local -r index_volume_mount_point="$2"
+  local -r volume_owner="$3"
 
   echo "Mounting EBS Volume for the index directory"
   mount_volume "$index_volume_device_name" "$index_volume_mount_point" "$volume_owner"
 }
 
 function run_couchbase {
-  local readonly cluster_asg_name="$1"
-  local readonly cluster_username="$2"
-  local readonly cluster_password="$3"
-  local readonly cluster_port="$4"
-  local readonly index_dir="$5"
+  local -r cluster_asg_name="$1"
+  local -r cluster_username="$2"
+  local -r cluster_password="$3"
+  local -r cluster_port="$4"
+  local -r index_dir="$5"
 
   echo "Starting Couchbase index, query, and search nodes"
 
@@ -37,17 +37,17 @@ function run_couchbase {
 }
 
 function run {
-  local readonly cluster_asg_name="$1"
-  local readonly cluster_port="$2"
-  local readonly index_volume_device_name="$3"
-  local readonly index_volume_mount_point="$4"
-  local readonly volume_owner="$5"
+  local -r cluster_asg_name="$1"
+  local -r cluster_port="$2"
+  local -r index_volume_device_name="$3"
+  local -r index_volume_mount_point="$4"
+  local -r volume_owner="$5"
 
   # To keep this example simple, we are hard-coding all credentials in this file in plain text. You should NOT do this
   # in production usage!!! Instead, you should use tools such as Vault, Keywhiz, or KMS to fetch the credentials at
   # runtime and only ever have the plaintext version in memory.
-  local readonly cluster_username="admin"
-  local readonly cluster_password="password"
+  local -r cluster_username="admin"
+  local -r cluster_password="password"
 
   mount_volumes "$index_volume_device_name" "$index_volume_mount_point" "$volume_owner"
   run_couchbase "$cluster_asg_name" "$cluster_username" "$cluster_password" "$cluster_port" "$index_volume_mount_point"
@@ -60,4 +60,3 @@ run \
   "${index_volume_device_name}" \
   "${index_volume_mount_point}" \
   "${volume_owner}"
-

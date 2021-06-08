@@ -10,11 +10,11 @@ source "/opt/couchbase-commons/couchbase-common.sh"
 source "/opt/couchbase-commons/mount-volume.sh"
 
 function mount_volumes {
-  local readonly data_volume_device_name="$1"
-  local readonly data_volume_mount_point="$2"
-  local readonly index_volume_device_name="$3"
-  local readonly index_volume_mount_point="$4"
-  local readonly volume_owner="$5"
+  local -r data_volume_device_name="$1"
+  local -r data_volume_mount_point="$2"
+  local -r index_volume_device_name="$3"
+  local -r index_volume_mount_point="$4"
+  local -r volume_owner="$5"
 
   echo "Mounting EBS Volumes for data and index directories"
   mount_volume "$data_volume_device_name" "$data_volume_mount_point" "$volume_owner"
@@ -22,12 +22,12 @@ function mount_volumes {
 }
 
 function run_couchbase {
-  local readonly cluster_asg_name="$1"
-  local readonly cluster_username="$2"
-  local readonly cluster_password="$3"
-  local readonly cluster_port="$4"
-  local readonly data_dir="$5"
-  local readonly index_dir="$6"
+  local -r cluster_asg_name="$1"
+  local -r cluster_username="$2"
+  local -r cluster_password="$3"
+  local -r cluster_port="$4"
+  local -r data_dir="$5"
+  local -r index_dir="$6"
 
   echo "Starting Couchbase"
 
@@ -43,15 +43,15 @@ function run_couchbase {
 }
 
 function create_test_resources {
-  local readonly cluster_username="$1"
-  local readonly cluster_password="$2"
-  local readonly cluster_port="$3"
-  local readonly user_name="$4"
-  local readonly user_password="$5"
-  local readonly bucket_name="$6"
+  local -r cluster_username="$1"
+  local -r cluster_password="$2"
+  local -r cluster_port="$3"
+  local -r user_name="$4"
+  local -r user_password="$5"
+  local -r bucket_name="$6"
 
-  local readonly max_retries=120
-  local readonly sleep_between_retries_sec=5
+  local -r max_retries=120
+  local -r sleep_between_retries_sec=5
 
   echo "Creating user $user_name"
 
@@ -88,13 +88,13 @@ function create_test_resources {
 }
 
 function run_sync_gateway {
-  local readonly cluster_asg_name="$1"
-  local readonly cluster_port="$2"
-  local readonly sync_gateway_interface="$3"
-  local readonly sync_gateway_admin_interface="$4"
-  local readonly bucket="$5"
-  local readonly username="$6"
-  local readonly password="$7"
+  local -r cluster_asg_name="$1"
+  local -r cluster_port="$2"
+  local -r sync_gateway_interface="$3"
+  local -r sync_gateway_admin_interface="$4"
+  local -r bucket="$5"
+  local -r username="$6"
+  local -r password="$7"
 
   echo "Starting Sync Gateway"
 
@@ -110,24 +110,24 @@ function run_sync_gateway {
 }
 
 function run {
-  local readonly cluster_asg_name="$1"
-  local readonly cluster_port="$2"
-  local readonly sync_gateway_interface="$3"
-  local readonly sync_gateway_admin_interface="$4"
-  local readonly data_volume_device_name="$5"
-  local readonly data_volume_mount_point="$6"
-  local readonly index_volume_device_name="$7"
-  local readonly index_volume_mount_point="$8"
-  local readonly volume_owner="$9"
+  local -r cluster_asg_name="$1"
+  local -r cluster_port="$2"
+  local -r sync_gateway_interface="$3"
+  local -r sync_gateway_admin_interface="$4"
+  local -r data_volume_device_name="$5"
+  local -r data_volume_mount_point="$6"
+  local -r index_volume_device_name="$7"
+  local -r index_volume_mount_point="$8"
+  local -r volume_owner="$9"
 
   # To keep this example simple, we are hard-coding all credentials in this file in plain text. You should NOT do this
   # in production usage!!! Instead, you should use tools such as Vault, Keywhiz, or KMS to fetch the credentials at
   # runtime and only ever have the plaintext version in memory.
-  local readonly cluster_username="admin"
-  local readonly cluster_password="password"
-  local readonly test_user_name="test-user"
-  local readonly test_user_password="password"
-  local readonly test_bucket_name="test-bucket"
+  local -r cluster_username="admin"
+  local -r cluster_password="password"
+  local -r test_user_name="test-user"
+  local -r test_user_password="password"
+  local -r test_bucket_name="test-bucket"
 
   mount_volumes "$data_volume_device_name" "$data_volume_mount_point" "$index_volume_device_name" "$index_volume_mount_point" "$volume_owner"
   run_couchbase "$cluster_asg_name" "$cluster_username" "$cluster_password" "$cluster_port" "$data_volume_mount_point" "$index_volume_mount_point"
@@ -155,4 +155,3 @@ run \
   "${index_volume_device_name}" \
   "${index_volume_mount_point}" \
   "${volume_owner}"
-
