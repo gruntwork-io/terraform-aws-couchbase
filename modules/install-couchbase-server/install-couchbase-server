@@ -23,14 +23,15 @@ readonly DEFAULT_EDITION="$ENTERPRISE_EDITION"
 # Get these from the downloads section of the Couchbase website: https://www.couchbase.com/downloads
 readonly DEFAULT_COUCHBASE_ENTERPRISE_VERSION="6.6.2"
 readonly DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_UBUNTU_18_04="8e7fd5434537094be2fbdfedf3ab5005f0f7d5b9d0578f59ce540b424215b728"
-readonly DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_UBUNTU_20_04="9f666b2e39c11b17a9cc74c00967d97efeab08e23b93e8bbdec582ce009c65c9"
-readonly DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_AMAZON_LINUX="91fd6bc72db44e59a12a2945944a698f782b621cf757ab95248f831a16b2c73a"
+readonly DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_UBUNTU_20_04="41c033e6c1e98b0844a5cb5768e3769e7012d8374a6bd235c86e10db33b17afc"
+readonly DEFAULT_COUCHBASE_ENTERPRISE_CHECKSUM_AMAZON_LINUX="48e713f1db822fb0d8f6ce63711f0d1686ec72342f2eafaff24810670a437168"
 
 # Get these from the downloads section of the Couchbase website: https://www.couchbase.com/downloads
-readonly DEFAULT_COUCHBASE_COMMUNITY_VERSION="6.5.1"
-readonly DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_UBUNTU_18_04="c4951cdab01759020444e4648023721ae3a333257591252475d34d5fc6ac8857"
-readonly DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_UBUNTU_20_04="baf65fb9cbcec87783d4e9c3ec067143a42cdeef13a884e1f917e8d2f14044b7"
-readonly DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_AMAZON_LINUX="93a99222c2df857ebc08e60e85b5a3378b63d574ed24f33066542934ce60bf74"
+# NOTE: Older versions of couchbase community is now returning Access Denied.
+readonly DEFAULT_COUCHBASE_COMMUNITY_VERSION="7.0.0-beta"
+readonly DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_UBUNTU_18_04="3240684cda9c79103fb36d31652d7eda6d56159abd60f54ba682e10ab0de761a"
+readonly DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_UBUNTU_20_04="51e843e9d2b5ef746353d79c044f17e4f9be0866673bd6fda01da27a0edf9fc9"
+readonly DEFAULT_COUCHBASE_COMMUNITY_CHECKSUM_AMAZON_LINUX="26bbb7e9dcb314996be9eb674581be4187306a964c1e0e67bad104c56da212bc"
 
 readonly SHA256_CHECKSUM_TYPE="sha256"
 readonly MD5_CHECKSUM_TYPE="md5"
@@ -89,11 +90,16 @@ function download_couchbase_on_ubuntu {
     url="https://packages.couchbase.com/releases/$version/$filepath"
 
     log_info "Downloading Couchbase from $url to $filepath"
-    if [[ "$(curl --location --silent --fail --show-error -o "$out_name" -w "%{http_code}" "$url")" == "404" ]]; then
-      log_warn "Failed to get Couchbase from $url."
-    else
+
+    local err_code
+    err_code="$(curl --location --silent --fail --show-error -o "$out_name" -w "%{http_code}" "$url")"
+
+    if [[ "$err_code" == '200' ]]; then
+      log_info "Successfully downloaded from $url"
       return
     fi
+
+    log_warn "Failed to download from $url: error code $err_code. Trying next Ubuntu version."
   done
 
   # If we make it here, it means none of the Ubuntu versions in the array worked.
@@ -137,9 +143,9 @@ function install_couchbase_on_amazon_linux {
   local -r checksum="$3"
   local -r checksum_type="$4"
 
-  log_info "Installing Couchbase $version ($edition edition) on Amazon Linux"
+  log_info "Installing Couchbase $version ($edition edition) on Amazon Linux 2"
 
-  local -r filepath="couchbase-server-${edition}-${version}-centos7.x86_64.rpm"
+  local -r filepath="couchbase-server-${edition}-${version}-amzn2.x86_64.rpm"
   local -r url="https://packages.couchbase.com/releases/$version/$filepath"
 
   log_info "Installing Couchbase dependencies"
