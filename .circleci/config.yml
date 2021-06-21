@@ -58,6 +58,7 @@ jobs:
           command: |
             mkdir -p /tmp/logs
             set -o pipefail && run-go-tests --path test --timeout 90m | tee /tmp/logs/all.log
+          no_output_timeout: 3600s
       - run:
           command: terratest_log_parser --testlog /tmp/logs/all.log --outputdir /tmp/logs
           when: always
