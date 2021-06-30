@@ -13,7 +13,7 @@ readonly COUCHBASE_CLI="$COUCHBASE_BIN_DIR/couchbase-cli"
 
 # Run the Couchbase CLI
 function run_couchbase_cli {
-  local -r args=($@)
+  local -a args=($@)
 
   # The Couchbase CLI may exit with an error, but we almost always want to ignore that and make decision based on
   # stdout instead, so we temporarily disable exit on error
@@ -30,7 +30,7 @@ function run_couchbase_cli_with_retry {
   local -r max_retries="$3"
   local -r sleep_between_retries_sec="$4"
   shift 4
-  local -r args=($@)
+  local -a args=($@)
 
   for (( i=0; i<"$max_retries"; i++ )); do
     local out
@@ -92,7 +92,7 @@ function get_cluster_status {
 
   log_info "Looking up server status in $cluster_url"
 
-  local server_list_args=()
+  local -a server_list_args=()
   server_list_args+=("server-list")
   server_list_args+=("--cluster=$cluster_url")
   server_list_args+=("--username=$cluster_username")
@@ -138,7 +138,7 @@ function cluster_is_balanced {
 
   log_info "Checking if cluster $cluster_url is currently rebalancing..."
 
-  local server_list_args=()
+  local -a server_list_args=()
   server_list_args+=("rebalance-status")
   server_list_args+=("--cluster=$cluster_url")
   server_list_args+=("--username=$cluster_username")
@@ -162,7 +162,7 @@ function has_bucket {
 
   log_info "Checking if bucket $bucket_name exists in $cluster_url"
 
-  local server_list_args=()
+  local -a server_list_args=()
   server_list_args+=("bucket-list")
   server_list_args+=("--cluster=$cluster_url")
   server_list_args+=("--username=$cluster_username")
