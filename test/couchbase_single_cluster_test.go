@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -10,7 +11,12 @@ import (
 	test_structure "github.com/gruntwork-io/terratest/modules/test-structure"
 )
 
-const couchbaseClusterVarName = "cluster_name"
+const (
+	couchbaseClusterVarName = "cluster_name"
+
+	// Set to true when iterating locally so we store the key pairs for SSH access.
+	enableKeyPairs = false
+)
 
 func TestIntegrationCouchbaseCommunitySingleClusterUbuntu20(t *testing.T) {
 	t.Parallel()
@@ -49,8 +55,8 @@ func testCouchbaseSingleCluster(t *testing.T, osName string, edition string) {
 	//os.Setenv("SKIP_setup_ami", "true")
 	//os.Setenv("SKIP_setup_deploy", "true")
 	//os.Setenv("SKIP_validation", "true")
-	//os.Setenv("SKIP_teardown", "true")
 	//os.Setenv("SKIP_logs", "true")
+	//os.Setenv("SKIP_teardown", "true")
 
 	rootFolder := test_structure.CopyTerraformFolderToTemp(t, "../", ".")
 	couchbaseAmiDir := filepath.Join(rootFolder, "examples", "couchbase-ami")
@@ -64,6 +70,12 @@ func testCouchbaseSingleCluster(t *testing.T, osName string, edition string) {
 		test_structure.SaveAmiId(t, rootFolder, amiId)
 		test_structure.SaveString(t, rootFolder, savedAwsRegion, awsRegion)
 		test_structure.SaveString(t, rootFolder, savedUniqueId, uniqueId)
+
+		if enableKeyPairs {
+			keyPairName := fmt.Sprintf("terratest-couchbase-%s", uniqueId)
+			keyPair := aws.CreateAndImportEC2KeyPair(t, awsRegion, keyPairName)
+			test_structure.SaveEc2KeyPair(t, rootFolder, keyPair)
+		}
 	})
 
 	defer test_structure.RunTestStage(t, "teardown", func() {
@@ -73,6 +85,11 @@ func testCouchbaseSingleCluster(t *testing.T, osName string, edition string) {
 		amiId := test_structure.LoadAmiId(t, rootFolder)
 		awsRegion := test_structure.LoadString(t, rootFolder, savedAwsRegion)
 		aws.DeleteAmi(t, awsRegion, amiId)
+
+		if enableKeyPairs {
+			keyPair := test_structure.LoadEc2KeyPair(t, rootFolder)
+			aws.DeleteEC2KeyPair(t, keyPair)
+		}
 	})
 
 	defer test_structure.RunTestStage(t, "logs", func() {
@@ -95,6 +112,11 @@ func testCouchbaseSingleCluster(t *testing.T, osName string, edition string) {
 			EnvVars: map[string]string{
 				AWS_DEFAULT_REGION_ENV_VAR: awsRegion,
 			},
+		}
+
+		if enableKeyPairs {
+			keyPair := test_structure.LoadEc2KeyPair(t, rootFolder)
+			terraformOptions.Vars["ssh_key_name"] = keyPair.Name
 		}
 
 		terraform.InitAndApply(t, terraformOptions)
