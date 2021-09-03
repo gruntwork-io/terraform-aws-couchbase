@@ -8,7 +8,7 @@ env: &env
     GRUNTWORK_INSTALLER_VERSION: v0.0.29
     TERRATEST_LOG_PARSER_VERSION: v0.30.10
     MODULE_CI_VERSION: v0.29.0
-    TERRAFORM_VERSION: 0.15.1
+    TERRAFORM_VERSION: 1.0.6
     TERRAGRUNT_VERSION: NONE
     PACKER_VERSION: 1.6.4
     GOLANG_VERSION: 1.16
@@ -41,7 +41,7 @@ jobs:
           command: |
             pip install pre-commit==1.21.0 cfgv==2.0.1 zipp==1.1.0 yapf
             go get golang.org/x/tools/cmd/goimports
-            export GOPATH=~/go/bin && export PATH=$PATH:$GOPATH 
+            export GOPATH=~/go/bin && export PATH=$PATH:$GOPATH
             pre-commit install
             pre-commit run --all-files
   test:
