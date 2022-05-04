@@ -10,6 +10,21 @@
 :built-with: terraform, bash
 -->
 
+:warning: **As of February, 2022, we are putting this repo on hold and will not be investing in further improvements to it.** :warning:
+
+This is because:
+
+- Maintaining the code for a complicated, distributed, stateful system like Couchbase is very time consuming.
+- We’ve had very little customer usage / interest in a self-managed Couchbase offering, so it does not make sense to continue to make a large investment in it.
+
+Therefore, for the time being, if you need to use Couchbase, we strongly recommend using one of the following alternatives:
+
+- [Couchbase in AWS marketplace](https://aws.amazon.com/marketplace/seller-profile?id=1a064a14-5ac2-4980-9167-15746aabde72)
+- [Couchbase Capella](https://docs.couchbase.com/cloud/index.html)
+
+If you have questions or concerns, please contact us at support@gruntwork.io.
+
+
 # Couchbase AWS Module
 
 [![Maintained by Gruntwork.io](https://img.shields.io/badge/maintained%20by-gruntwork.io-%235849a6.svg)](https://gruntwork.io/?ref=repo_aws_couchbase)
