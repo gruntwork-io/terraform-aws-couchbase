@@ -31,7 +31,7 @@ module "couchbase" {
   user_data = data.template_file.user_data_server.rendered
 
   vpc_id     = data.aws_vpc.default.id
-  subnet_ids = data.aws_subnet_ids.default.ids
+  subnet_ids = data.aws_subnets.default.ids
 
   # We recommend using two EBS Volumes with your Couchbase servers: one for the data directory and one for the index
   # directory.
@@ -114,7 +114,7 @@ module "load_balancer" {
 
   name       = var.cluster_name
   vpc_id     = data.aws_vpc.default.id
-  subnet_ids = data.aws_subnet_ids.default.ids
+  subnet_ids = data.aws_subnets.default.ids
 
   http_listener_ports            = [var.couchbase_load_balancer_port, var.sync_gateway_load_balancer_port]
   https_listener_ports_and_certs = []
@@ -270,7 +270,7 @@ data "aws_vpc" "default" {
   default = true
 }
 
-data "aws_subnet_ids" "default" {
+data "aws_subnets" "default" {
   vpc_id = data.aws_vpc.default.id
 }
 

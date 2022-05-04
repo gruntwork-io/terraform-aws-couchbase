@@ -39,7 +39,7 @@ module "couchbase_primary" {
   user_data = data.template_file.user_data_primary.rendered
 
   vpc_id     = data.aws_vpc.default_primary.id
-  subnet_ids = data.aws_subnet_ids.default_primary.ids
+  subnet_ids = data.aws_subnets.default_primary.ids
 
   # To make testing easier, we allow SSH requests from any IP address here. In a production deployment, we strongly
   # recommend you limit this to the IP address ranges of known, trusted servers inside your VPC.
@@ -79,7 +79,7 @@ module "couchbase_replica" {
   user_data = data.template_file.user_data_replica.rendered
 
   vpc_id     = data.aws_vpc.default_replica.id
-  subnet_ids = data.aws_subnet_ids.default_replica.ids
+  subnet_ids = data.aws_subnets.default_replica.ids
 
   # To make testing easier, we allow SSH requests from any IP address here. In a production deployment, we strongly
   # recommend you limit this to the IP address ranges of known, trusted servers inside your VPC.
@@ -144,7 +144,7 @@ module "load_balancer_primary" {
 
   name       = var.cluster_name_primary
   vpc_id     = data.aws_vpc.default_primary.id
-  subnet_ids = data.aws_subnet_ids.default_primary.ids
+  subnet_ids = data.aws_subnets.default_primary.ids
 
   http_listener_ports            = [var.couchbase_load_balancer_port]
   https_listener_ports_and_certs = []
@@ -199,7 +199,7 @@ module "load_balancer_replica" {
 
   name       = var.cluster_name_replica
   vpc_id     = data.aws_vpc.default_replica.id
-  subnet_ids = data.aws_subnet_ids.default_replica.ids
+  subnet_ids = data.aws_subnets.default_replica.ids
 
   http_listener_ports            = [var.couchbase_load_balancer_port]
   https_listener_ports_and_certs = []
@@ -411,10 +411,13 @@ data "aws_vpc" "default_primary" {
   provider = aws.primary
 }
 
-data "aws_subnet_ids" "default_primary" {
-  vpc_id = data.aws_vpc.default_primary.id
+data "aws_subnets" "default_primary" {
 
   provider = aws.primary
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default_primary.id]
+  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -430,10 +433,13 @@ data "aws_vpc" "default_replica" {
   provider = aws.replica
 }
 
-data "aws_subnet_ids" "default_replica" {
-  vpc_id = data.aws_vpc.default_replica.id
+data "aws_subnets" "default_replica" {
 
   provider = aws.replica
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default_replica.id]
+  }
 }
 
 data "aws_region" "replica" {

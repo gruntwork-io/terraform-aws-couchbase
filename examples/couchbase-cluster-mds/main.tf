@@ -33,7 +33,7 @@ module "couchbase_data_nodes" {
   user_data = data.template_file.user_data_couchbase_data_nodes.rendered
 
   vpc_id     = data.aws_vpc.default.id
-  subnet_ids = data.aws_subnet_ids.default.ids
+  subnet_ids = data.aws_subnets.default.ids
 
   # We recommend using a separate EBS Volumes for the Couchbase data dir
   ebs_block_devices = [
@@ -90,7 +90,7 @@ module "couchbase_index_query_search_nodes" {
   user_data = data.template_file.user_data_couchbase_index_query_search_nodes.rendered
 
   vpc_id     = data.aws_vpc.default.id
-  subnet_ids = data.aws_subnet_ids.default.ids
+  subnet_ids = data.aws_subnets.default.ids
 
   # We recommend using a separate EBS Volumes for the Couchbase index dir
   ebs_block_devices = [
@@ -147,7 +147,7 @@ module "sync_gateway" {
   user_data = data.template_file.user_data_sync_gateway.rendered
 
   vpc_id     = data.aws_vpc.default.id
-  subnet_ids = data.aws_subnet_ids.default.ids
+  subnet_ids = data.aws_subnets.default.ids
 
   # To make testing easier, we allow SSH requests from any IP address here. In a production deployment, we strongly
   # recommend you limit this to the IP address ranges of known, trusted servers inside your VPC.
@@ -240,7 +240,7 @@ module "load_balancer" {
 
   name       = var.couchbase_data_node_cluster_name
   vpc_id     = data.aws_vpc.default.id
-  subnet_ids = data.aws_subnet_ids.default.ids
+  subnet_ids = data.aws_subnets.default.ids
 
   http_listener_ports            = [var.data_nodes_load_balancer_port, var.index_query_search_nodes_load_balancer_port, var.sync_gateway_load_balancer_port]
   https_listener_ports_and_certs = []
@@ -488,7 +488,10 @@ data "aws_vpc" "default" {
   default = true
 }
 
-data "aws_subnet_ids" "default" {
-  vpc_id = data.aws_vpc.default.id
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
 }
 
