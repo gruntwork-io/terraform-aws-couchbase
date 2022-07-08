@@ -119,12 +119,13 @@ function run {
   local readonly index_volume_device_name="$7"
   local readonly index_volume_mount_point="$8"
   local readonly volume_owner="$9"
+  local readonly cluster_username="$10"
+  local readonly cluster_password="$11"
+
 
   # To keep this example simple, we are hard-coding all credentials in this file in plain text. You should NOT do this
   # in production usage!!! Instead, you should use tools such as Vault, Keywhiz, or KMS to fetch the credentials at
   # runtime and only ever have the plaintext version in memory.
-  local readonly cluster_username="admin"
-  local readonly cluster_password="password"
   local readonly test_user_name="test-user"
   local readonly test_user_password="password"
   local readonly test_bucket_name="test-bucket"
@@ -155,4 +156,6 @@ run \
   "${index_volume_device_name}" \
   "${index_volume_mount_point}" \
   "${volume_owner}"
+  "${cluster_username}"
+  "${cluster_password}"
 

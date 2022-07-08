@@ -77,3 +77,15 @@ variable "sync_gateway_load_balancer_port" {
   default     = 4984
 }
 
+variable "cluster_username" {
+  description = "What is the user name of this cluster admin"
+  type        = string
+  default     = "admin"
+}
+
+variable "cluster_password" {
+  description = "What is the password of the cluster admin"
+  type        = string
+  default     = "password"
+}
+

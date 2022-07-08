@@ -85,6 +85,8 @@ data "template_file" "user_data_server" {
   vars = {
     cluster_asg_name = var.cluster_name
     cluster_port     = module.couchbase_security_group_rules.rest_port
+    cluster_username = var.cluster_username
+    cluster_password = var.cluster_password
 
     # We expose the Sync Gateway on all IPs but the Sync Gateway Admin should ONLY be accessible from localhost, as it
     # provides admin access to ALL Sync Gateway data.
