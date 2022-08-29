@@ -12,7 +12,7 @@ production!
 ## Quick start
 
 First, use the Packer template in the [couchbase-ami 
-example](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-ami) to build a Docker 
+example](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/examples/couchbase-ami) to build a Docker 
 image with Couchbase and Sync Gateway installed on Ubuntu:
 
 ```

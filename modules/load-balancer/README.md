@@ -12,10 +12,10 @@ your Couchbase and/or Sync Gateway cluster to:
 
 Note that this module solely deploys the Load Balancer, as you may want to share one load balancer across multiple
 applications. To deploy Target Groups, health checks, and routing rules, use the 
-[load-balancer-target-group](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/load-balancer-target-group)
+[load-balancer-target-group](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/modules/load-balancer-target-group)
 module.
 
-See the [examples folder](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples) for fully 
+See the [examples folder](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/examples) for fully 
 working sample code.
 
 
@@ -57,7 +57,7 @@ Note the following:
 * `source`: Use this parameter in the `module` to specify the URL of the load-balancer module. The double slash (`//`) 
   is intentional and required. Terraform uses it to specify subfolders within a Git repo (see [module 
   sources](https://www.terraform.io/docs/modules/sources.html)). The `ref` parameter specifies a specific Git tag in 
-  this repo. That way, instead of using the latest version of this module from the `master` branch, which 
+  this repo. That way, instead of using the latest version of this module from the `main` branch, which 
   will change every time you run Terraform, you're using a fixed version of the repo.
 
 * `http_listener_ports`: Which ports the load balancer should listen on for HTTP requests.

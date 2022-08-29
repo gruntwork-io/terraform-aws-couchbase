@@ -1,11 +1,11 @@
 # Sync Gateway Install Script
 
 This folder contains a script for installing Couchbase Sync Gateway and its dependencies. Use this script along with the
-[run-sync-gateway script](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/run-sync-gateway) 
+[run-sync-gateway script](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/modules/run-sync-gateway) 
 to create a Sync Gateway [Amazon Machine Image 
 (AMI)](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) that can be deployed in 
 [AWS](https://aws.amazon.com/) across an Auto Scaling Group using the [couchbase-cluster 
-module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster).
+module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/modules/couchbase-cluster).
 
 This script has been tested on the following operating systems:
 
@@ -31,16 +31,16 @@ terraform-aws-couchbase/modules/install-couchbase-server/install-sync-gateway --
 ```
 
 The `install-sync-gateway` script will install Sync Gateway, its dependencies, and the [run-sync-gateway 
-script](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/run-sync-gateway).
+script](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/modules/run-sync-gateway).
 You can execute the `run-sync-gateway` script when the server is booting to start Sync Gateway and configure it to 
 automatically join other nodes to form a cluster.
 
 We recommend running the `install-sync-gateway` script as part of a [Packer](https://www.packer.io/) template to 
 create a Sync Gateway [Amazon Machine Image (AMI)](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) (see the 
-[couchbase-ami example](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-ami) for 
+[couchbase-ami example](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/examples/couchbase-ami) for 
 fully-working sample code). You can then deploy the AMI across an Auto Scaling Group using the [couchbase-cluster 
-module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster) (see the 
-[examples folder](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples) for fully-working 
+module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/modules/couchbase-cluster) (see the 
+[examples folder](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/examples) for fully-working 
 sample code).
 
 
@@ -84,7 +84,7 @@ Install the following:
 * `Sync Gateway`: Install Sync Gateway using the appropriate [Linux 
   installer](https://developer.couchbase.com/documentation/mobile/1.5/installation/sync-gateway/index.html). 
 * `run-sync-gateway`: Copy the [run-sync-gateway 
-  script](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/run-sync-gateway) into 
+  script](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/modules/run-sync-gateway) into 
   `/opt/couchbase/bin`. 
 
 
@@ -94,5 +94,5 @@ Install the following:
 
 We needed an easy way to install these scripts that satisfied a number of requirements, including working on a variety 
 of operating systems and supported versioning. Our current solution is to use `git`, but this may change in the future.
-See [Package Managers](https://github.com/hashicorp/terraform-aws-consul/blob/master/_docs/package-managers.md) 
+See [Package Managers](https://github.com/hashicorp/terraform-aws-consul/blob/main/_docs/package-managers.md) 
 for a full discussion of the requirements, trade-offs, and why we picked `git`.

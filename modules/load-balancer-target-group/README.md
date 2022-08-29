@@ -4,13 +4,13 @@ This module can be used to create a [Target
 Group](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-target-groups.html) and
 [Listener Rules](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-update-rules.html) for
 a Load Balancer created with the [load-balancer 
-module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/load-balancer). You can use this 
+module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/modules/load-balancer). You can use this 
 module to configure health checks and routing for Couchbase and Sync Gateway. 
 
 The reason the `load-balancer` and `load-balancer-target-group` modules are separate is that you may wish to create
 multiple target groups for a single load balancer.
 
-See the [examples folder](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples) for fully
+See the [examples folder](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/examples) for fully
 working sample code.
 
 
@@ -19,8 +19,8 @@ working sample code.
 ## How do you use this module?
 
 Imagine you've deployed Couchbase and Sync Gateway using the [couchbase-cluster
-module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster) and a Load Balancer
-using the [load-balancer module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/load-balancer):    
+module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/modules/couchbase-cluster) and a Load Balancer
+using the [load-balancer module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/modules/load-balancer):    
 
 ```hcl
 module "couchbase" {

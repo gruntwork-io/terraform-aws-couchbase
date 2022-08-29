@@ -1,18 +1,18 @@
 # Couchbase Multi Datacenter Replication Example
 
 This folder shows an example of Terraform code that uses the 
-[couchbase-cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster) 
+[couchbase-cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/modules/couchbase-cluster) 
 module to deploy two [Couchbase](https://www.couchbase.com/) clusters in [AWS](https://aws.amazon.com/), a primary and
 a replica, each one in a different region, with the primary replicating one of its buckets to the replica.
 
-![Couchbase multi-datacenter replication architecture](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/master/_docs/couchbase-multi-datacenter-replication-architecture.png?raw=true)
+![Couchbase multi-datacenter replication architecture](https://github.com/gruntwork-io/terraform-aws-couchbase/blob/main/_docs/couchbase-multi-datacenter-replication-architecture.png?raw=true)
 
 You will need to create an [Amazon Machine Image (AMI)](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) 
 that has Couchbase installed, which you can do using the [couchbase-ami 
-example](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-ami)). 
+example](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/examples/couchbase-ami)). 
 
 For more info on how the Couchbase cluster works, check out the 
-[couchbase-cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster) documentation.
+[couchbase-cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/modules/couchbase-cluster) documentation.
 
 
 
@@ -22,7 +22,7 @@ To deploy a Couchbase Cluster:
 
 1. `git clone` this repo to your computer.
 1. Optional: build custom Couchbase AMIs. See the
-   [couchbase-ami example](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-ami)
+   [couchbase-ami example](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/examples/couchbase-ami)
    documentation for instructions. Note that you'll need to build one AMI in each of the regions specified in
    `variables.tf`: `aws_region_primary` and `aws_region_replica`:
 
@@ -45,10 +45,10 @@ To deploy a Couchbase Cluster:
 ## Connecting to the cluster
 
 Check out [How do you connect to the Couchbase
-cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster#how-do-you-connect-to-the-couchbase-cluster)
+cluster](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/modules/couchbase-cluster#how-do-you-connect-to-the-couchbase-cluster)
 documentation. To log into the Couchbase Web Console, use the username and password from the `cluster_username`
 and `cluster_password` vars in
-[user-data-primary.sh](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-multi-datacenter-replication/user-data/user-data-primary.sh).
+[user-data-primary.sh](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/examples/couchbase-multi-datacenter-replication/user-data/user-data-primary.sh).
 
 Note that booting up and rebalancing a Couchbase cluster can take 5 - 10 minutes, depending on the number and types of
 instances.
