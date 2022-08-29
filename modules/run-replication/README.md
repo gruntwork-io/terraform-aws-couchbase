@@ -18,7 +18,7 @@ There is a good chance it will work on other flavors of Debian, CentOS, and RHEL
 ## Quick start
 
 This script assumes you installed it, plus all of its dependencies (including Couchbase itself), using the
-[install-couchbase-server module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/install-couchbase-server).
+[install-couchbase-server module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/modules/install-couchbase-server).
 The default install path is `/opt/couchbase/bin`, so to kick off replication, you can run:
 
 ```
@@ -50,7 +50,7 @@ We recommend using the `run-replication` command as part of [User
 Data](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html#user-data-shell-scripts), so that it executes
 when the EC2 Instance is first booting.
 
-See the [examples folder](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples) for
+See the [examples folder](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/examples) for
 fully-working sample code.
 
 

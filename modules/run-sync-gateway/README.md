@@ -14,7 +14,7 @@ There is a good chance it will work on other flavors of Debian, CentOS, and RHEL
 ## Quick start
 
 This script assumes you installed it, plus all of its dependencies (including Sync Gateway itself), using the 
-[install-sync-gateway module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/install-sync-gateway). 
+[install-sync-gateway module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/modules/install-sync-gateway). 
 As part of the installation process, we recommend that you create a [Sync Gateway JSON config 
 file](https://developer.couchbase.com/documentation/mobile/1.5/guides/sync-gateway/config-properties/index.html) and 
 install it using the `--config` option of the `install-sync-gateway` script.
@@ -22,7 +22,7 @@ install it using the `--config` option of the `install-sync-gateway` script.
 You may want some of the configs, such as the IPs of the Couchbase servers, to be filled in dynamically, when the 
 server is booting up. You can do this using the `run-sync-gateway` script! Simply leave placeholders in your
 Sync Gateway config file like this (see the [couchbase-ami
-folder](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples/couchbase-ami) for a full example):
+folder](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/examples/couchbase-ami) for a full example):
 
 ```json
 {
@@ -57,7 +57,7 @@ We recommend using the `run-sync-gateway` command as part of [User
 Data](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html#user-data-shell-scripts), so that it executes
 when the EC2 Instance is first booting. 
 
-See the [examples folder](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/examples) for 
+See the [examples folder](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/examples) for 
 fully-working sample code.
 
 
@@ -99,7 +99,7 @@ Role](http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) that has th
 * `autoscaling:DescribeAutoScalingGroups`
 
 These permissions are automatically added by the [couchbase-cluster 
-module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/master/modules/couchbase-cluster).
+module](https://github.com/gruntwork-io/terraform-aws-couchbase/tree/main/modules/couchbase-cluster).
 
 
 
