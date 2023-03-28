@@ -88,7 +88,8 @@ workflows:
     jobs:
       - precommit:
           context:
-            - Gruntwork Admin
+            - AWS__PHXDEVOPS__circle-ci-test
+            - GITHUB__PAT__gruntwork-ci
       - test:
           requires:
             - precommit
@@ -100,7 +101,8 @@ workflows:
             tags:
               only: /.*/
           context:
-            - Gruntwork Admin
+            - AWS__PHXDEVOPS__circle-ci-test
+            - GITHUB__PAT__gruntwork-ci
       - release:
           requires:
             - test
@@ -111,5 +113,6 @@ workflows:
             branches:
               ignore: /.*/
           context:
-            - Gruntwork Admin
+            - AWS__PHXDEVOPS__circle-ci-test
+            - GITHUB__PAT__gruntwork-ci
             - Gruntwork AMI Publishing
