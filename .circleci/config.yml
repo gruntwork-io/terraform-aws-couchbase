@@ -41,7 +41,7 @@ jobs:
           command: |
             pip install pre-commit==1.21.0 cfgv==2.0.1 zipp==1.1.0 yapf
             go get golang.org/x/tools/cmd/goimports
-            export GOPATH=~/go/bin && export PATH=$PATH:$GOPATH 
+            export GOPATH=~/go/bin && export PATH=$PATH:$GOPATH
             pre-commit install
             pre-commit run --all-files
   test:
@@ -88,7 +88,8 @@ workflows:
     jobs:
       - precommit:
           context:
-            - Gruntwork Admin
+            - AWS__PHXDEVOPS__circle-ci-test
+            - GITHUB__PAT__gruntwork-ci
       - test:
           requires:
             - precommit
@@ -100,7 +101,8 @@ workflows:
             tags:
               only: /.*/
           context:
-            - Gruntwork Admin
+            - AWS__PHXDEVOPS__circle-ci-test
+            - GITHUB__PAT__gruntwork-ci
       - release:
           requires:
             - test
@@ -111,5 +113,5 @@ workflows:
             branches:
               ignore: /.*/
           context:
-            - Gruntwork Admin
-            - Gruntwork AMI Publishing
+            - AWS__PHXDEVOPS__circle-ci-test
+            - GITHUB__PAT__gruntwork-ci
